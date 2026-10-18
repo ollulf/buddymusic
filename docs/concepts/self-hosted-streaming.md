@@ -6,7 +6,7 @@ Step-by-step laptop setup, with what Claude Code can do for you: [../setup-check
 
 ## Goal
 
-An always-on Windows laptop serves the music library. It starts out just for me (phase 1) and grows into **buddymusic**: my own app that friends use too, with profiles and shared uploads.
+An always-on laptop running Ubuntu Server 24.04 LTS serves the music library. It starts out just for me (phase 1) and grows into **buddymusic**: my own app that friends use too, with profiles and shared uploads.
 
 ## Recommendation: option A, Navidrome + companion API
 
@@ -15,6 +15,17 @@ An always-on Windows laptop serves the music library. It starts out just for me 
 - **Routing:** Caddy on the laptop sends `/api` to the buddymusic API and `/rest` (Subsonic) to Navidrome, all under one HTTPS address.
 - **App:** Flutter for Android and iOS (`just_audio` + `audio_service`, offline cache, upload from phone).
 - **Option B (own backend from scratch)** means building the scanner, streaming, transcoding and search yourself: months of work. It stays possible later because the app only talks to `/api` and `/rest`.
+
+## Server laptop: Ubuntu
+
+- **OS:** Ubuntu Server 24.04 LTS, whole disk wiped (no dual-boot), hostname `musicbox`. Server instead of Desktop because nothing should suspend it or spend RAM on a GUI; it is managed over SSH from the Windows PC. Desktop works with the same steps if a GUI for tagging is wanted.
+- **Navidrome:** official `.deb` with its `navidrome` system user and `navidrome.service`, config `/etc/navidrome/navidrome.toml`, data `/var/lib/navidrome`. Docker Compose is the alternative, not used to keep the laptop light.
+- **Library:** `/srv/music/{library,_incoming,_trash}` on a second drive if there is one, group `music` (setgid) shared by your user, `navidrome` and later the `buddymusic` API user.
+- **Always on:** logind `HandleLidSwitch=ignore`, sleep, suspend and hibernate targets masked, battery limit 60-80 % via TLP sysfs thresholds or the BIOS.
+- **Network:** Tailscale (install script, `tailscale up --ssh`), ufw denying everything except `tailscale0` and SSH from the home LAN. No router ports.
+- **Maintenance:** unattended-upgrades with reboot at 04:00, backups with rsync to USB plus restic off-site, both as systemd timers.
+- **Later services:** Caddy (`caddy.service`) and the Go companion API (`buddymusic-api.service`) as systemd units, listening on localhost or the Tailscale address only.
+- **Claude Code:** installed on the laptop and run in tmux over SSH. It writes configs and scripts; you run anything that needs `sudo`.
 
 ## Friends access
 
@@ -27,7 +38,7 @@ An always-on Windows laptop serves the music library. It starts out just for me 
 
 ## Shared uploads
 
-- Flow: resumable upload to `/api/uploads`, then `D:\Music\_incoming`, ffprobe check, tags filled in from MusicBrainz/AcoustID, move to `D:\Music\Library\<user>\Artist\Album`, then a Navidrome scan.
+- Flow: resumable upload to `/api/uploads`, then `/srv/music/_incoming`, ffprobe check, tags filled in from MusicBrainz/AcoustID, move to `/srv/music/library/<user>/Artist/Album`, then a Navidrome scan.
 - Duplicates are caught by SHA-256 and by artist + title + duration (or AcoustID).
 - Accepted formats are FLAC, MP3, M4A/AAC and OGG/Opus, up to 200 MB per file, with a quota per friend.
 - Uploaders can delete their own files and admins can delete any. Deleted files sit in `_trash` for 30 days.
@@ -44,7 +55,7 @@ An always-on Windows laptop serves the music library. It starts out just for me 
 
 ## Phase 1 base setup (round 1)
 
-- **Server:** Navidrome as a Windows service, library in `D:\Music`, ffmpeg for transcoding.
+- **Server:** Navidrome as a systemd service, library in `/srv/music`, ffmpeg for transcoding (round 1 assumed Windows; replaced in round 4).
 - **Remote access:** Tailscale on laptop and phone, with no router ports opened.
 - **Phone clients:** Symfonium or Tempo (Android), Amperfy, play:Sub or substreamer (iOS). Opus 128 kbps on mobile data.
 - **Laptop:** sleep never on AC, lid close does nothing, battery charge limit, nightly backup.
