@@ -1,0 +1,33 @@
+[Unit]
+Description=buddymusic API and upload page
+After=network-online.target navidrome.service tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=buddymusic
+Group=buddymusic
+SupplementaryGroups=music
+EnvironmentFile=/etc/buddymusic/api.env
+ExecStart=/usr/local/bin/buddymusic-api
+StateDirectory=buddymusic
+StateDirectoryMode=0750
+UMask=0002
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadWritePaths=/srv/music/_incoming /srv/music/library
+
+[Install]
+WantedBy=multi-user.target
