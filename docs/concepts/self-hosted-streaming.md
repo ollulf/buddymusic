@@ -6,7 +6,7 @@ Step-by-step laptop setup, with what Claude Code can do for you: [../setup-check
 
 ## Goal
 
-An always-on laptop running Ubuntu Server 24.04 LTS serves the music library. It starts out just for me (phase 1) and grows into **buddymusic**: my own app that friends use too, with profiles and shared uploads.
+My everyday Ubuntu Desktop 24.04 laptop also serves the music library while it is awake. It starts out just for me (phase 1) and grows into **buddymusic**: my own app that friends use too, with profiles and shared uploads.
 
 ## Recommendation: option A, Navidrome + companion API
 
@@ -16,16 +16,18 @@ An always-on laptop running Ubuntu Server 24.04 LTS serves the music library. It
 - **App:** Flutter for Android and iOS (`just_audio` + `audio_service`, offline cache, upload from phone).
 - **Option B (own backend from scratch)** means building the scanner, streaming, transcoding and search yourself: months of work. It stays possible later because the app only talks to `/api` and `/rest`.
 
-## Server laptop: Ubuntu
+## Server laptop: Ubuntu Desktop, daily use + music server
 
-- **OS:** Ubuntu Server 24.04 LTS, whole disk wiped (no dual-boot), hostname `musicbox`. Server instead of Desktop because nothing should suspend it or spend RAM on a GUI; it is managed over SSH from the Windows PC. Desktop works with the same steps if a GUI for tagging is wanted.
-- **Navidrome:** official `.deb` with its `navidrome` system user and `navidrome.service`, config `/etc/navidrome/navidrome.toml`, data `/var/lib/navidrome`. Docker Compose is the alternative, not used to keep the laptop light.
-- **Library:** `/srv/music/{library,_incoming,_trash}` on a second drive if there is one, group `music` (setgid) shared by your user, `navidrome` and later the `buddymusic` API user.
-- **Always on:** logind `HandleLidSwitch=ignore`, sleep, suspend and hibernate targets masked, battery limit 60-80 % via TLP sysfs thresholds or the BIOS.
-- **Network:** Tailscale (install script, `tailscale up --ssh`), ufw denying everything except `tailscale0` and SSH from the home LAN. No router ports.
-- **Maintenance:** unattended-upgrades with reboot at 04:00, backups with rsync to USB plus restic off-site, both as systemd timers.
-- **Later services:** Caddy (`caddy.service`) and the Go companion API (`buddymusic-api.service`) as systemd units, listening on localhost or the Tailscale address only.
-- **Claude Code:** installed on the laptop and run in tmux over SSH. It writes configs and scripts; you run anything that needs `sudo`.
+- **OS:** Ubuntu Desktop 24.04 LTS (GNOME), already installed, hostname `musicbox`. The laptop stays a normal personal laptop; the server parts run in the background. Check the version with `lsb_release -a`.
+- **Navidrome:** official `.deb` with its `navidrome` system user and `navidrome.service`, config `/etc/navidrome/navidrome.toml`, data `/var/lib/navidrome`. A system service, so it streams while you are logged out or locked. Kept light with a drop-in (`Nice=10`, `CPUWeight=20`, `IOWeight=20`, `MemoryHigh=512M`), a scan every 6 h and Opus 128 kbps transcoding for phones.
+- **Library:** `/srv/music/{library,_incoming,_trash}`, group `music` (setgid) shared by your user, `navidrome` and later the `buddymusic` API user. Not `~/Music`, because home folders on 24.04 are private (`750`) and the service user could not read them.
+- **Power:** streaming only works while the laptop is awake. Default: GNOME automatic suspend off on AC and on for battery, logind `HandleLidSwitchExternalPower=ignore` with `HandleLidSwitch=suspend`, screen blank and lock stay on, sleep targets not masked. Optional: a `systemd-inhibit` helper that blocks sleep while Navidrome reports something playing. When the laptop travels or sleeps, the server travels or sleeps with it; offline downloads on the phone cover that.
+- **Battery:** charge limit from the BIOS/vendor setting first, else a small systemd oneshot writing the sysfs threshold. TLP only if wanted, since it conflicts with GNOME's `power-profiles-daemon`.
+- **Network:** Tailscale as a normal node (also usable for your own remote access), ufw denying incoming except `tailscale0`, outgoing open so desktop features keep working. LAN SSH, mDNS or GSConnect rules only if used. No router ports.
+- **Maintenance:** Ubuntu's default unattended security updates plus Software Updater, no automatic reboot. Music server backup with an rsync systemd timer to a USB drive (`Persistent=true` catches up missed runs); Déjà Dup stays for your home folder; restic off-site later.
+- **Later services:** Caddy (`caddy.service`) and the Go companion API (`buddymusic-api.service`) as systemd units, listening on localhost or the Tailscale address only, with the same low-priority drop-in.
+- **Claude Code:** runs in the normal GNOME Terminal. It writes configs and scripts in `~/ops`; you run anything that needs `sudo`.
+- **Round 4 (replaced):** Ubuntu Server, wiped disk, SSH-only management, masked sleep targets, TLP, automatic 04:00 reboot.
 
 ## Friends access
 
