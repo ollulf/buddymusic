@@ -6,3 +6,6 @@
 
 # No HTML in the repository (result pages and concept boards live as artifacts)
 *.html
+
+# Docs live outside the repo (%LOCALAPPDATA%/buddymusic-board/docs)
+docs/

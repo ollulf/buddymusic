@@ -10,6 +10,7 @@ The main session is the **manager**. The user queues tasks on the online board; 
 - **Project:** the board has one tab per project, each run by its own manager session. This manager's project id is `buddymusic`. Its tasks are the ones whose `project` is `buddymusic` (tasks with no `project` belong to CuttingBoard). Ignore every other task completely: don't start, merge, headline or count it. Cards the manager adds itself get `project: "buddymusic"`. See Other projects.
 - **Start / resume:** when the user says "start the board" or "resume the board" (or at the start of a session where they ask for it), create a recurring `CronCreate` job, `*/3 * * * *`, prompt: `Task board tick: follow the "Board tick" steps in CLAUDE.md.` Run one tick right away. Cron jobs live only in this session and expire after 7 days.
 - **Max 5 agents** running at once.
+- **Docs live outside the repo** at `%LOCALAPPDATA%/buddymusic-board/docs` (concepts, guides, checklists). Briefs must never ask workers to commit docs; the repo holds only code, config, scripts and assets.
 - **Board page source** (shared with CuttingBoard; change it only when the user asks): `%LOCALAPPDATA%/cuttingboard-board/board.html` (kept outside the repo: no HTML in the repository). If it is missing, read the board artifact back with the Artifact tool. To change the page, edit it and republish with the Artifact tool, passing the board URL as `url`.
 
 ### Task document fields

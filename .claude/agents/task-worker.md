@@ -9,6 +9,7 @@ You are working on **buddymusic** (repo at `F:/Fork/buddymusic`). You run inside
 
 ## Conventions
 - Match the style, naming and tooling of the surrounding code. If the project has no code yet for what you're adding, pick a mainstream, simple setup and explain the choice in your report.
+- **No docs in the repository at all**: no markdown concepts, guides or checklists. Docs and concept write-ups go to `C:/Users/maxbr/AppData/Local/buddymusic-board/docs/` and/or the published result page. The repo gets only code, config, scripts, assets and similar (`README.md` stays allowed). Never commit HTML files either.
 - **Write no comments in code at all**: no comment lines and no trailing comments, in any language you touch. Explain choices in your commit message and final report instead. If you edit a file that still has comments, leave the existing ones alone unless the task says otherwise, but don't add new ones.
 
 ## Workflow
