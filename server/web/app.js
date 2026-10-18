@@ -1,4 +1,7 @@
 import { renderUpload } from "./upload.js";
+import { renderLibrary } from "./library.js";
+import { renderSearch } from "./search.js";
+import { renderBar } from "./player.js";
 
 const root = document.getElementById("app");
 
@@ -56,16 +59,46 @@ async function logout() {
   showLogin();
 }
 
+const TABS = [["library", "Library"], ["search", "Search"], ["upload", "Upload"]];
+let routeHandler = null;
+let playerBar = null;
+
 function showApp(user) {
-  const main = h("main");
+  const opts = { onUnauthorized: showLogin };
+  const views = Object.fromEntries(TABS.map(([k]) => [k, h("main", { class: `view view-${k}`, hidden: true })]));
+  const links = Object.fromEntries(TABS.map(([k, label]) => [k, h("a", { class: "tab", href: `#/${k}` }, label)]));
+  playerBar ||= renderBar();
   root.replaceChildren(
     h("header", { class: "top" },
       h("strong", {}, "buddymusic"),
-      h("span", { class: "tab on" }, "Upload"),
+      h("nav", { class: "tabs" }, Object.values(links)),
       h("span", { class: "who" }, user),
       h("button", { class: "ghost", onclick: logout }, "Log out")),
-    main);
-  renderUpload(main, { onUnauthorized: showLogin });
+    ...Object.values(views),
+    playerBar);
+  renderUpload(views.upload, opts);
+  let shown = "";
+  const route = () => {
+    const parts = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);
+    const tab = TABS.some(([k]) => k === parts[0]) ? parts[0] : "library";
+    for (const [k] of TABS) {
+      views[k].hidden = k !== tab;
+      links[k].classList.toggle("on", k === tab);
+      if (k === tab) links[k].setAttribute("aria-current", "page");
+      else links[k].removeAttribute("aria-current");
+    }
+    const key = [tab, ...parts.slice(1)].join("/");
+    if (tab === "library" && key !== shown) {
+      renderLibrary(views.library, parts.slice(1), opts);
+      window.scrollTo(0, 0);
+    }
+    if (tab === "search" && !views.search.firstChild) renderSearch(views.search, opts);
+    if (tab === "library") shown = key;
+  };
+  if (routeHandler) window.removeEventListener("hashchange", routeHandler);
+  routeHandler = route;
+  window.addEventListener("hashchange", route);
+  route();
 }
 
 async function boot() {
