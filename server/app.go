@@ -23,6 +23,7 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("POST /api/uploads", a.requireUser(a.handleUpload))
 	mux.Handle("GET /api/uploads", a.requireUser(a.handleListUploads))
 	mux.Handle("GET /api/uploads/{id}", a.requireUser(a.handleGetUpload))
+	mux.Handle("GET /", a.webHandler())
 	return a.trustedOnly(mux)
 }
 
