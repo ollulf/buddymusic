@@ -14,6 +14,7 @@ type App struct {
 	nav     *Navidrome
 	limiter loginLimiter
 	scanner *Scanner
+	admins  adminCache
 }
 
 func NewApp(cfg *Config, store *Store) *App {
@@ -39,6 +40,8 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("GET /api/music/cover/{id}", a.requireUser(a.handleCover))
 	mux.Handle("GET /api/music/stream/{id}", a.requireUser(a.handleStream))
 	mux.Handle("POST /api/music/scrobble/{id}", a.requireUser(a.handleScrobble))
+	mux.Handle("DELETE /api/music/track/{id}", a.requireUser(a.adminDelete(a.loadTrack)))
+	mux.Handle("DELETE /api/music/album/{id}", a.requireUser(a.adminDelete(a.loadAlbum)))
 	mux.Handle("GET /", a.webHandler())
 	return a.trustedOnly(mux)
 }

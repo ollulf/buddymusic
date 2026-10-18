@@ -1,5 +1,9 @@
-import { h, api, cover, fmtTime, Unauthorized } from "./dom.js";
+import { h, api, apiSend, cover, fmtTime, Unauthorized } from "./dom.js";
 import * as player from "./player.js";
+
+const deletedSongs = new Set();
+const deletedAlbums = new Set();
+const liveAlbums = (list) => (list || []).filter((al) => !deletedAlbums.has(al.id));
 
 const LISTS = [["newest", "New"], ["recent", "Recently played"], ["random", "Random"], ["artists", "Artists"]];
 
@@ -20,7 +24,8 @@ export function songRow(songs, i, opts = {}) {
         opts.showArtist ? h("span", { class: "s-sub" }, [s.artist, s.album].filter(Boolean).join(" · ")) : null),
       h("span", { class: "s-dur" }, fmtTime(s.duration))),
     h("button", { class: "icon more", title: "Play next", "aria-label": "Play next", onclick: () => player.playNext([s]) }, "⤵"),
-    h("button", { class: "icon more", title: "Add to queue", "aria-label": "Add to queue", onclick: () => player.addToQueue([s]) }, "+"));
+    h("button", { class: "icon more", title: "Add to queue", "aria-label": "Add to queue", onclick: () => player.addToQueue([s]) }, "+"),
+    opts.onDelete ? h("button", { class: "icon more danger", title: "Delete track", "aria-label": "Delete track", onclick: () => opts.onDelete(s) }, "✕") : null);
 }
 
 export function artistList(artists) {
@@ -49,7 +54,7 @@ async function renderLists(container, kind, opts) {
       return;
     }
     const data = await api(`/api/music/albums?type=${kind}&size=60`);
-    const albums = data.album || [];
+    const albums = liveAlbums(data.album);
     body.replaceWith(albums.length ? h("div", { class: "grid" }, albums.map(albumCard))
       : h("div", { class: "card muted" }, "No albums yet. Upload some music in the Upload tab."));
   } catch (e) {
@@ -57,11 +62,45 @@ async function renderLists(container, kind, opts) {
   }
 }
 
+const DELETE_ERRORS = {
+  "admin-only": "Only Navidrome admins can delete music.",
+  "outside-library": "The file is outside the music library, nothing was moved.",
+  "file-not-found": "The file was not found on disk. Navidrome may need \"Report Real Path\" or a rescan.",
+  "not-found": "Not found in Navidrome.",
+};
+
+async function deleteItem(kind, id, opts) {
+  try {
+    const res = await apiSend("DELETE", `/api/music/${kind}/${encodeURIComponent(id)}`);
+    return res.moved || [];
+  } catch (e) {
+    if (e instanceof Unauthorized) { opts.onUnauthorized?.(); return null; }
+    alert(`Delete failed: ${DELETE_ERRORS[e.message] || e.message}`);
+    return null;
+  }
+}
+
 async function renderAlbum(container, id, opts) {
   container.replaceChildren(h("div", { class: "muted" }, "Loading…"));
   try {
     const al = await api(`/api/music/album/${encodeURIComponent(id)}`);
-    const songs = (al.song || []).map((s) => ({ ...s, coverArt: s.coverArt || al.coverArt }));
+    const songs = (al.song || []).filter((s) => !deletedSongs.has(s.id)).map((s) => ({ ...s, coverArt: s.coverArt || al.coverArt }));
+    const deleteTrack = opts.admin ? async (s) => {
+      if (!confirm(`Move "${s.title || "this track"}" to the trash?\n\nThe file goes to _trash in the music folder and leaves the library for everyone.`)) return;
+      if (!(await deleteItem("track", s.id, opts))) return;
+      deletedSongs.add(s.id);
+      player.removeSongs([s.id]);
+      if (songs.length <= 1) { deletedAlbums.add(al.id); location.hash = "#/library"; }
+      else renderAlbum(container, id, opts);
+    } : null;
+    const deleteAlbum = async () => {
+      if (!confirm(`Move the whole album "${al.name || "Unknown album"}" (${songs.length} songs and its cover) to the trash?\n\nThe files go to _trash in the music folder and leave the library for everyone.`)) return;
+      if (!(await deleteItem("album", al.id, opts))) return;
+      songs.forEach((s) => deletedSongs.add(s.id));
+      deletedAlbums.add(al.id);
+      player.removeSongs(songs.map((s) => s.id));
+      location.hash = "#/library";
+    };
     const total = songs.reduce((t, s) => t + (s.duration || 0), 0);
     container.replaceChildren(
       h("a", { class: "back", href: "#/library" }, "‹ Library"),
@@ -74,8 +113,9 @@ async function renderAlbum(container, id, opts) {
           h("div", { class: "actions" },
             h("button", { class: "primary", onclick: () => player.playList(songs, 0), disabled: !songs.length }, "Play"),
             h("button", { onclick: () => { player.playList(songs, Math.floor(Math.random() * songs.length)); if (!player.settings().shuffle) player.toggleShuffle(); }, disabled: !songs.length }, "Shuffle"),
-            h("button", { onclick: () => player.addToQueue(songs), disabled: !songs.length }, "Add to queue")))),
-      h("ol", { class: "songs card" }, songs.map((_, i) => songRow(songs, i))));
+            h("button", { onclick: () => player.addToQueue(songs), disabled: !songs.length }, "Add to queue"),
+            opts.admin ? h("button", { class: "danger", onclick: deleteAlbum }, "Delete album") : null))),
+      h("ol", { class: "songs card" }, songs.map((_, i) => songRow(songs, i, { onDelete: deleteTrack }))));
   } catch (e) {
     container.replaceChildren(h("a", { class: "back", href: "#/library" }, "‹ Library"), failBox(e, opts));
   }
@@ -88,7 +128,7 @@ async function renderArtist(container, id, opts) {
     container.replaceChildren(
       h("a", { class: "back", href: "#/library/artists" }, "‹ Artists"),
       h("h1", {}, ar.name || "Unknown artist"),
-      h("div", { class: "grid" }, (ar.album || []).map(albumCard)));
+      h("div", { class: "grid" }, liveAlbums(ar.album).map(albumCard)));
   } catch (e) {
     container.replaceChildren(h("a", { class: "back", href: "#/library/artists" }, "‹ Artists"), failBox(e, opts));
   }

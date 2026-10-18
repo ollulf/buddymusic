@@ -138,7 +138,13 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 		Name: sessionCookie, Value: id, Path: "/", MaxAge: int(sessionTTL.Seconds()),
 		HttpOnly: true, Secure: a.cfg.SecureCookie, SameSite: http.SameSiteStrictMode,
 	})
-	writeJSON(w, http.StatusOK, map[string]string{"user": user})
+	admin, err := a.checkAdmin(r.Context(), creds)
+	if err != nil {
+		log.Printf("login: admin check: %v", err)
+	} else {
+		a.admins.put(idHash, admin)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"user": user, "admin": admin})
 }
 
 func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
@@ -150,7 +156,7 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleMe(w http.ResponseWriter, r *http.Request, user string) {
-	writeJSON(w, http.StatusOK, map[string]string{"user": user})
+	writeJSON(w, http.StatusOK, map[string]any{"user": user, "admin": a.cachedAdmin(r)})
 }
 
 func (a *App) sessionUser(r *http.Request) (string, error) {

@@ -92,6 +92,24 @@ export function addToQueue(songs) {
   emit();
 }
 
+export function removeSongs(ids) {
+  const gone = new Set(ids);
+  if (!state.queue.some((s) => gone.has(s.id))) return;
+  const cur = current();
+  const kept = state.queue.slice(0, Math.max(state.index, 0)).filter((s) => !gone.has(s.id)).length;
+  state.queue = state.queue.filter((s) => !gone.has(s.id));
+  if (cur && gone.has(cur.id)) {
+    const playing = !audio.paused;
+    state.index = kept < state.queue.length ? kept : -1;
+    rebuildOrder();
+    load(state.index, playing);
+    return;
+  }
+  state.index = state.queue.indexOf(cur);
+  rebuildOrder();
+  emit();
+}
+
 export function jump(i) { if (state.queue[i]) load(i); }
 export function toggle() { if (!current()) return; audio.paused ? audio.play().catch(() => {}) : audio.pause(); }
 export function next() { const i = step(1); if (i >= 0) load(i); else { audio.pause(); emit(); } }

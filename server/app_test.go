@@ -17,6 +17,11 @@ import (
 
 func newTestApp(t *testing.T) *App {
 	t.Helper()
+	return newTestAppWith(t, nil)
+}
+
+func newTestAppWith(t *testing.T, extra func(w http.ResponseWriter, r *http.Request) bool) *App {
+	t.Helper()
 	root := t.TempDir()
 	for _, d := range []string{"_incoming", "library", "data"} {
 		os.MkdirAll(filepath.Join(root, d), 0o755)
@@ -29,7 +34,7 @@ func newTestApp(t *testing.T) *App {
 		ScanDelay:   10 * time.Millisecond,
 		TrustedNets: []netip.Prefix{netip.MustParsePrefix("192.0.2.0/24")},
 	}
-	nav := httptest.NewServer(fakeNavidrome(map[string]string{"max": "secret", "buddymusic-scan": "scanpw"}))
+	nav := httptest.NewServer(fakeNavidrome(map[string]string{"max": "secret", "boss": "bosspw", "buddymusic-scan": "scanpw"}, extra))
 	t.Cleanup(nav.Close)
 	cfg.NavidromeURL = nav.URL
 	cfg.ScanUser = "buddymusic-scan"
@@ -42,7 +47,7 @@ func newTestApp(t *testing.T) *App {
 	return NewApp(cfg, store)
 }
 
-func fakeNavidrome(users map[string]string) http.Handler {
+func fakeNavidrome(users map[string]string, extra func(w http.ResponseWriter, r *http.Request) bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
 		pw, ok := users[q.Get("u")]
@@ -56,7 +61,16 @@ func fakeNavidrome(users map[string]string) http.Handler {
 			w.Write([]byte(`{"subsonic-response":{"status":"failed","error":{"code":50,"message":"not authorized"}}}`))
 			return
 		}
+		if extra != nil && extra(w, r) {
+			return
+		}
 		switch {
+		case strings.HasSuffix(r.URL.Path, "/getUser.view"):
+			admin := "false"
+			if q.Get("u") == "boss" {
+				admin = "true"
+			}
+			w.Write([]byte(`{"subsonic-response":{"status":"ok","user":{"username":"` + q.Get("username") + `","adminRole":` + admin + `}}}`))
 		case strings.HasSuffix(r.URL.Path, "/getAlbum.view") && q.Get("id") == "missing":
 			w.Write([]byte(`{"subsonic-response":{"status":"failed","error":{"code":70,"message":"not found"}}}`))
 		case strings.HasSuffix(r.URL.Path, "/getAlbum.view"):
@@ -81,7 +95,12 @@ func fakeNavidrome(users map[string]string) http.Handler {
 
 func login(t *testing.T, a *App) *http.Cookie {
 	t.Helper()
-	req := httptest.NewRequest("POST", "/api/login", strings.NewReader(`{"username":"Max","password":"secret"}`))
+	return loginAs(t, a, "Max", "secret")
+}
+
+func loginAs(t *testing.T, a *App, user, pass string) *http.Cookie {
+	t.Helper()
+	req := httptest.NewRequest("POST", "/api/login", strings.NewReader(`{"username":"`+user+`","password":"`+pass+`"}`))
 	rec := do(t, a.Routes(), req)
 	if rec.Code != 200 {
 		t.Fatalf("login status %d: %s", rec.Code, rec.Body)

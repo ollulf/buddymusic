@@ -38,7 +38,7 @@ function showLogin() {
         body: JSON.stringify({ username: user.value, password: pass.value }),
       });
       const body = await res.json().catch(() => ({}));
-      if (res.ok) return showApp(body.user);
+      if (res.ok) return showApp(body.user, body.admin);
       err.textContent = LOGIN_ERRORS[body.error] || "Login failed";
     } catch {
       err.textContent = "No connection to the server";
@@ -63,8 +63,8 @@ const TABS = [["library", "Library"], ["search", "Search"], ["upload", "Upload"]
 let routeHandler = null;
 let playerBar = null;
 
-function showApp(user) {
-  const opts = { onUnauthorized: showLogin };
+function showApp(user, admin) {
+  const opts = { onUnauthorized: showLogin, admin: admin === true };
   const views = Object.fromEntries(TABS.map(([k]) => [k, h("main", { class: `view view-${k}`, hidden: true })]));
   const links = Object.fromEntries(TABS.map(([k, label]) => [k, h("a", { class: "tab", href: `#/${k}` }, label)]));
   playerBar ||= renderBar();
@@ -72,7 +72,7 @@ function showApp(user) {
     h("header", { class: "top" },
       h("strong", {}, "buddymusic"),
       h("nav", { class: "tabs" }, Object.values(links)),
-      h("span", { class: "who" }, user),
+      h("span", { class: "who" }, admin ? `${user} (admin)` : user),
       h("button", { class: "ghost", onclick: logout }, "Log out")),
     ...Object.values(views),
     playerBar);
@@ -104,7 +104,10 @@ function showApp(user) {
 async function boot() {
   try {
     const res = await fetch("/api/me");
-    if (res.ok) return showApp((await res.json()).user);
+    if (res.ok) {
+      const me = await res.json();
+      return showApp(me.user, me.admin);
+    }
   } catch {}
   showLogin();
 }
