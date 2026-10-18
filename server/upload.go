@@ -274,16 +274,14 @@ func (a *App) placeUpload(ctx context.Context, u *Upload, form *uploadForm, stor
 		return fail(http.StatusInternalServerError, "save-failed")
 	}
 	os.Chmod(dst, 0o664)
-	if !hasCoverFile(dir) {
-		var err error
-		if form.cover != nil {
-			err = writeNew(filepath.Join(dir, "cover"+sniffImage(form.cover)), form.cover)
-		} else if tags.Cover {
-			err = extractCover(ctx, dst, filepath.Join(dir, "cover.jpg"))
-		}
-		if err != nil && !errors.Is(err, os.ErrExist) {
-			log.Printf("upload %s: cover: %v", u.ID, err)
-		}
+	var coverErr error
+	if form.cover != nil {
+		coverErr = replaceCover(dir, form.cover)
+	} else if tags.Cover && !hasCoverFile(dir) {
+		coverErr = extractCover(ctx, dst, filepath.Join(dir, "cover.jpg"))
+	}
+	if coverErr != nil && !errors.Is(coverErr, os.ErrExist) {
+		log.Printf("upload %s: cover: %v", u.ID, coverErr)
 	}
 	rel, _ := filepath.Rel(a.cfg.LibraryDir(), dst)
 	u.Status, u.LibraryPath = "in-library", rel

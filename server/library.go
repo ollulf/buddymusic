@@ -87,6 +87,35 @@ func writeNew(path string, data []byte) error {
 	return f.Close()
 }
 
+func replaceCover(dir string, data []byte) error {
+	ext := sniffImage(data)
+	if ext == "" {
+		return errors.New("unsupported cover type")
+	}
+	tmp, err := os.CreateTemp(dir, ".cover-*"+ext)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	os.Chmod(tmp.Name(), 0o664)
+	if err := os.Rename(tmp.Name(), filepath.Join(dir, "cover"+ext)); err != nil {
+		return err
+	}
+	for _, other := range []string{"cover.jpg", "cover.png"} {
+		if other != "cover"+ext {
+			os.Remove(filepath.Join(dir, other))
+		}
+	}
+	return nil
+}
+
 type Scanner struct {
 	nav   *Navidrome
 	user  string

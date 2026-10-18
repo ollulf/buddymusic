@@ -57,3 +57,31 @@ export function merge(fileTags, typed, shared) {
   out.cover = !!(fileTags.cover || typed.cover || shared.cover);
   return out;
 }
+
+export function fromFileName(name) {
+  let base = String(name || "").replace(/\.[^.]+$/, "").trim();
+  let track = "";
+  let disc = "";
+  const m = base.match(/^(?:(\d{1,2})[-.](?=\d))?(\d{1,3})(?:\s*[-._)\]]+\s*|\s+)(.*)$/);
+  if (m && m[3].trim()) {
+    disc = m[1] ? String(parseInt(m[1], 10)) : "";
+    track = String(parseInt(m[2], 10));
+    base = m[3];
+  }
+  if (!/\s/.test(base)) base = base.replace(/_+/g, " ");
+  base = base.replace(/^[\s\-_.]+|[\s\-_.]+$/g, "").replace(/\s+/g, " ");
+  return { title: base, track: track === "0" ? "" : track, disc };
+}
+
+export function mostCommon(values) {
+  const counts = new Map();
+  let best = "", bestN = 0;
+  for (const raw of values) {
+    const v = String(raw ?? "").trim();
+    if (!v) continue;
+    const n = (counts.get(v) || 0) + 1;
+    counts.set(v, n);
+    if (n > bestN) { best = v; bestN = n; }
+  }
+  return best;
+}

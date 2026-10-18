@@ -1,6 +1,7 @@
-import { REQUIRED, LABELS, fromMediaTags, merge, missingFields, present } from "./tags.js";
+import { LABELS, fromMediaTags, fromFileName, mostCommon, present, trackNumber } from "./tags.js";
 
-const SHARED_FIELDS = ["artist", "album", "album_artist", "year"];
+const ALBUM_FIELDS = ["artist", "album", "album_artist", "year"];
+const ROW_FIELDS = ["title", "track"];
 const ERRORS = {
   "unsupported-type": "Not a supported audio file (FLAC, MP3, M4A, OGG, Opus)",
   "too-large": "File is too big",
@@ -11,7 +12,7 @@ const ERRORS = {
   "unauthorized": "Logged out, please log in again",
 };
 
-let state = { files: [], shared: { cover: null }, busy: false, nextId: 1 };
+let state = { files: [], cover: null, edited: new Set(), busy: false, nextId: 1 };
 
 const h = (tag, attrs = {}, ...kids) => {
   const el = document.createElement(tag);
@@ -29,73 +30,107 @@ let ui = {};
 
 function readTags(file) {
   return new Promise((resolve) => {
-    if (!window.jsmediatags || /\.(ogg|opus)$/i.test(file.name)) return resolve(null);
+    if (!window.jsmediatags || /\.(ogg|opus)$/i.test(file.name)) return resolve({ tags: null, picture: null });
     window.jsmediatags.read(file, {
-      onSuccess: (r) => resolve(fromMediaTags(r.tags)),
-      onError: () => resolve(null),
+      onSuccess: (r) => resolve({ tags: fromMediaTags(r.tags), picture: r.tags?.picture || null }),
+      onError: () => resolve({ tags: null, picture: null }),
     });
   });
 }
 
-function effective(entry) {
-  const base = entry.fileTags || {};
-  return merge(base, entry.typed, entry.fileTags ? sharedFor(entry) : {});
+function pending() {
+  return state.files.filter((e) => e.status !== "done");
 }
 
-function sharedFor(entry) {
-  const s = {};
-  for (const k of SHARED_FIELDS) s[k] = ui.shared?.[k]?.value || "";
-  s.cover = state.shared.cover;
-  return entry.fileTags?.cover ? { ...s, cover: null } : s;
+function album() {
+  const out = {};
+  for (const k of ALBUM_FIELDS) out[k] = String(ui.album[k].value || "").trim();
+  return out;
 }
 
-function albumKey(t) {
-  const artist = String(t.album_artist || t.artist || "").trim().toLowerCase();
-  const album = String(t.album || "").trim().toLowerCase();
-  return artist && album ? artist + "\u0000" + album : "";
+function albumKey(a) {
+  const artist = (a.album_artist || a.artist || "").toLowerCase();
+  const name = (a.album || "").toLowerCase();
+  return artist && name ? artist + "\u0000" + name : "";
 }
 
 const folderCovers = new Map();
 
-function coverElsewhere(entry, eff) {
-  const key = albumKey(eff);
+function folderCover(a) {
+  const key = albumKey(a);
   if (!key) return false;
-  if (folderCovers.get(key) === true) return true;
-  return state.files.some((o) => o !== entry && o.fileTags?.cover && albumKey(effective(o)) === key);
+  if (!folderCovers.has(key)) {
+    folderCovers.set(key, "pending");
+    const q = new URLSearchParams({ artist: a.artist, album: a.album, album_artist: a.album_artist });
+    fetch("/api/covers?" + q).then((r) => r.ok ? r.json() : { exists: false }).then((b) => {
+      folderCovers.set(key, !!b.exists);
+      refresh();
+    }).catch(() => folderCovers.delete(key));
+  }
+  return folderCovers.get(key) === true;
 }
 
-function checkFolderCover(eff) {
-  const key = albumKey(eff);
-  if (!key || folderCovers.has(key)) return;
-  folderCovers.set(key, "pending");
-  const q = new URLSearchParams({ artist: eff.artist || "", album: eff.album || "", album_artist: eff.album_artist || "" });
-  fetch("/api/covers?" + q).then((r) => r.ok ? r.json() : { exists: false }).then((b) => {
-    folderCovers.set(key, !!b.exists);
-    if (b.exists) refresh();
-  }).catch(() => folderCovers.delete(key));
+function batchCover() {
+  return state.files.some((e) => e.status !== "done" && e.fileTags?.cover);
+}
+
+function coverState(entry, a) {
+  if (state.cover) return "picked";
+  if (entry.fileTags?.cover) return "own";
+  if (entry.serverMissing.includes("cover")) return folderCover(a) ? "folder" : "";
+  if (batchCover()) return "album";
+  if (folderCover(a)) return "folder";
+  return entry.fileTags ? "" : "unknown";
 }
 
 function missingOf(entry) {
-  if (!entry.fileTags) {
-    return entry.serverMissing.filter((k) => !present(k, k === "cover" ? entry.typed.cover || state.shared.cover : entry.typed[k]));
+  const a = album();
+  const miss = [];
+  if (!present("title", entry.title)) miss.push("title");
+  if (!present("artist", a.artist)) miss.push("artist");
+  if (!present("album", a.album)) miss.push("album");
+  if (!present("track", entry.track)) miss.push("track");
+  if (!coverState(entry, a)) miss.push("cover");
+  return miss;
+}
+
+function prefillAlbum() {
+  const readable = pending().filter((e) => e.fileTags);
+  for (const k of ALBUM_FIELDS) {
+    if (state.edited.has(k)) continue;
+    ui.album[k].value = mostCommon(readable.map((e) => e.fileTags[k]));
   }
-  const eff = effective(entry);
-  const miss = missingFields(eff);
-  if (!miss.includes("cover")) return miss;
-  checkFolderCover(eff);
-  return coverElsewhere(entry, eff) ? miss.filter((k) => k !== "cover") : miss;
+}
+
+function resetAlbum() {
+  state.edited = new Set();
+  state.cover = null;
+  for (const k of ALBUM_FIELDS) ui.album[k].value = "";
+  ui.coverInput.value = "";
 }
 
 function addFiles(list) {
+  if (!list.length) return;
+  if (!pending().length) resetAlbum();
   for (const file of list) {
-    const entry = { id: state.nextId++, file, fileTags: undefined, typed: {}, serverMissing: [], status: "reading", message: "" };
+    const guess = fromFileName(file.name);
+    const entry = { id: state.nextId++, file, fileTags: undefined, picture: null, title: guess.title, track: guess.track, disc: guess.disc,
+      serverMissing: [], status: "reading" };
     state.files.push(entry);
     entry.el = buildRow(entry);
     ui.list.append(entry.el.row);
-    readTags(file).then((tags) => {
+    readTags(file).then(({ tags, picture }) => {
       entry.fileTags = tags;
+      entry.picture = picture?.data?.length ? picture : null;
       entry.status = "pending";
+      if (tags) {
+        if (present("title", tags.title)) entry.title = tags.title;
+        if (present("track", tags.track)) entry.track = String(trackNumber(tags.track));
+        if (present("track", tags.disc)) entry.disc = String(trackNumber(tags.disc));
+      }
       buildFields(entry);
+      prefillAlbum();
+      sortRows();
       refresh();
     });
   }
@@ -104,59 +139,75 @@ function addFiles(list) {
 
 function buildRow(entry) {
   const chips = h("div", { class: "chips" });
-  const fields = h("div", { class: "fields" });
+  const fields = h("div", { class: "song" });
   const bar = h("i");
   const msg = h("div", { class: "msg" });
   const state_ = h("span", { class: "state" }, "reading tags…");
   const remove = h("button", { class: "icon", title: "Remove", onclick: () => removeEntry(entry) }, "×");
   const row = h("div", { class: "row" },
     h("div", { class: "row-head" }, h("span", { class: "fn" }, entry.file.name), state_, remove),
-    chips, fields, h("div", { class: "progress" }, bar), msg);
-  return { row, chips, fields, bar, msg, state: state_, remove };
+    fields, chips, h("div", { class: "progress" }, bar), msg);
+  return { row, chips, fields, bar, msg, state: state_, remove, inputs: {} };
 }
 
-function input(entry, key) {
-  if (key === "cover") {
-    return h("label", { class: "field" }, h("span", {}, LABELS.cover),
-      h("input", { type: "file", accept: "image/jpeg,image/png", onchange: (e) => { entry.typed.cover = e.target.files[0] || null; refresh(); } }));
-  }
-  return h("label", { class: "field" }, h("span", {}, LABELS[key]),
-    h("input", {
-      type: key === "track" || key === "year" ? "number" : "text",
-      min: key === "track" ? "1" : null,
-      value: entry.typed[key] || "",
-      placeholder: entry.fileTags ? "required" : "only if the file lacks it",
-      oninput: (e) => { entry.typed[key] = e.target.value; refresh(); },
-    }));
+function rowInput(entry, key) {
+  const numeric = key !== "title";
+  const el = h("input", {
+    type: numeric ? "number" : "text",
+    min: numeric ? "1" : null,
+    inputmode: numeric ? "numeric" : null,
+    value: entry[key] || "",
+    placeholder: "required",
+    "aria-label": LABELS[key] + " for " + entry.file.name,
+    oninput: (e) => {
+      entry[key] = e.target.value;
+      entry.serverMissing = entry.serverMissing.filter((k) => k !== key);
+      refresh();
+    },
+    onchange: () => { if (key !== "title") { sortRows(); refresh(); } },
+  });
+  entry.el.inputs[key] = el;
+  return h("label", { class: "field " + key }, h("span", {}, LABELS[key]), el);
 }
 
 function buildFields(entry) {
-  const keys = new Set(entry.serverMissing);
-  if (entry.fileTags) for (const k of missingFields(entry.fileTags)) keys.add(k);
-  entry.el.fields.replaceChildren(...REQUIRED.filter((k) => keys.has(k)).map((k) => input(entry, k)));
+  const keys = present("track", entry.disc) ? [...ROW_FIELDS, "disc"] : ROW_FIELDS;
+  entry.el.fields.replaceChildren(...keys.map((k) => rowInput(entry, k)));
+}
+
+function sortKey(e) {
+  return [trackNumber(e.disc) || 1, trackNumber(e.track) || 1e6, e.file.name];
+}
+
+function sortRows() {
+  const sorted = [...state.files].sort((x, y) => {
+    const a = sortKey(x), b = sortKey(y);
+    return a[0] - b[0] || a[1] - b[1] || a[2].localeCompare(b[2]);
+  });
+  const order = state.files.map((e) => e.id).join();
+  state.files = sorted;
+  if (sorted.map((e) => e.id).join() !== order) ui.list.append(...sorted.map((e) => e.el.row));
 }
 
 function chip(text, cls) {
   return h("span", { class: "chip " + cls }, text);
 }
 
-function renderChips(entry) {
+const COVER_CHIPS = {
+  picked: ["picked cover", "ok"],
+  own: ["own cover", "ok"],
+  album: ["album cover", "ok"],
+  folder: ["cover in library", "ok"],
+  unknown: ["cover checked on upload", "warn"],
+};
+
+function renderChips(entry, miss) {
   const el = entry.el.chips;
-  if (entry.status === "reading") return el.replaceChildren();
-  if (!entry.fileTags && !entry.serverMissing.length) {
-    return el.replaceChildren(chip("tags checked on upload", "warn"));
-  }
-  const eff = entry.fileTags ? effective(entry) : {};
-  const miss = new Set(missingOf(entry));
-  const out = [];
-  for (const k of REQUIRED) {
-    if (miss.has(k)) out.push(chip(LABELS[k] + " missing", "bad"));
-    else if (entry.fileTags) out.push(chip(k === "track" ? "track " + eff.track : k === "cover" ? (eff.cover ? "cover" : "album cover") : LABELS[k].toLowerCase(), "ok"));
-  }
-  if (entry.fileTags) {
-    out.push(chip(eff.album_artist ? "album artist" : "no album artist", eff.album_artist ? "ok" : "warn"));
-    out.push(chip(eff.year ? eff.year : "no year", eff.year ? "ok" : "warn"));
-  }
+  if (entry.status === "reading" || entry.status === "done") return el.replaceChildren();
+  const out = miss.map((k) => chip(LABELS[k] + " missing", "bad"));
+  const c = COVER_CHIPS[coverState(entry, album())];
+  if (c) out.push(chip(c[0], c[1]));
+  if (entry.fileTags === null) out.push(chip("tags not readable here", "warn"));
   el.replaceChildren(...out);
 }
 
@@ -164,30 +215,60 @@ function removeEntry(entry) {
   if (entry.status === "uploading") return;
   state.files = state.files.filter((e) => e !== entry);
   entry.el.row.remove();
+  prefillAlbum();
   refresh();
+}
+
+let previewUrl = "";
+
+function renderCover(a) {
+  const withPic = state.cover ? null : pending().find((e) => e.picture);
+  const src = state.cover || withPic;
+  if (src !== ui.coverSrc) {
+    ui.coverSrc = src;
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    let blob = state.cover;
+    if (withPic) {
+      const fmt = String(withPic.picture.format || "image/jpeg");
+      blob = new Blob([new Uint8Array(withPic.picture.data)], { type: fmt.startsWith("image/") ? fmt : "image/" + fmt });
+    }
+    previewUrl = blob ? URL.createObjectURL(blob) : "";
+    ui.preview.replaceChildren(previewUrl ? h("img", { src: previewUrl, alt: "Cover preview" }) : h("span", {}, "No cover"));
+  }
+  if (state.cover) ui.coverNote.textContent = "picked image, replaces the album's cover";
+  else if (withPic) ui.coverNote.textContent = "embedded in " + withPic.file.name;
+  else if (folderCover(a)) ui.coverNote.textContent = "album folder already has a cover";
+  else ui.coverNote.textContent = "pick a JPEG or PNG";
 }
 
 function refresh() {
   let ready = 0, blocked = 0, done = 0;
-  const needShared = state.files.some((e) => e.status !== "done" && e.fileTags &&
-    ["artist", "album", "cover"].some((k) => !present(k, e.fileTags[k])));
-  ui.sharedBox.hidden = !needShared;
+  const open = pending();
+  ui.albumBox.hidden = open.length === 0;
+  const a = album();
+  const needAlbum = new Set();
   for (const e of state.files) {
-    renderChips(e);
-    const miss = e.status === "reading" ? [] : missingOf(e);
     e.el.row.dataset.status = e.status;
-    if (e.status === "done") { done++; e.el.state.textContent = "in library"; continue; }
+    if (e.status === "done") { done++; e.el.state.textContent = "in library"; renderChips(e, []); continue; }
+    if (e.status === "reading") { blocked++; renderChips(e, []); continue; }
+    const miss = missingOf(e);
+    renderChips(e, miss);
+    for (const k of miss) if (ALBUM_FIELDS.includes(k)) needAlbum.add(k);
+    for (const k of ROW_FIELDS) e.el.inputs[k]?.classList.toggle("need", miss.includes(k));
     if (e.status === "uploading") { e.el.state.textContent = "uploading…"; continue; }
-    if (e.status === "reading") { blocked++; continue; }
     if (miss.length) { blocked++; e.el.state.textContent = "needs " + miss.map((k) => LABELS[k].toLowerCase()).join(", "); }
     else { ready++; e.el.state.textContent = e.status === "error" ? "retry" : "ready"; }
     e.el.row.classList.toggle("blocked", miss.length > 0);
   }
-  const pending = ready + blocked;
+  for (const k of ALBUM_FIELDS) ui.album[k].classList.toggle("need", needAlbum.has(k));
+  if (open.length) renderCover(a);
+  const coverMissing = open.some((e) => e.status !== "reading" && missingOf(e).includes("cover"));
+  ui.coverBox.classList.toggle("need", coverMissing);
+  const total = ready + blocked;
   ui.upload.disabled = state.busy || ready === 0 || blocked > 0;
-  ui.upload.textContent = state.busy ? "Uploading…" : pending ? `Upload ${pending} file${pending === 1 ? "" : "s"}` : "Upload";
+  ui.upload.textContent = state.busy ? "Uploading…" : total ? `Upload ${total} file${total === 1 ? "" : "s"}` : "Upload";
   const parts = [];
-  if (pending) parts.push(`${ready} of ${pending} ready`);
+  if (total) parts.push(`${ready} of ${total} ready`);
   if (blocked) parts.push(`${blocked} need${blocked === 1 ? "s" : ""} tags`);
   if (done) parts.push(`${done} uploaded`);
   ui.summary.textContent = parts.length ? parts.join(" · ") : "No files picked yet";
@@ -195,13 +276,15 @@ function refresh() {
 }
 
 function tagPayload(entry) {
+  const a = album();
   const out = {};
-  const shared = entry.fileTags ? sharedFor(entry) : {};
-  for (const k of ["title", "artist", "album", "track", "album_artist", "year", "disc"]) {
-    const t = String(entry.typed[k] ?? "").trim();
-    if (t) out[k] = t;
-    else if (entry.fileTags && !present(k, entry.fileTags[k]) && shared[k]) out[k] = String(shared[k]).trim();
+  for (const k of ROW_FIELDS) {
+    const v = String(entry[k] ?? "").trim();
+    if (v) out[k] = v;
   }
+  const disc = String(entry.disc ?? "").trim();
+  if (disc) out.disc = disc;
+  for (const k of ALBUM_FIELDS) if (a[k]) out[k] = a[k];
   return out;
 }
 
@@ -209,8 +292,7 @@ function send(entry) {
   return new Promise((resolve) => {
     const fd = new FormData();
     fd.append("tags", JSON.stringify(tagPayload(entry)));
-    const cover = entry.typed.cover || (entry.fileTags?.cover ? null : state.shared.cover);
-    if (cover) fd.append("cover", cover, cover.name);
+    if (state.cover) fd.append("cover", state.cover, state.cover.name);
     fd.append("file", entry.file, entry.file.name);
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/uploads");
@@ -225,9 +307,15 @@ function send(entry) {
   });
 }
 
+function setRowEnabled(entry, on) {
+  for (const el of Object.values(entry.el.inputs)) el.disabled = !on;
+}
+
 async function uploadAll() {
   if (state.busy) return;
   state.busy = true;
+  for (const k of ALBUM_FIELDS) ui.album[k].disabled = true;
+  ui.coverInput.disabled = true;
   refresh();
   const order = [...state.files].sort((x, y) => (y.fileTags?.cover ? 1 : 0) - (x.fileTags?.cover ? 1 : 0));
   for (const e of order) {
@@ -235,27 +323,26 @@ async function uploadAll() {
     e.status = "uploading";
     e.el.msg.textContent = "";
     e.el.bar.style.width = "0";
+    setRowEnabled(e, false);
     refresh();
     const { status, body } = await send(e);
+    setRowEnabled(e, true);
     if (status === 201) {
       e.status = "done";
       e.el.msg.textContent = "Added: " + (body.libraryPath || body.filename);
       e.el.fields.replaceChildren();
-      const key = albumKey({ artist: body.artist, album: body.album, ...(e.fileTags ? effective(e) : {}) });
+      e.el.inputs = {};
+      const key = albumKey(album());
       if (key) folderCovers.set(key, true);
     } else if (status === 422 && body.missing) {
       e.status = "error";
       e.serverMissing = body.missing;
       e.el.msg.textContent = "Server: missing " + body.missing.map((k) => LABELS[k]?.toLowerCase() || k).join(", ");
-      const t = body.tags || {};
-      e.fileTags = { title: t.title || "", artist: t.artist || "", album: t.album || "", track: t.track || "",
-        album_artist: t.album_artist || "", year: t.year || "", disc: t.disc || "", cover: !body.missing.includes("cover") };
-      e.typed = {};
-      buildFields(e);
+      if (body.missing.includes("cover")) folderCovers.delete(albumKey(album()));
     } else if (status === 401) {
       e.status = "error";
       e.el.msg.textContent = ERRORS.unauthorized;
-      state.busy = false;
+      unlockAlbum();
       refresh();
       onUnauthorized();
       return;
@@ -265,9 +352,15 @@ async function uploadAll() {
     }
     refresh();
   }
-  state.busy = false;
+  unlockAlbum();
   refresh();
   loadRecent();
+}
+
+function unlockAlbum() {
+  state.busy = false;
+  for (const k of ALBUM_FIELDS) ui.album[k].disabled = false;
+  ui.coverInput.disabled = false;
 }
 
 let onUnauthorized = () => {};
@@ -282,13 +375,20 @@ async function loadRecent() {
   ui.recentBox.hidden = list.length === 0;
 }
 
-function sharedInput(key) {
-  return h("label", { class: "field" }, h("span", {}, LABELS[key]),
-    h("input", { type: key === "year" ? "number" : "text", oninput: refresh }));
+function albumInput(key) {
+  const el = h("input", {
+    type: "text",
+    inputmode: key === "year" ? "numeric" : null,
+    placeholder: key === "artist" || key === "album" ? "required" : "optional",
+    oninput: () => { state.edited.add(key); refresh(); },
+  });
+  ui.album[key] = el;
+  return h("label", { class: "field" }, h("span", {}, LABELS[key]), el);
 }
 
 export function renderUpload(container, opts = {}) {
-  state = { files: [], shared: { cover: null }, busy: false, nextId: 1 };
+  state = { files: [], cover: null, edited: new Set(), busy: false, nextId: 1 };
+  ui = { album: {} };
   if (opts.onUnauthorized) onUnauthorized = opts.onUnauthorized;
   const picker = h("input", { type: "file", multiple: true, accept: "audio/*,.flac,.mp3,.m4a,.ogg,.opus", hidden: true,
     onchange: (e) => { addFiles(e.target.files); e.target.value = ""; } });
@@ -298,16 +398,20 @@ export function renderUpload(container, opts = {}) {
     ondragover: (e) => { e.preventDefault(); drop.classList.add("over"); },
     ondragleave: () => drop.classList.remove("over"),
     ondrop: (e) => { e.preventDefault(); drop.classList.remove("over"); addFiles(e.dataTransfer.files); },
-  }, h("strong", {}, "Drop audio files here"), h("span", {}, "or tap to pick · FLAC, MP3, M4A, OGG, Opus"), picker);
+  }, h("strong", {}, "Drop an album's audio files here"), h("span", {}, "or tap to pick · FLAC, MP3, M4A, OGG, Opus"), picker);
 
-  ui.shared = Object.fromEntries(SHARED_FIELDS.map((k) => [k, null]));
-  const sharedFields = SHARED_FIELDS.map((k) => { const el = sharedInput(k); ui.shared[k] = el.querySelector("input"); return el; });
-  const coverInput = h("label", { class: "field" }, h("span", {}, LABELS.cover),
-    h("input", { type: "file", accept: "image/jpeg,image/png", onchange: (e) => { state.shared.cover = e.target.files[0] || null; refresh(); } }));
-  ui.sharedBox = h("section", { class: "card shared", hidden: true },
-    h("h2", {}, "For all files that lack it"),
-    h("p", { class: "muted" }, "Fills in album fields and cover art only where a file has none."),
-    h("div", { class: "fields" }, ...sharedFields, coverInput));
+  ui.coverInput = h("input", { type: "file", accept: "image/jpeg,image/png", onchange: (e) => {
+    state.cover = e.target.files[0] || null;
+    refresh();
+  } });
+  ui.preview = h("div", { class: "preview" }, h("span", {}, "No cover"));
+  ui.coverNote = h("span", { class: "muted" });
+  ui.coverBox = h("div", { class: "cover" }, ui.preview,
+    h("label", { class: "field" }, h("span", {}, LABELS.cover), ui.coverInput, ui.coverNote));
+  ui.albumBox = h("section", { class: "card album", hidden: true },
+    h("h2", {}, "Album"),
+    h("p", { class: "muted" }, "Applies to every file below. Prefilled from the files' tags."),
+    h("div", { class: "album-grid" }, ui.coverBox, h("div", { class: "fields" }, ...ALBUM_FIELDS.map(albumInput))));
 
   ui.list = h("div", { class: "list" });
   ui.summary = h("span", { class: "muted" });
@@ -321,8 +425,9 @@ export function renderUpload(container, opts = {}) {
   ui.recentBox = h("section", { class: "card", hidden: true }, h("h2", {}, "Recent uploads"), ui.recent);
 
   container.replaceChildren(
-    drop, ui.sharedBox,
-    h("section", { class: "card files" }, ui.list, h("div", { class: "foot" }, ui.summary, h("div", { class: "actions" }, ui.clear, ui.upload))),
+    drop, ui.albumBox,
+    h("section", { class: "card files" }, h("h2", {}, "Songs"), ui.list,
+      h("div", { class: "foot" }, ui.summary, h("div", { class: "actions" }, ui.clear, ui.upload))),
     ui.recentBox);
   refresh();
   loadRecent();

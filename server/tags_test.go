@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -225,6 +226,71 @@ func TestUploadTypedTagsAndCover(t *testing.T) {
 	entries, _ := os.ReadDir(filepath.Join(a.cfg.IncomingDir(), "max"))
 	if len(entries) != 0 {
 		t.Fatalf("incoming not cleaned: %v", entries)
+	}
+}
+
+func png(t *testing.T) []byte {
+	t.Helper()
+	img := filepath.Join(t.TempDir(), "c.png")
+	if b, err := exec.Command("ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=c=green:s=32x32:d=1", "-frames:v", "1", img).CombinedOutput(); err != nil {
+		t.Fatalf("%v %s", err, b)
+	}
+	data, _ := os.ReadFile(img)
+	return data
+}
+
+func TestPickedCoverReplacesAlbumCover(t *testing.T) {
+	needFFmpeg(t)
+	a := newTestApp(t)
+	cookie := login(t, a)
+	first := makeAudio(t, "a.mp3", true, "title", "One", "artist", "Band", "album", "Covers", "track", "1")
+	rec, body := postUpload(t, a, cookie, formPart{"file", "a.mp3", first})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("%d %s", rec.Code, rec.Body)
+	}
+	dir := filepath.Dir(filepath.Join(a.cfg.LibraryDir(), body["libraryPath"].(string)))
+	extracted, err := os.ReadFile(filepath.Join(dir, "cover.jpg"))
+	if err != nil {
+		t.Fatal("embedded cover not extracted")
+	}
+
+	picked := jpeg(t)
+	second := makeAudio(t, "b.mp3", false, "title", "Two", "artist", "Band", "album", "Covers", "track", "2")
+	rec, _ = postUpload(t, a, cookie, formPart{"cover", "c.jpg", picked}, formPart{"file", "b.mp3", second})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("%d %s", rec.Code, rec.Body)
+	}
+	got, _ := os.ReadFile(filepath.Join(dir, "cover.jpg"))
+	if !bytes.Equal(got, picked) || bytes.Equal(got, extracted) {
+		t.Fatal("picked cover did not replace cover.jpg")
+	}
+
+	third := makeAudio(t, "c.mp3", true, "title", "Three", "artist", "Band", "album", "Covers", "track", "3")
+	rec, _ = postUpload(t, a, cookie, formPart{"file", "c.mp3", third})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("%d %s", rec.Code, rec.Body)
+	}
+	if got, _ := os.ReadFile(filepath.Join(dir, "cover.jpg")); !bytes.Equal(got, picked) {
+		t.Fatal("embedded cover overwrote an existing cover.jpg")
+	}
+
+	pic := png(t)
+	fourth := makeAudio(t, "d.mp3", false, "title", "Four", "artist", "Band", "album", "Covers", "track", "4")
+	rec, _ = postUpload(t, a, cookie, formPart{"cover", "c.png", pic}, formPart{"file", "d.mp3", fourth})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("%d %s", rec.Code, rec.Body)
+	}
+	if got, _ := os.ReadFile(filepath.Join(dir, "cover.png")); !bytes.Equal(got, pic) {
+		t.Fatal("cover.png not written")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "cover.jpg")); !os.IsNotExist(err) {
+		t.Fatal("old cover.jpg kept next to the new cover.png")
+	}
+	entries, _ := os.ReadDir(dir)
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), ".cover-") {
+			t.Fatalf("temp cover left: %s", e.Name())
+		}
 	}
 }
 
