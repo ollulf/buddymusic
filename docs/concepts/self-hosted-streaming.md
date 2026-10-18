@@ -2,6 +2,8 @@
 
 Visual concept page: https://claude.ai/artifact/QjNmhD4zoo48DB1jHPSh9K
 
+Step-by-step laptop setup, with what Claude Code can do for you: [../setup-checklist.md](../setup-checklist.md)
+
 ## Goal
 
 An always-on Windows laptop serves the music library. It starts out just for me (phase 1) and grows into **buddymusic**: my own app that friends use too, with profiles and shared uploads.
