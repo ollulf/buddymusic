@@ -56,7 +56,26 @@ func fakeNavidrome(users map[string]string) http.Handler {
 			w.Write([]byte(`{"subsonic-response":{"status":"failed","error":{"code":50,"message":"not authorized"}}}`))
 			return
 		}
-		w.Write([]byte(`{"subsonic-response":{"status":"ok","scanStatus":{"scanning":true}}}`))
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/getAlbum.view") && q.Get("id") == "missing":
+			w.Write([]byte(`{"subsonic-response":{"status":"failed","error":{"code":70,"message":"not found"}}}`))
+		case strings.HasSuffix(r.URL.Path, "/getAlbum.view"):
+			w.Write([]byte(`{"subsonic-response":{"status":"ok","album":{"id":"` + q.Get("id") + `","name":"Blue","song":[{"id":"s1","title":"One"}]}}}`))
+		case strings.HasSuffix(r.URL.Path, "/getAlbumList2.view"):
+			w.Write([]byte(`{"subsonic-response":{"status":"ok","albumList2":{"album":[{"id":"al1","name":"Blue","type":"` + q.Get("type") + `"}]}}}`))
+		case strings.HasSuffix(r.URL.Path, "/stream.view"):
+			w.Header().Set("Content-Type", "audio/mpeg")
+			w.Header().Set("Accept-Ranges", "bytes")
+			if rg := r.Header.Get("Range"); rg != "" {
+				w.Header().Set("Content-Range", "bytes 2-5/10")
+				w.WriteHeader(http.StatusPartialContent)
+				w.Write([]byte("2345"))
+				return
+			}
+			w.Write([]byte("0123456789" + q.Get("format") + q.Get("maxBitRate")))
+		default:
+			w.Write([]byte(`{"subsonic-response":{"status":"ok","scanStatus":{"scanning":true}}}`))
+		}
 	})
 }
 
