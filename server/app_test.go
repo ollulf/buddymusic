@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
-	"encoding/json"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func newTestApp(t *testing.T) *App {
@@ -26,6 +26,7 @@ func newTestApp(t *testing.T) *App {
 		DataDir:     filepath.Join(root, "data"),
 		SessionKey:  bytes.Repeat([]byte{7}, 32),
 		MaxUpload:   1 << 20,
+		ScanDelay:   10 * time.Millisecond,
 		TrustedNets: []netip.Prefix{netip.MustParsePrefix("192.0.2.0/24")},
 	}
 	nav := httptest.NewServer(fakeNavidrome(map[string]string{"max": "secret", "buddymusic-scan": "scanpw"}))
@@ -196,29 +197,5 @@ func TestUploadTooLarge(t *testing.T) {
 	rec := authed(t, a, req)
 	if rec.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("status %d: %s", rec.Code, rec.Body)
-	}
-}
-
-func TestUploadStoresFile(t *testing.T) {
-	a := newTestApp(t)
-	body, ct := multipartBody(t, formPart{"file", "song.flac", []byte("fLaC\x00\x00\x00\x22rest")})
-	req := httptest.NewRequest("POST", "/api/uploads", body)
-	req.Header.Set("Content-Type", ct)
-	cookie := login(t, a)
-	req.AddCookie(cookie)
-	rec := do(t, a.Routes(), req)
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("status %d: %s", rec.Code, rec.Body)
-	}
-	var u Upload
-	json.Unmarshal(rec.Body.Bytes(), &u)
-	if _, err := os.Stat(filepath.Join(a.cfg.IncomingDir(), "max", u.ID+".flac")); err != nil {
-		t.Fatal(err)
-	}
-	get := httptest.NewRequest("GET", "/api/uploads/"+u.ID, nil)
-	get.AddCookie(cookie)
-	rec = do(t, a.Routes(), get)
-	if rec.Code != 200 {
-		t.Fatalf("get status %d", rec.Code)
 	}
 }

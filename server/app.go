@@ -13,10 +13,12 @@ type App struct {
 	store   *Store
 	nav     *Navidrome
 	limiter loginLimiter
+	scanner *Scanner
 }
 
 func NewApp(cfg *Config, store *Store) *App {
-	return &App{cfg: cfg, store: store, nav: NewNavidrome(cfg.NavidromeURL)}
+	nav := NewNavidrome(cfg.NavidromeURL)
+	return &App{cfg: cfg, store: store, nav: nav, scanner: NewScanner(nav, cfg.ScanUser, cfg.ScanPassword, cfg.ScanDelay)}
 }
 
 func (a *App) Routes() http.Handler {
@@ -28,6 +30,7 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("POST /api/uploads", a.requireUser(a.handleUpload))
 	mux.Handle("GET /api/uploads", a.requireUser(a.handleListUploads))
 	mux.Handle("GET /api/uploads/{id}", a.requireUser(a.handleGetUpload))
+	mux.Handle("GET /api/covers", a.requireUser(a.handleCoverExists))
 	mux.Handle("GET /", a.webHandler())
 	return a.trustedOnly(mux)
 }

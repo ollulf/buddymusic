@@ -49,11 +49,41 @@ function sharedFor(entry) {
   return entry.fileTags?.cover ? { ...s, cover: null } : s;
 }
 
+function albumKey(t) {
+  const artist = String(t.album_artist || t.artist || "").trim().toLowerCase();
+  const album = String(t.album || "").trim().toLowerCase();
+  return artist && album ? artist + "\u0000" + album : "";
+}
+
+const folderCovers = new Map();
+
+function coverElsewhere(entry, eff) {
+  const key = albumKey(eff);
+  if (!key) return false;
+  if (folderCovers.get(key) === true) return true;
+  return state.files.some((o) => o !== entry && o.fileTags?.cover && albumKey(effective(o)) === key);
+}
+
+function checkFolderCover(eff) {
+  const key = albumKey(eff);
+  if (!key || folderCovers.has(key)) return;
+  folderCovers.set(key, "pending");
+  const q = new URLSearchParams({ artist: eff.artist || "", album: eff.album || "", album_artist: eff.album_artist || "" });
+  fetch("/api/covers?" + q).then((r) => r.ok ? r.json() : { exists: false }).then((b) => {
+    folderCovers.set(key, !!b.exists);
+    if (b.exists) refresh();
+  }).catch(() => folderCovers.delete(key));
+}
+
 function missingOf(entry) {
   if (!entry.fileTags) {
     return entry.serverMissing.filter((k) => !present(k, k === "cover" ? entry.typed.cover || state.shared.cover : entry.typed[k]));
   }
-  return missingFields(effective(entry));
+  const eff = effective(entry);
+  const miss = missingFields(eff);
+  if (!miss.includes("cover")) return miss;
+  checkFolderCover(eff);
+  return coverElsewhere(entry, eff) ? miss.filter((k) => k !== "cover") : miss;
 }
 
 function addFiles(list) {
@@ -121,7 +151,7 @@ function renderChips(entry) {
   const out = [];
   for (const k of REQUIRED) {
     if (miss.has(k)) out.push(chip(LABELS[k] + " missing", "bad"));
-    else if (entry.fileTags) out.push(chip(k === "track" ? "track " + eff.track : k === "cover" ? "cover" : LABELS[k].toLowerCase(), "ok"));
+    else if (entry.fileTags) out.push(chip(k === "track" ? "track " + eff.track : k === "cover" ? (eff.cover ? "cover" : "album cover") : LABELS[k].toLowerCase(), "ok"));
   }
   if (entry.fileTags) {
     out.push(chip(eff.album_artist ? "album artist" : "no album artist", eff.album_artist ? "ok" : "warn"));
@@ -199,7 +229,8 @@ async function uploadAll() {
   if (state.busy) return;
   state.busy = true;
   refresh();
-  for (const e of state.files) {
+  const order = [...state.files].sort((x, y) => (y.fileTags?.cover ? 1 : 0) - (x.fileTags?.cover ? 1 : 0));
+  for (const e of order) {
     if (e.status === "done" || e.status === "reading" || missingOf(e).length) continue;
     e.status = "uploading";
     e.el.msg.textContent = "";
@@ -210,13 +241,16 @@ async function uploadAll() {
       e.status = "done";
       e.el.msg.textContent = "Added: " + (body.libraryPath || body.filename);
       e.el.fields.replaceChildren();
+      const key = albumKey({ artist: body.artist, album: body.album, ...(e.fileTags ? effective(e) : {}) });
+      if (key) folderCovers.set(key, true);
     } else if (status === 422 && body.missing) {
       e.status = "error";
       e.serverMissing = body.missing;
       e.el.msg.textContent = "Server: missing " + body.missing.map((k) => LABELS[k]?.toLowerCase() || k).join(", ");
-      e.typed = { ...e.typed };
-      for (const k of body.missing) if (k === "cover") e.typed.cover = null; else delete e.typed[k];
-      if (e.fileTags) for (const k of body.missing) if (k in e.fileTags) e.fileTags[k] = k === "cover" ? false : "";
+      const t = body.tags || {};
+      e.fileTags = { title: t.title || "", artist: t.artist || "", album: t.album || "", track: t.track || "",
+        album_artist: t.album_artist || "", year: t.year || "", disc: t.disc || "", cover: !body.missing.includes("cover") };
+      e.typed = {};
       buildFields(e);
     } else if (status === 401) {
       e.status = "error";
@@ -243,7 +277,8 @@ async function loadRecent() {
   if (!res.ok) return;
   const list = await res.json();
   ui.recent.replaceChildren(...list.slice(0, 20).map((u) =>
-    h("li", {}, h("span", { class: "fn" }, u.libraryPath || u.filename), h("span", { class: "chip " + (u.status === "scanned" || u.status === "stored" ? "ok" : "warn") }, u.status))));
+    h("li", {}, h("span", { class: "fn" }, u.libraryPath || u.filename), h("span", { class: "chip " + (u.status === "in-library" ? "ok" : "bad") },
+      u.status === "in-library" ? "in library" : "rejected" + (u.missing?.length ? ": " + u.missing.join(", ") : "")))));
   ui.recentBox.hidden = list.length === 0;
 }
 

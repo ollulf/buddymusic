@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -216,11 +217,78 @@ func (a *App) handleUpload(w http.ResponseWriter, r *http.Request, user string) 
 		writeError(w, http.StatusInternalServerError, "save-failed")
 		return
 	}
-	u := &Upload{ID: id, User: user, Filename: form.filename, Status: "stored", CreatedAt: time.Now().UnixMilli()}
+	defer os.Remove(stored)
+	u := &Upload{ID: id, User: user, Filename: form.filename, CreatedAt: time.Now().UnixMilli()}
+	status, body := a.placeUpload(r.Context(), u, form, stored)
 	if err := a.store.SaveUpload(u); err != nil {
 		log.Printf("upload %s: db: %v", id, err)
 	}
-	writeJSON(w, http.StatusCreated, u)
+	writeJSON(w, status, body)
+}
+
+func (a *App) placeUpload(ctx context.Context, u *Upload, form *uploadForm, stored string) (int, any) {
+	fail := func(status int, code string) (int, any) {
+		u.Status = "rejected"
+		return status, map[string]string{"error": code}
+	}
+	tags, err := probe(ctx, stored)
+	if errors.Is(err, errNotAudio) {
+		return fail(http.StatusUnsupportedMediaType, "unsupported-type")
+	}
+	if err != nil {
+		log.Printf("upload %s: %v", u.ID, err)
+		return fail(http.StatusUnprocessableEntity, "probe-failed")
+	}
+	typed, err := parseTyped(form.tagsJSON)
+	if err != nil {
+		return fail(http.StatusBadRequest, "bad-tags")
+	}
+	fields := mergeTags(tags, typed)
+	u.Title, u.Artist, u.Album, u.TrackNo = fields["title"], fields["artist"], fields["album"], number(fields["track"])
+	dir := a.albumDir(u.User, fields)
+	hasCover := tags.Cover || form.cover != nil || (fields["album"] != "" && fields["artist"] != "" && hasCoverFile(dir))
+	if missing := missingTags(fields, hasCover); len(missing) > 0 {
+		u.Status, u.Missing = "rejected", missing
+		return http.StatusUnprocessableEntity, map[string]any{"error": "missing-tags", "missing": missing, "tags": fields}
+	}
+	src := stored
+	if len(typed) > 0 {
+		tagged := strings.TrimSuffix(stored, form.ext) + ".tagged" + form.ext
+		defer os.Remove(tagged)
+		if err := writeTags(ctx, stored, tagged, form.ext, typed); err != nil {
+			log.Printf("upload %s: %v", u.ID, err)
+			return fail(http.StatusInternalServerError, "tag-write-failed")
+		}
+		src = tagged
+	}
+	if err := os.MkdirAll(dir, 0o775|os.ModeSetgid); err != nil {
+		log.Printf("upload %s: mkdir: %v", u.ID, err)
+		return fail(http.StatusInternalServerError, "save-failed")
+	}
+	dst := filepath.Join(dir, trackFileName(fields, form.ext))
+	if err := moveNoReplace(src, dst); err != nil {
+		if errors.Is(err, errExists) {
+			return fail(http.StatusConflict, "exists")
+		}
+		log.Printf("upload %s: move: %v", u.ID, err)
+		return fail(http.StatusInternalServerError, "save-failed")
+	}
+	os.Chmod(dst, 0o664)
+	if !hasCoverFile(dir) {
+		var err error
+		if form.cover != nil {
+			err = writeNew(filepath.Join(dir, "cover"+sniffImage(form.cover)), form.cover)
+		} else if tags.Cover {
+			err = extractCover(ctx, dst, filepath.Join(dir, "cover.jpg"))
+		}
+		if err != nil && !errors.Is(err, os.ErrExist) {
+			log.Printf("upload %s: cover: %v", u.ID, err)
+		}
+	}
+	rel, _ := filepath.Rel(a.cfg.LibraryDir(), dst)
+	u.Status, u.LibraryPath = "in-library", rel
+	a.scanner.Trigger()
+	return http.StatusCreated, u
 }
 
 func (a *App) handleGetUpload(w http.ResponseWriter, r *http.Request, user string) {
@@ -243,4 +311,14 @@ func (a *App) handleListUploads(w http.ResponseWriter, r *http.Request, user str
 		return
 	}
 	writeJSON(w, http.StatusOK, list)
+}
+
+func (a *App) handleCoverExists(w http.ResponseWriter, r *http.Request, user string) {
+	q := r.URL.Query()
+	fields := map[string]string{}
+	for _, k := range []string{"artist", "album", "album_artist"} {
+		fields[k] = cleanTag(q.Get(k))
+	}
+	exists := fields["album"] != "" && (fields["artist"] != "" || fields["album_artist"] != "") && hasCoverFile(a.albumDir(user, fields))
+	writeJSON(w, http.StatusOK, map[string]bool{"exists": exists})
 }

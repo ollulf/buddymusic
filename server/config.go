@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Config struct {
@@ -21,6 +22,7 @@ type Config struct {
 	MaxUpload    int64
 	TrustedNets  []netip.Prefix
 	SecureCookie bool
+	ScanDelay    time.Duration
 }
 
 func env(key, def string) string {
@@ -39,6 +41,7 @@ func LoadConfig() (*Config, error) {
 		ScanUser:     env("SCAN_USER", "buddymusic-scan"),
 		ScanPassword: os.Getenv("SCAN_PASSWORD"),
 		SecureCookie: env("SECURE_COOKIE", "false") == "true",
+		ScanDelay:    10 * time.Second,
 	}
 	mb, err := strconv.Atoi(env("MAX_UPLOAD_MB", "200"))
 	if err != nil || mb <= 0 {
