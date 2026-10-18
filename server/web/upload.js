@@ -11,7 +11,7 @@ const ERRORS = {
   "unauthorized": "Logged out, please log in again",
 };
 
-const state = { files: [], shared: { cover: null }, busy: false, nextId: 1 };
+let state = { files: [], shared: { cover: null }, busy: false, nextId: 1 };
 
 const h = (tag, attrs = {}, ...kids) => {
   const el = document.createElement(tag);
@@ -253,6 +253,7 @@ function sharedInput(key) {
 }
 
 export function renderUpload(container, opts = {}) {
+  state = { files: [], shared: { cover: null }, busy: false, nextId: 1 };
   if (opts.onUnauthorized) onUnauthorized = opts.onUnauthorized;
   const picker = h("input", { type: "file", multiple: true, accept: "audio/*,.flac,.mp3,.m4a,.ogg,.opus", hidden: true,
     onchange: (e) => { addFiles(e.target.files); e.target.value = ""; } });

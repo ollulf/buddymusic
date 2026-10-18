@@ -9,17 +9,22 @@ import (
 )
 
 type App struct {
-	cfg   *Config
-	store *Store
+	cfg     *Config
+	store   *Store
+	nav     *Navidrome
+	limiter loginLimiter
 }
 
 func NewApp(cfg *Config, store *Store) *App {
-	return &App{cfg: cfg, store: store}
+	return &App{cfg: cfg, store: store, nav: NewNavidrome(cfg.NavidromeURL)}
 }
 
 func (a *App) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", a.handleHealth)
+	mux.HandleFunc("POST /api/login", a.handleLogin)
+	mux.HandleFunc("POST /api/logout", a.handleLogout)
+	mux.Handle("GET /api/me", a.requireUser(a.handleMe))
 	mux.Handle("POST /api/uploads", a.requireUser(a.handleUpload))
 	mux.Handle("GET /api/uploads", a.requireUser(a.handleListUploads))
 	mux.Handle("GET /api/uploads/{id}", a.requireUser(a.handleGetUpload))
@@ -32,12 +37,6 @@ func (a *App) handleHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 type userHandler func(w http.ResponseWriter, r *http.Request, user string)
-
-func (a *App) requireUser(h userHandler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		h(w, r, "dev")
-	})
-}
 
 func (a *App) trustedOnly(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

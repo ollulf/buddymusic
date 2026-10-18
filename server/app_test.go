@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"mime/multipart"
 	"net/http"
@@ -9,6 +11,7 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -25,12 +28,57 @@ func newTestApp(t *testing.T) *App {
 		MaxUpload:   1 << 20,
 		TrustedNets: []netip.Prefix{netip.MustParsePrefix("192.0.2.0/24")},
 	}
+	nav := httptest.NewServer(fakeNavidrome(map[string]string{"max": "secret", "buddymusic-scan": "scanpw"}))
+	t.Cleanup(nav.Close)
+	cfg.NavidromeURL = nav.URL
+	cfg.ScanUser = "buddymusic-scan"
+	cfg.ScanPassword = "scanpw"
 	store, err := OpenStore(filepath.Join(cfg.DataDir, "test.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { store.Close() })
 	return NewApp(cfg, store)
+}
+
+func fakeNavidrome(users map[string]string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		pw, ok := users[q.Get("u")]
+		sum := md5.Sum([]byte(pw + q.Get("s")))
+		w.Header().Set("Content-Type", "application/json")
+		if !ok || hex.EncodeToString(sum[:]) != q.Get("t") {
+			w.Write([]byte(`{"subsonic-response":{"status":"failed","error":{"code":40,"message":"Wrong username or password"}}}`))
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/startScan.view") && q.Get("u") != "buddymusic-scan" {
+			w.Write([]byte(`{"subsonic-response":{"status":"failed","error":{"code":50,"message":"not authorized"}}}`))
+			return
+		}
+		w.Write([]byte(`{"subsonic-response":{"status":"ok","scanStatus":{"scanning":true}}}`))
+	})
+}
+
+func login(t *testing.T, a *App) *http.Cookie {
+	t.Helper()
+	req := httptest.NewRequest("POST", "/api/login", strings.NewReader(`{"username":"Max","password":"secret"}`))
+	rec := do(t, a.Routes(), req)
+	if rec.Code != 200 {
+		t.Fatalf("login status %d: %s", rec.Code, rec.Body)
+	}
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == sessionCookie {
+			return c
+		}
+	}
+	t.Fatal("no session cookie")
+	return nil
+}
+
+func authed(t *testing.T, a *App, req *http.Request) *httptest.ResponseRecorder {
+	t.Helper()
+	req.AddCookie(login(t, a))
+	return do(t, a.Routes(), req)
 }
 
 type formPart struct {
@@ -129,11 +177,11 @@ func TestUploadRejectsNonAudio(t *testing.T) {
 	body, ct := multipartBody(t, formPart{"file", "fake.mp3", []byte("this is not audio at all")})
 	req := httptest.NewRequest("POST", "/api/uploads", body)
 	req.Header.Set("Content-Type", ct)
-	rec := do(t, a.Routes(), req)
+	rec := authed(t, a, req)
 	if rec.Code != http.StatusUnsupportedMediaType {
 		t.Fatalf("status %d: %s", rec.Code, rec.Body)
 	}
-	entries, _ := os.ReadDir(filepath.Join(a.cfg.IncomingDir(), "dev"))
+	entries, _ := os.ReadDir(filepath.Join(a.cfg.IncomingDir(), "max"))
 	if len(entries) != 0 {
 		t.Fatalf("leftover files: %v", entries)
 	}
@@ -145,7 +193,7 @@ func TestUploadTooLarge(t *testing.T) {
 	body, ct := multipartBody(t, formPart{"file", "big.flac", data})
 	req := httptest.NewRequest("POST", "/api/uploads", body)
 	req.Header.Set("Content-Type", ct)
-	rec := do(t, a.Routes(), req)
+	rec := authed(t, a, req)
 	if rec.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("status %d: %s", rec.Code, rec.Body)
 	}
@@ -156,16 +204,20 @@ func TestUploadStoresFile(t *testing.T) {
 	body, ct := multipartBody(t, formPart{"file", "song.flac", []byte("fLaC\x00\x00\x00\x22rest")})
 	req := httptest.NewRequest("POST", "/api/uploads", body)
 	req.Header.Set("Content-Type", ct)
+	cookie := login(t, a)
+	req.AddCookie(cookie)
 	rec := do(t, a.Routes(), req)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("status %d: %s", rec.Code, rec.Body)
 	}
 	var u Upload
 	json.Unmarshal(rec.Body.Bytes(), &u)
-	if _, err := os.Stat(filepath.Join(a.cfg.IncomingDir(), "dev", u.ID+".flac")); err != nil {
+	if _, err := os.Stat(filepath.Join(a.cfg.IncomingDir(), "max", u.ID+".flac")); err != nil {
 		t.Fatal(err)
 	}
-	rec = do(t, a.Routes(), httptest.NewRequest("GET", "/api/uploads/"+u.ID, nil))
+	get := httptest.NewRequest("GET", "/api/uploads/"+u.ID, nil)
+	get.AddCookie(cookie)
+	rec = do(t, a.Routes(), get)
 	if rec.Code != 200 {
 		t.Fatalf("get status %d", rec.Code)
 	}
