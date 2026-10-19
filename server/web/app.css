@@ -153,6 +153,12 @@ button.icon.danger:hover, button.icon.danger:focus-visible { color: var(--bad); 
 .recent li { display: flex; gap: 8px; align-items: baseline; }
 .recent .fn { font-weight: 400; }
 .login { max-width: 360px; margin: 10vh auto 0; display: flex; flex-direction: column; gap: 10px; }
+.brand { display: flex; flex-direction: column; line-height: 1.15; }
+.brand .powered { color: var(--muted); font-size: .72rem; letter-spacing: .02em; }
+.login .brand h2 { margin: 0; font-size: 1.6rem; text-transform: none; letter-spacing: -.01em; color: var(--fg); }
+.login .brand .powered { font-size: .8rem; margin-top: 2px; }
+.login .check { display: flex; align-items: center; gap: 8px; font-size: .9rem; cursor: pointer; }
+.login .check input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
 .login .err { color: var(--bad); font-size: .88rem; min-height: 1.2em; }
 .album-grid { display: grid; grid-template-columns: 140px 1fr; gap: 12px; align-items: start; }
 .cover { display: flex; flex-direction: column; gap: 6px; border-radius: 8px; }

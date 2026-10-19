@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestLoginWrongPassword(t *testing.T) {
@@ -95,5 +96,74 @@ func TestLoginRateLimit(t *testing.T) {
 	}
 	if last != http.StatusTooManyRequests {
 		t.Fatalf("last status %d", last)
+	}
+}
+
+func loginRemember(t *testing.T, a *App, remember string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest("POST", "/api/login", strings.NewReader(`{"username":"max","password":"secret","remember":`+remember+`}`))
+	rec := do(t, a.Routes(), req)
+	if rec.Code != 200 {
+		t.Fatalf("login status %d: %s", rec.Code, rec.Body)
+	}
+	return rec
+}
+
+func sessionCookieOf(t *testing.T, rec *httptest.ResponseRecorder) *http.Cookie {
+	t.Helper()
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == sessionCookie {
+			return c
+		}
+	}
+	t.Fatal("no session cookie")
+	return nil
+}
+
+func TestRememberLogin(t *testing.T) {
+	a := newTestApp(t)
+	long := loginRemember(t, a, "true")
+	short := loginRemember(t, a, "false")
+	lc, sc := sessionCookieOf(t, long), sessionCookieOf(t, short)
+	if lc.MaxAge != int(sessionTTL.Seconds()) {
+		t.Fatalf("remembered cookie MaxAge %d", lc.MaxAge)
+	}
+	if sc.MaxAge != 0 || !sc.Expires.IsZero() || strings.Contains(short.Header().Get("Set-Cookie"), "Max-Age") {
+		t.Fatalf("session cookie should not persist: %q", short.Header().Get("Set-Cookie"))
+	}
+	if !sc.HttpOnly || sc.SameSite != http.SameSiteStrictMode {
+		t.Fatalf("cookie flags: %+v", sc)
+	}
+	le, err := a.store.SessionExpiry(hashSessionID(lc.Value))
+	if err != nil {
+		t.Fatal(err)
+	}
+	se, err := a.store.SessionExpiry(hashSessionID(sc.Value))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d := time.Until(le); d < sessionTTL-time.Minute || d > sessionTTL+time.Minute {
+		t.Fatalf("remembered expiry in %v", d)
+	}
+	if d := time.Until(se); d < shortTTL-time.Minute || d > shortTTL+time.Minute {
+		t.Fatalf("short expiry in %v", d)
+	}
+	for _, rec := range []*httptest.ResponseRecorder{long, short} {
+		all := rec.Body.String() + strings.Join(rec.Header().Values("Set-Cookie"), ";")
+		if strings.Contains(all, "secret") {
+			t.Fatal("password leaked into response")
+		}
+	}
+	req := httptest.NewRequest("GET", "/api/me", nil)
+	req.AddCookie(sc)
+	if rec := do(t, a.Routes(), req); rec.Code != 200 {
+		t.Fatalf("short session me: %d", rec.Code)
+	}
+}
+
+func TestRememberDefaultsToTrue(t *testing.T) {
+	a := newTestApp(t)
+	if c := login(t, a); c.MaxAge != int(sessionTTL.Seconds()) {
+		t.Fatalf("default MaxAge %d", c.MaxAge)
 	}
 }

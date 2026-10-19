@@ -134,6 +134,15 @@ func (s *Store) GetSession(idHash string) (user string, secret []byte, err error
 	return user, secret, err
 }
 
+func (s *Store) SessionExpiry(idHash string) (time.Time, error) {
+	var exp int64
+	err := s.db.QueryRow(`SELECT expires_at FROM sessions WHERE id_hash = ?`, idHash).Scan(&exp)
+	if errors.Is(err, sql.ErrNoRows) {
+		return time.Time{}, ErrNotFound
+	}
+	return time.Unix(exp, 0), err
+}
+
 func (s *Store) DeleteSession(idHash string) error {
 	_, err := s.db.Exec(`DELETE FROM sessions WHERE id_hash = ?`, idHash)
 	return err

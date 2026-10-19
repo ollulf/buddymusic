@@ -27,6 +27,7 @@ const LOGIN_ERRORS = {
 function showLogin() {
   const user = h("input", { name: "username", autocomplete: "username", required: true, autocapitalize: "none" });
   const pass = h("input", { name: "password", type: "password", autocomplete: "current-password", required: true });
+  const remember = h("input", { name: "remember", type: "checkbox", checked: true });
   const err = h("div", { class: "err", role: "alert" });
   const btn = h("button", { class: "primary", type: "submit" }, "Log in");
   const form = h("form", { class: "card login", onsubmit: async (e) => {
@@ -36,7 +37,7 @@ function showLogin() {
     try {
       const res = await fetch("/api/login", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: user.value, password: pass.value }),
+        body: JSON.stringify({ username: user.value, password: pass.value, remember: remember.checked }),
       });
       const body = await res.json().catch(() => ({}));
       if (res.ok) return showApp(body.user, body.admin);
@@ -46,10 +47,11 @@ function showLogin() {
     }
     btn.disabled = false;
   } },
-    h("h2", {}, "buddymusic"),
+    h("div", { class: "brand" }, h("h2", {}, "buddymusic"), h("span", { class: "powered" }, "powered by Navidrome")),
     h("p", { class: "muted" }, "Log in with your Navidrome account."),
     h("label", { class: "field" }, h("span", {}, "Username"), user),
     h("label", { class: "field" }, h("span", {}, "Password"), pass),
+    h("label", { class: "check" }, remember, h("span", {}, "Keep me logged in")),
     err, btn);
   root.replaceChildren(h("main", {}, form));
   user.focus();
@@ -71,7 +73,7 @@ function showApp(user, admin) {
   playerBar ||= renderBar({ onUnauthorized: showLogin });
   root.replaceChildren(
     h("header", { class: "top" },
-      h("strong", {}, "buddymusic"),
+      h("span", { class: "brand" }, h("strong", {}, "buddymusic"), h("span", { class: "powered" }, "powered by Navidrome")),
       h("nav", { class: "tabs" }, Object.values(links)),
       h("span", { class: "who" }, admin ? `${user} (admin)` : user),
       h("button", { class: "ghost", onclick: logout }, "Log out")),

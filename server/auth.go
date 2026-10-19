@@ -21,6 +21,7 @@ import (
 const (
 	sessionCookie = "bm_session"
 	sessionTTL    = 30 * 24 * time.Hour
+	shortTTL      = 12 * time.Hour
 	loginWindow   = 5 * time.Minute
 	loginAttempts = 10
 )
@@ -98,6 +99,7 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
+		Remember *bool  `json:"remember"`
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "bad-request")
@@ -107,6 +109,11 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if user == "" || body.Password == "" {
 		writeError(w, http.StatusBadRequest, "missing-credentials")
 		return
+	}
+	remember := body.Remember == nil || *body.Remember
+	ttl := shortTTL
+	if remember {
+		ttl = sessionTTL
 	}
 	creds := NewCreds(user, body.Password)
 	if err := a.nav.Ping(r.Context(), creds); err != nil {
@@ -128,16 +135,20 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "session")
 		return
 	}
-	if err := a.store.SaveSession(idHash, user, sealed, sessionTTL); err != nil {
+	if err := a.store.SaveSession(idHash, user, sealed, ttl); err != nil {
 		log.Printf("login: save session: %v", err)
 		writeError(w, http.StatusInternalServerError, "session")
 		return
 	}
 	a.store.PurgeSessions()
-	http.SetCookie(w, &http.Cookie{
-		Name: sessionCookie, Value: id, Path: "/", MaxAge: int(sessionTTL.Seconds()),
+	cookie := &http.Cookie{
+		Name: sessionCookie, Value: id, Path: "/",
 		HttpOnly: true, Secure: a.cfg.SecureCookie, SameSite: http.SameSiteStrictMode,
-	})
+	}
+	if remember {
+		cookie.MaxAge = int(sessionTTL.Seconds())
+	}
+	http.SetCookie(w, cookie)
 	admin, err := a.checkAdmin(r.Context(), creds)
 	if err != nil {
 		log.Printf("login: admin check: %v", err)
