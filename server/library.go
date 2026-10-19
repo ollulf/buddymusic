@@ -15,11 +15,7 @@ import (
 var coverNames = []string{"cover.jpg", "cover.png", "folder.jpg", "folder.png"}
 
 func (a *App) albumDir(user string, f map[string]string) string {
-	artist := f["album_artist"]
-	if artist == "" {
-		artist = f["artist"]
-	}
-	return filepath.Join(a.cfg.LibraryDir(), safeSegment(user), safeSegment(artist), safeSegment(f["album"]))
+	return filepath.Join(a.cfg.LibraryDir(), safeSegment(user), safeSegment(f["artist"]), safeSegment(f["album"]))
 }
 
 func trackFileName(f map[string]string, ext string) string {

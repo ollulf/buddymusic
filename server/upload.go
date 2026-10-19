@@ -314,9 +314,9 @@ func (a *App) handleListUploads(w http.ResponseWriter, r *http.Request, user str
 func (a *App) handleCoverExists(w http.ResponseWriter, r *http.Request, user string) {
 	q := r.URL.Query()
 	fields := map[string]string{}
-	for _, k := range []string{"artist", "album", "album_artist"} {
+	for _, k := range []string{"artist", "album"} {
 		fields[k] = cleanTag(q.Get(k))
 	}
-	exists := fields["album"] != "" && (fields["artist"] != "" || fields["album_artist"] != "") && hasCoverFile(a.albumDir(user, fields))
+	exists := fields["album"] != "" && fields["artist"] != "" && hasCoverFile(a.albumDir(user, fields))
 	writeJSON(w, http.StatusOK, map[string]bool{"exists": exists})
 }

@@ -25,7 +25,7 @@ func TestParseProbe(t *testing.T) {
 		err   error
 	}{
 		{"flac upper keys", `{"format":{"format_name":"flac","tags":{"TITLE":"A","ARTIST":"B","ALBUM":"C","TRACKNUMBER":"3/12","ALBUMARTIST":"D","DATE":"2020"}},"streams":[{"codec_type":"audio"}]}`,
-			map[string]string{"title": "A", "artist": "B", "album": "C", "track": "3/12", "album_artist": "D", "year": "2020"}, false, nil},
+			map[string]string{"title": "A", "artist": "B", "album": "C", "track": "3/12", "year": "2020"}, false, nil},
 		{"ogg stream tags", `{"format":{"format_name":"ogg"},"streams":[{"codec_type":"audio","tags":{"title":"T","artist":"A","album":"B","track":"1"}}]}`,
 			map[string]string{"title": "T", "artist": "A", "album": "B", "track": "1"}, false, nil},
 		{"mp3 cover", `{"format":{"format_name":"mp3","tags":{"title":"  x\ty  "}},"streams":[{"codec_type":"audio"},{"codec_type":"video","disposition":{"attached_pic":1}}]}`,
@@ -200,14 +200,14 @@ func TestUploadTypedTagsAndCover(t *testing.T) {
 		t.Fatalf("%d %s", rec.Code, rec.Body)
 	}
 	dst := filepath.Join(a.cfg.LibraryDir(), body["libraryPath"].(string))
-	if !strings.HasSuffix(dst, "max/Various/Fresh/02 - Memo.mp3") {
+	if !strings.HasSuffix(dst, "max/Test Band/Fresh/02 - Memo.mp3") {
 		t.Fatal(dst)
 	}
 	tags, err := probe(context.Background(), dst)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if tags.Fields["album"] != "Fresh" || number(tags.Fields["track"]) != 2 || tags.Fields["album_artist"] != "Various" {
+	if tags.Fields["album"] != "Fresh" || number(tags.Fields["track"]) != 2 {
 		t.Fatalf("written tags %v", tags.Fields)
 	}
 	if !hasCoverFile(filepath.Dir(dst)) {
@@ -215,9 +215,12 @@ func TestUploadTypedTagsAndCover(t *testing.T) {
 	}
 
 	other := makeAudio(t, "c.mp3", false, "title", "Second", "artist", "Test Band", "album", "Fresh", "album_artist", "Various", "track", "3")
-	rec, _ = postUpload(t, a, cookie, formPart{"file", "c.mp3", other})
+	rec, body = postUpload(t, a, cookie, formPart{"file", "c.mp3", other})
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("cover from folder not accepted: %d %s", rec.Code, rec.Body)
+	}
+	if body["libraryPath"] != "max/Test Band/Fresh/03 - Second.mp3" {
+		t.Fatalf("album artist tag changed folder: %v", body["libraryPath"])
 	}
 	rec, body = postUpload(t, a, cookie, formPart{"file", "c.mp3", other})
 	if rec.Code != http.StatusConflict || body["error"] != "exists" {

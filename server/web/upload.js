@@ -1,6 +1,6 @@
 import { LABELS, fromMediaTags, fromFileName, mostCommon, present, trackNumber } from "./tags.js";
 
-const ALBUM_FIELDS = ["artist", "album", "album_artist", "year"];
+const ALBUM_FIELDS = ["artist", "album", "year"];
 const ROW_FIELDS = ["title", "track"];
 const ERRORS = {
   "unsupported-type": "Not a supported audio file (FLAC, MP3, M4A, OGG, Opus)",
@@ -49,7 +49,7 @@ function album() {
 }
 
 function albumKey(a) {
-  const artist = (a.album_artist || a.artist || "").toLowerCase();
+  const artist = (a.artist || "").toLowerCase();
   const name = (a.album || "").toLowerCase();
   return artist && name ? artist + "\u0000" + name : "";
 }
@@ -61,7 +61,7 @@ function folderCover(a) {
   if (!key) return false;
   if (!folderCovers.has(key)) {
     folderCovers.set(key, "pending");
-    const q = new URLSearchParams({ artist: a.artist, album: a.album, album_artist: a.album_artist });
+    const q = new URLSearchParams({ artist: a.artist, album: a.album });
     fetch("/api/covers?" + q).then((r) => r.ok ? r.json() : { exists: false }).then((b) => {
       folderCovers.set(key, !!b.exists);
       refresh();
