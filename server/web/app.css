@@ -181,3 +181,20 @@ button.icon.danger:hover, button.icon.danger:focus-visible { color: var(--bad); 
   .song { grid-template-columns: 1fr 72px; }
   .song:has(.disc) { grid-template-columns: 1fr 64px 56px; }
 }
+.pl-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.pl-row { display: flex; align-items: center; gap: 2px; border-bottom: 1px solid var(--line); }
+.pl-row:last-child { border-bottom: 0; }
+.pl-main { flex: 1; min-width: 0; display: flex; padding: 8px 6px; border-radius: 6px; text-decoration: none; }
+.pl-main:hover { background: var(--bg); }
+.pl-head { display: flex; flex-direction: column; gap: 4px; }
+.pl-head .actions { margin-top: 8px; flex-wrap: wrap; }
+.pl-public { display: flex; align-items: center; gap: 8px; font-size: .9rem; margin-top: 6px; }
+.badge { display: inline-block; margin-left: 8px; padding: 0 8px; border-radius: 999px; font-size: .72rem; font-weight: 600; vertical-align: middle; color: var(--ok); background: var(--okbg); }
+dialog.sheet { width: min(420px, calc(100vw - 32px)); max-height: 80vh; overflow: auto; color: var(--fg); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+dialog.sheet:not([open]) { display: none; }
+dialog.sheet::backdrop { background: rgb(0 0 0 / .45); }
+.sheet-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.sheet-item { width: 100%; display: flex; justify-content: space-between; gap: 10px; text-align: left; }
+.sheet-new { display: flex; gap: 8px; }
+.sheet-new .search-box { padding: 6px 10px; }
+.toast { position: fixed; left: 50%; bottom: 140px; transform: translateX(-50%); z-index: 5; background: var(--fg); color: var(--bg); padding: 8px 16px; border-radius: 999px; font-size: .9rem; }

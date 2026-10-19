@@ -1,6 +1,7 @@
 import { h, api, apiSend, cover, fmtTime, Unauthorized } from "./dom.js";
 import * as player from "./player.js";
 import { heartButton } from "./favs.js";
+import { addToPlaylistButton } from "./playlists.js";
 
 const deletedSongs = new Set();
 const deletedAlbums = new Set();
@@ -27,6 +28,8 @@ export function songRow(songs, i, opts = {}) {
     heartButton(s, "song", { cls: "more", onUnauthorized: opts.onUnauthorized }),
     h("button", { class: "icon more", title: "Play next", "aria-label": "Play next", onclick: () => player.playNext([s]) }, "⤵"),
     h("button", { class: "icon more", title: "Add to queue", "aria-label": "Add to queue", onclick: () => player.addToQueue([s]) }, "+"),
+    addToPlaylistButton([s], opts),
+    opts.extra || null,
     opts.onDelete ? h("button", { class: "icon more danger", title: "Delete track", "aria-label": "Delete track", onclick: () => opts.onDelete(s) }, "✕") : null);
 }
 
@@ -116,6 +119,7 @@ async function renderAlbum(container, id, opts) {
             h("button", { class: "primary", onclick: () => player.playList(songs, 0), disabled: !songs.length }, "Play"),
             h("button", { onclick: () => { player.playList(songs, Math.floor(Math.random() * songs.length)); if (!player.settings().shuffle) player.toggleShuffle(); }, disabled: !songs.length }, "Shuffle"),
             h("button", { onclick: () => player.addToQueue(songs), disabled: !songs.length }, "Add to queue"),
+            songs.length ? addToPlaylistButton(songs, opts, "") : null,
             heartButton(al, "album", { cls: "album-heart", onUnauthorized: opts.onUnauthorized }),
             opts.admin ? h("button", { class: "danger", onclick: deleteAlbum }, "Delete album") : null))),
       h("ol", { class: "songs card" }, songs.map((_, i) => songRow(songs, i, { onDelete: deleteTrack, onUnauthorized: opts.onUnauthorized }))));

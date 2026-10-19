@@ -3,6 +3,7 @@ import { renderLibrary } from "./library.js";
 import { renderSearch } from "./search.js";
 import { renderFavorites } from "./favorites.js";
 import { renderBar } from "./player.js";
+import { renderPlaylists, setPlaylistUser } from "./playlists.js";
 
 const root = document.getElementById("app");
 
@@ -60,12 +61,13 @@ async function logout() {
   showLogin();
 }
 
-const TABS = [["library", "Library"], ["search", "Search"], ["favorites", "Favorites"], ["upload", "Upload"]];
+const TABS = [["library", "Library"], ["search", "Search"], ["favorites", "Favorites"], ["playlists", "Playlists"], ["upload", "Upload"]];
 let routeHandler = null;
 let playerBar = null;
 
 function showApp(user, admin) {
   const opts = { onUnauthorized: showLogin, admin: admin === true };
+  setPlaylistUser(user);
   const views = Object.fromEntries(TABS.map(([k]) => [k, h("main", { class: `view view-${k}`, hidden: true })]));
   const links = Object.fromEntries(TABS.map(([k, label]) => [k, h("a", { class: "tab", href: `#/${k}` }, label)]));
   playerBar ||= renderBar({ onUnauthorized: showLogin });
@@ -96,7 +98,11 @@ function showApp(user, admin) {
     }
     if (tab === "search" && !views.search.firstChild) renderSearch(views.search, opts);
     if (tab === "favorites" && lastTab !== "favorites") renderFavorites(views.favorites, opts);
-    if (tab === "library") shown = key;
+    if (tab === "playlists" && key !== shown) {
+      renderPlaylists(views.playlists, parts.slice(1), opts);
+      window.scrollTo(0, 0);
+    }
+    if (tab === "library" || tab === "playlists") shown = key;
     lastTab = tab;
   };
   if (routeHandler) window.removeEventListener("hashchange", routeHandler);
