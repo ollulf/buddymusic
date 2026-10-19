@@ -205,7 +205,8 @@ export function renderBar(opts = {}) {
   const dur = h("span", { class: "bar-time" }, "0:00");
   const range = h("input", { type: "range", min: 0, max: 0, step: "any", value: 0, "aria-label": "Seek" });
   let dragging = false;
-  range.addEventListener("input", () => { dragging = true; pos.textContent = fmtTime(+range.value); });
+  const paintSeek = () => { const m = +range.max; range.style.setProperty("--fill", `${m > 0 ? Math.min(100, (+range.value / m) * 100) : 0}%`); };
+  range.addEventListener("input", () => { dragging = true; pos.textContent = fmtTime(+range.value); paintSeek(); });
   range.addEventListener("change", () => { dragging = false; seek(+range.value); });
   const btn = (label, cls, fn) => h("button", { class: `icon ${cls}`, "aria-label": label, title: label, onclick: fn });
   const shuffleB = btn("Shuffle", "shuffle", toggleShuffle);
@@ -273,6 +274,7 @@ export function renderBar(opts = {}) {
     range.max = d;
     dur.textContent = fmtTime(d);
     if (!dragging) { range.value = audio.currentTime; pos.textContent = fmtTime(audio.currentTime); }
+    paintSeek();
     if ("mediaSession" in navigator && d) {
       try { navigator.mediaSession.setPositionState({ duration: d, position: Math.min(audio.currentTime, d), playbackRate: 1 }); } catch {}
     }
