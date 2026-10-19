@@ -260,6 +260,8 @@ footer.player { background: var(--card); border-top: 2px solid var(--ink); box-s
 .bar-title { font-weight: 400; font-size: 16px; }
 .bar-art .art { box-shadow: none; }
 .bar-seek input, .bar-vol input { -webkit-appearance: none; appearance: none; height: 10px; margin: 0; cursor: pointer; border: 2px solid var(--ink); box-shadow: inset 2px 2px 0 var(--shade); background: linear-gradient(to right, var(--orange) var(--fill, 0%), var(--bg) var(--fill, 0%)); }
+.bar-seek input { --fill: calc(7px + (100% - 14px) * var(--p, 0)); }
+.bar-seek input:disabled { cursor: default; }
 .bar-vol input { background: linear-gradient(to right, var(--orange) var(--fill, 80%), var(--bg) var(--fill, 80%)); }
 .bar-seek input::-webkit-slider-thumb, .bar-vol input::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 16px; border-radius: 0; background: var(--fg); border: 2px solid var(--ink); }
 .bar-seek input::-moz-range-thumb, .bar-vol input::-moz-range-thumb { width: 8px; height: 14px; border-radius: 0; background: var(--fg); border: 2px solid var(--ink); }

@@ -1,4 +1,4 @@
-import { h, coverURL, cover, fmtTime } from "./dom.js";
+import { h, coverURL, fmtTime } from "./dom.js";
 import { heartButton, retarget } from "./favs.js";
 
 const SAVER_KEY = "bm.dataSaver";
@@ -36,6 +36,13 @@ const streamURL = (song) => {
 export const current = () => state.queue[state.index] || null;
 export const queue = () => state.queue.slice();
 export const isPlaying = () => !audio.paused;
+export const duration = () => {
+  const d = audio.duration;
+  if (isFinite(d) && d > 0) return d;
+  const song = current();
+  return song && song.duration > 0 ? +song.duration : 0;
+};
+export const position = () => audio.currentTime || 0;
 
 function rebuildOrder() {
   const n = state.queue.length;
@@ -171,14 +178,14 @@ audio.addEventListener("ended", () => {
 audio.addEventListener("timeupdate", () => {
   const song = current();
   if (!song) return;
-  const d = audio.duration || song.duration || 0;
+  const d = duration();
   if (!state.scrobbled && d > 30 && (audio.currentTime >= d / 2 || audio.currentTime >= 240)) {
     state.scrobbled = true;
     fetch(`/api/music/scrobble/${encodeURIComponent(song.id)}`, { method: "POST" }).catch(() => {});
   }
   if (d && d - audio.currentTime < 30) preloadNext();
 });
-for (const ev of ["play", "pause", "loadedmetadata"]) audio.addEventListener(ev, emit);
+for (const ev of ["play", "pause", "loadedmetadata", "durationchange", "seeking", "seeked", "emptied"]) audio.addEventListener(ev, emit);
 
 const vol = (() => {
   let v = 80, m = false;
@@ -205,7 +212,7 @@ export function renderBar(opts = {}) {
   const dur = h("span", { class: "bar-time" }, "0:00");
   const range = h("input", { type: "range", min: 0, max: 0, step: "any", value: 0, "aria-label": "Seek" });
   let dragging = false;
-  const paintSeek = () => { const m = +range.max; range.style.setProperty("--fill", `${m > 0 ? Math.min(100, (+range.value / m) * 100) : 0}%`); };
+  const paintSeek = () => { const m = +range.max; range.style.setProperty("--p", String(m > 0 ? Math.min(1, Math.max(0, +range.value / m)) : 0)); };
   range.addEventListener("input", () => { dragging = true; pos.textContent = fmtTime(+range.value); paintSeek(); });
   range.addEventListener("change", () => { dragging = false; seek(+range.value); });
   const btn = (label, cls, fn) => h("button", { class: `icon ${cls}`, "aria-label": label, title: label, onclick: fn });
@@ -252,13 +259,19 @@ export function renderBar(opts = {}) {
     title.textContent = song.title || "Unknown title";
     sub.textContent = [song.artist, song.album].filter(Boolean).join(" · ");
     if (heartB.dataset.id !== song.id) retarget(heartB, song);
-    const cid = song.coverArt || song.albumId;
-    if (lastCover !== cid) {
-      lastCover = cid;
-      const c = cover(cid, 96, "art small");
-      const img = c.querySelector("img");
-      if (img) img.alt = song.album || "Album cover";
-      art.replaceChildren(c);
+    const ids = [...new Set([song.coverArt, song.albumId].filter(Boolean))];
+    const key = ids.join("|");
+    if (lastCover !== key) {
+      lastCover = key;
+      const box = h("div", { class: "art small" });
+      const tryNext = (i) => {
+        if (i >= ids.length) { box.replaceChildren(); return; }
+        const img = h("img", { src: coverURL(ids[i], 96), alt: song.album || "Album cover", decoding: "async" });
+        img.addEventListener("error", () => tryNext(i + 1), { once: true });
+        box.replaceChildren(img);
+      };
+      tryNext(0);
+      art.replaceChildren(box);
     }
     if (song.albumId) art.href = `#/library/album/${encodeURIComponent(song.albumId)}`;
     else art.removeAttribute("href");
@@ -270,13 +283,15 @@ export function renderBar(opts = {}) {
     repeatB.dataset.mode = s.repeat;
     repeatB.title = `Repeat: ${s.repeat}`;
     saver.checked = s.saver;
-    const d = audio.duration || song.duration || 0;
-    range.max = d;
+    const d = duration();
+    const t = d ? Math.min(position(), d) : position();
+    range.max = String(d);
+    range.disabled = !d;
     dur.textContent = fmtTime(d);
-    if (!dragging) { range.value = audio.currentTime; pos.textContent = fmtTime(audio.currentTime); }
+    if (!dragging) { range.value = String(t); pos.textContent = fmtTime(t); }
     paintSeek();
     if ("mediaSession" in navigator && d) {
-      try { navigator.mediaSession.setPositionState({ duration: d, position: Math.min(audio.currentTime, d), playbackRate: 1 }); } catch {}
+      try { navigator.mediaSession.setPositionState({ duration: d, position: t, playbackRate: 1 }); } catch {}
     }
   };
   onChange(paint);
