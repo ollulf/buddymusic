@@ -180,6 +180,23 @@ audio.addEventListener("timeupdate", () => {
 });
 for (const ev of ["play", "pause", "loadedmetadata"]) audio.addEventListener(ev, emit);
 
+const vol = (() => {
+  let v = 80, m = false;
+  try { const n = parseInt(localStorage.getItem("bm.volume"), 10); if (n >= 0 && n <= 100) v = n; m = localStorage.getItem("bm.muted") === "1"; } catch {}
+  return { v, m };
+})();
+function applyVolume() {
+  audio.volume = vol.v / 100;
+  audio.muted = vol.m;
+  preloader.volume = vol.v / 100;
+  try { localStorage.setItem("bm.volume", String(vol.v)); localStorage.setItem("bm.muted", vol.m ? "1" : "0"); } catch {}
+}
+applyVolume();
+const volumeSettable = (() => {
+  if (/iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) return false;
+  try { const t = new Audio(); t.volume = 0.5; return t.volume === 0.5; } catch { return false; }
+})();
+
 export function renderBar(opts = {}) {
   const art = h("a", { class: "bar-art", "aria-label": "Open album" });
   const title = h("div", { class: "bar-title" });
@@ -197,6 +214,25 @@ export function renderBar(opts = {}) {
   const nextB = btn("Next", "next", next);
   const repeatB = btn("Repeat", "repeat", cycleRepeat);
   const heartB = heartButton(null, "song", { cls: "bar-heart", get: current, onUnauthorized: opts.onUnauthorized });
+  const muteB = h("button", { class: "icon mute", type: "button" });
+  const volR = h("input", { type: "range", min: 0, max: 100, step: 1, value: vol.v, "aria-label": "Volume" });
+  const paintVol = () => {
+    const off = vol.m || vol.v === 0;
+    muteB.classList.toggle("off", off);
+    muteB.classList.toggle("low", !off && vol.v < 50);
+    muteB.setAttribute("aria-pressed", String(vol.m));
+    muteB.setAttribute("aria-label", vol.m ? "Unmute" : "Mute");
+    muteB.title = vol.m ? "Unmute" : "Mute";
+    volR.value = vol.v;
+    volR.style.setProperty("--fill", `${vol.m ? 0 : vol.v}%`);
+  };
+  muteB.addEventListener("click", () => {
+    if (vol.m || vol.v > 0) vol.m = !vol.m; else { vol.v = 50; vol.m = false; }
+    applyVolume(); paintVol();
+  });
+  volR.addEventListener("input", () => { vol.v = +volR.value; vol.m = false; applyVolume(); paintVol(); });
+  paintVol();
+  const volBox = h("div", { class: "bar-vol" + (volumeSettable ? "" : " fixed") }, muteB, volR);
   const saver = h("input", { type: "checkbox" });
   saver.addEventListener("change", () => setSaver(saver.checked));
   const bar = h("footer", { class: "player", hidden: true },
@@ -204,6 +240,7 @@ export function renderBar(opts = {}) {
     h("div", { class: "bar-row" },
       art, h("div", { class: "bar-meta" }, title, sub), heartB,
       h("div", { class: "bar-ctl" }, shuffleB, prevB, playB, nextB, repeatB),
+      volBox,
       h("label", { class: "saver", title: "Stream Opus 128 kbps to save mobile data" }, saver, h("span", {}, "Data saver"))));
 
   let lastCover = null;
