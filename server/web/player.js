@@ -150,7 +150,7 @@ function updateSession() {
   if (!song) return;
   navigator.mediaSession.metadata = new MediaMetadata({
     title: song.title || "", artist: song.artist || "", album: song.album || "",
-    artwork: song.coverArt ? [96, 256, 512].map((s) => ({ src: coverURL(song.coverArt, s), sizes: `${s}x${s}` })) : [],
+    artwork: (song.coverArt || song.albumId) ? [96, 256, 512].map((s) => ({ src: coverURL(song.coverArt || song.albumId, s), sizes: `${s}x${s}` })) : [],
   });
 }
 
@@ -181,7 +181,7 @@ audio.addEventListener("timeupdate", () => {
 for (const ev of ["play", "pause", "loadedmetadata"]) audio.addEventListener(ev, emit);
 
 export function renderBar(opts = {}) {
-  const art = h("div", { class: "bar-art" });
+  const art = h("a", { class: "bar-art", "aria-label": "Open album" });
   const title = h("div", { class: "bar-title" });
   const sub = h("div", { class: "bar-sub" });
   const pos = h("span", { class: "bar-time" }, "0:00");
@@ -214,7 +214,16 @@ export function renderBar(opts = {}) {
     title.textContent = song.title || "Unknown title";
     sub.textContent = [song.artist, song.album].filter(Boolean).join(" · ");
     if (heartB.dataset.id !== song.id) retarget(heartB, song);
-    if (lastCover !== song.coverArt) { lastCover = song.coverArt; art.replaceChildren(cover(song.coverArt, 96, "art small")); }
+    const cid = song.coverArt || song.albumId;
+    if (lastCover !== cid) {
+      lastCover = cid;
+      const c = cover(cid, 96, "art small");
+      const img = c.querySelector("img");
+      if (img) img.alt = song.album || "Album cover";
+      art.replaceChildren(c);
+    }
+    if (song.albumId) art.href = `#/library/album/${encodeURIComponent(song.albumId)}`;
+    else art.removeAttribute("href");
     const s = settings();
     playB.classList.toggle("pause", isPlaying());
     playB.setAttribute("aria-label", isPlaying() ? "Pause" : "Play");

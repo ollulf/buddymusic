@@ -82,7 +82,7 @@ footer.player { position: fixed; left: 0; right: 0; bottom: 0; z-index: 3; backg
 .bar-seek input { flex: 1; accent-color: var(--accent); min-width: 0; }
 .bar-time { font-size: .75rem; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 34px; text-align: center; }
 .bar-row { display: flex; align-items: center; gap: 12px; max-width: 980px; margin: 0 auto; }
-.bar-art { flex: none; }
+.bar-art { flex: none; display: block; }
 .bar-meta { flex: 1; min-width: 0; }
 .bar-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bar-sub { color: var(--muted); font-size: .82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
