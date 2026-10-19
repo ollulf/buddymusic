@@ -22,7 +22,7 @@ export function renderSearch(container, opts = {}) {
       out.replaceChildren(
         artists.length ? h("section", {}, h("h2", {}, "Artists"), artistList(artists)) : null,
         albums.length ? h("section", {}, h("h2", {}, "Albums"), h("div", { class: "grid" }, albums.map(albumCard))) : null,
-        songs.length ? h("section", {}, h("h2", {}, "Songs"), h("ol", { class: "songs card" }, songs.map((_, i) => songRow(songs, i, { showArtist: true, showCover: true })))) : null);
+        songs.length ? h("section", {}, h("h2", {}, "Songs"), h("ol", { class: "songs card" }, songs.map((_, i) => songRow(songs, i, { showArtist: true, showCover: true, onUnauthorized: opts.onUnauthorized })))) : null);
     } catch (e) {
       if (mine !== seq) return;
       if (e instanceof Unauthorized) return opts.onUnauthorized?.();

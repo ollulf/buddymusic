@@ -1,4 +1,5 @@
 import { h, coverURL, cover, fmtTime } from "./dom.js";
+import { heartButton, retarget } from "./favs.js";
 
 const SAVER_KEY = "bm.dataSaver";
 
@@ -179,7 +180,7 @@ audio.addEventListener("timeupdate", () => {
 });
 for (const ev of ["play", "pause", "loadedmetadata"]) audio.addEventListener(ev, emit);
 
-export function renderBar() {
+export function renderBar(opts = {}) {
   const art = h("div", { class: "bar-art" });
   const title = h("div", { class: "bar-title" });
   const sub = h("div", { class: "bar-sub" });
@@ -195,12 +196,13 @@ export function renderBar() {
   const playB = btn("Play", "play big", toggle);
   const nextB = btn("Next", "next", next);
   const repeatB = btn("Repeat", "repeat", cycleRepeat);
+  const heartB = heartButton(null, "song", { cls: "bar-heart", get: current, onUnauthorized: opts.onUnauthorized });
   const saver = h("input", { type: "checkbox" });
   saver.addEventListener("change", () => setSaver(saver.checked));
   const bar = h("footer", { class: "player", hidden: true },
     h("div", { class: "bar-seek" }, pos, range, dur),
     h("div", { class: "bar-row" },
-      art, h("div", { class: "bar-meta" }, title, sub),
+      art, h("div", { class: "bar-meta" }, title, sub), heartB,
       h("div", { class: "bar-ctl" }, shuffleB, prevB, playB, nextB, repeatB),
       h("label", { class: "saver", title: "Stream Opus 128 kbps to save mobile data" }, saver, h("span", {}, "Data saver"))));
 
@@ -211,6 +213,7 @@ export function renderBar() {
     if (!song) return;
     title.textContent = song.title || "Unknown title";
     sub.textContent = [song.artist, song.album].filter(Boolean).join(" · ");
+    if (heartB.dataset.id !== song.id) retarget(heartB, song);
     if (lastCover !== song.coverArt) { lastCover = song.coverArt; art.replaceChildren(cover(song.coverArt, 96, "art small")); }
     const s = settings();
     playB.classList.toggle("pause", isPlaying());

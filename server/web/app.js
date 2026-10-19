@@ -1,6 +1,7 @@
 import { renderUpload } from "./upload.js";
 import { renderLibrary } from "./library.js";
 import { renderSearch } from "./search.js";
+import { renderFavorites } from "./favorites.js";
 import { renderBar } from "./player.js";
 
 const root = document.getElementById("app");
@@ -59,7 +60,7 @@ async function logout() {
   showLogin();
 }
 
-const TABS = [["library", "Library"], ["search", "Search"], ["upload", "Upload"]];
+const TABS = [["library", "Library"], ["search", "Search"], ["favorites", "Favorites"], ["upload", "Upload"]];
 let routeHandler = null;
 let playerBar = null;
 
@@ -67,7 +68,7 @@ function showApp(user, admin) {
   const opts = { onUnauthorized: showLogin, admin: admin === true };
   const views = Object.fromEntries(TABS.map(([k]) => [k, h("main", { class: `view view-${k}`, hidden: true })]));
   const links = Object.fromEntries(TABS.map(([k, label]) => [k, h("a", { class: "tab", href: `#/${k}` }, label)]));
-  playerBar ||= renderBar();
+  playerBar ||= renderBar({ onUnauthorized: showLogin });
   root.replaceChildren(
     h("header", { class: "top" },
       h("strong", {}, "buddymusic"),
@@ -78,6 +79,7 @@ function showApp(user, admin) {
     playerBar);
   renderUpload(views.upload, opts);
   let shown = "";
+  let lastTab = "";
   const route = () => {
     const parts = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);
     const tab = TABS.some(([k]) => k === parts[0]) ? parts[0] : "library";
@@ -93,7 +95,9 @@ function showApp(user, admin) {
       window.scrollTo(0, 0);
     }
     if (tab === "search" && !views.search.firstChild) renderSearch(views.search, opts);
+    if (tab === "favorites" && lastTab !== "favorites") renderFavorites(views.favorites, opts);
     if (tab === "library") shown = key;
+    lastTab = tab;
   };
   if (routeHandler) window.removeEventListener("hashchange", routeHandler);
   routeHandler = route;

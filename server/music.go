@@ -281,3 +281,45 @@ func (a *App) handleScrobble(w http.ResponseWriter, r *http.Request, user string
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (a *App) handleStar(on bool) userHandler {
+	return func(w http.ResponseWriter, r *http.Request, user string) {
+		id := r.PathValue("id")
+		if !validID(id) {
+			writeError(w, http.StatusBadRequest, "bad-request")
+			return
+		}
+		param := "id"
+		switch r.URL.Query().Get("kind") {
+		case "", "song":
+		case "album":
+			param = "albumId"
+		default:
+			writeError(w, http.StatusBadRequest, "bad-request")
+			return
+		}
+		creds, err := a.sessionCreds(r)
+		if err != nil {
+			writeError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		endpoint := "unstar.view"
+		if on {
+			endpoint = "star.view"
+		}
+		_, err = a.nav.raw(r.Context(), endpoint, "", creds, url.Values{param: {id}})
+		switch {
+		case errors.Is(err, ErrBadLogin):
+			writeError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		case errors.Is(err, ErrNotFound):
+			writeError(w, http.StatusNotFound, "not-found")
+			return
+		case err != nil:
+			log.Printf("music %s: %v", endpoint, err)
+			writeError(w, http.StatusBadGateway, "navidrome-unreachable")
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"id": id, "starred": on})
+	}
+}

@@ -97,6 +97,13 @@ footer.player { position: fixed; left: 0; right: 0; bottom: 0; z-index: 3; backg
 .bar-ctl .next::before { content: "⏭"; }
 .bar-ctl .repeat::before { content: "↻"; }
 .bar-ctl .repeat[data-mode="one"]::after { content: "1"; font-size: .6rem; font-weight: 700; }
+button.heart::before { content: "\2661\FE0E"; }
+button.heart[aria-pressed="true"] { color: var(--bad); }
+button.heart[aria-pressed="true"]::before { content: "\2665\FE0E"; }
+button.heart:hover, button.heart:focus-visible { color: var(--bad); }
+button.heart.album-heart { font-size: 1.4rem; padding: 0 8px; }
+button.heart.bar-heart { flex: none; width: 38px; height: 38px; padding: 0; font-size: 1.25rem; }
+.fav-actions { flex-wrap: wrap; margin-bottom: 8px; }
 .saver { display: flex; align-items: center; gap: 4px; font-size: .78rem; color: var(--muted); white-space: nowrap; }
 header.top .who { margin-left: auto; color: var(--muted); font-size: .9rem; }
 main { max-width: 820px; margin: 0 auto; padding: 16px 16px 48px; display: flex; flex-direction: column; gap: 14px; }
