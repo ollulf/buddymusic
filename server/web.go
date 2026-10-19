@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"io/fs"
+	"mime"
 	"net/http"
 )
 
@@ -14,7 +15,7 @@ const shellPage = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light dark">
+<meta name="color-scheme" content="dark">
 <title>buddymusic</title>
 <link rel="stylesheet" href="/app.css">
 <script src="/vendor/jsmediatags.min.js" defer></script>
@@ -23,6 +24,10 @@ const shellPage = `<!doctype html>
 <body><div id="app"></div></body>
 </html>
 `
+
+func init() {
+	mime.AddExtensionType(".ttf", "font/ttf")
+}
 
 func (a *App) webHandler() http.Handler {
 	sub, _ := fs.Sub(webFS, "web")
