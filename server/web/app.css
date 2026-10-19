@@ -198,3 +198,9 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / .45); }
 .sheet-new { display: flex; gap: 8px; }
 .sheet-new .search-box { padding: 6px 10px; }
 .toast { position: fixed; left: 50%; bottom: 140px; transform: translateX(-50%); z-index: 5; background: var(--fg); color: var(--bg); padding: 8px 16px; border-radius: 999px; font-size: .9rem; }
+@media (max-width: 560px) {
+  header.top .tabs { flex-wrap: wrap; }
+  header.top .tab { padding: 1px 7px; }
+  .song-row button.icon.more { padding: 6px 4px; }
+  .song-main { gap: 8px; padding: 8px 4px; }
+}
