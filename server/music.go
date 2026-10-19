@@ -15,6 +15,8 @@ import (
 
 var errNoCreds = errors.New("no session credentials")
 
+var ErrForbidden = errors.New("forbidden")
+
 func (a *App) sessionCreds(r *http.Request) (SubsonicCreds, error) {
 	var creds SubsonicCreds
 	c, err := r.Cookie(sessionCookie)
@@ -80,6 +82,9 @@ func (n *Navidrome) raw(ctx context.Context, endpoint, key string, c SubsonicCre
 		}
 		if e.Code == 70 {
 			return nil, ErrNotFound
+		}
+		if e.Code == 50 {
+			return nil, ErrForbidden
 		}
 		return nil, fmt.Errorf("navidrome %s: %d %s", endpoint, e.Code, e.Message)
 	}

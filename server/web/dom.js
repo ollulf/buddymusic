@@ -26,6 +26,13 @@ export async function apiSend(method, path) {
   return res.json();
 }
 
+export async function apiJSON(method, path, body) {
+  const res = await fetch(path, { method, headers: { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+  if (res.status === 401) throw new Unauthorized();
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `http ${res.status}`);
+  return res.status === 204 ? {} : res.json();
+}
+
 export const coverURL = (id, size = 300) => (id ? `/api/music/cover/${encodeURIComponent(id)}?size=${size}` : "");
 
 export function cover(id, size = 300, cls = "art") {
