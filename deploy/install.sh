@@ -16,7 +16,12 @@ echo "== Build as $OWNER"
 GO="$(runuser -u "$OWNER" -- bash -lc 'command -v go' 2>/dev/null || true)"
 [ -n "$GO" ] || GO="$OWNER_HOME/.local/go/bin/go"
 [ -x "$GO" ] || { echo "Go not found for $OWNER"; exit 1; }
-VERSION="1.0.$(runuser -u "$OWNER" -- git -C "$REPO" log -1 --format=%cd --date=format:%d%m)"
+SUBJECT="$(runuser -u "$OWNER" -- git -C "$REPO" log -1 --format=%s)"
+if [[ "$SUBJECT" =~ ^Release\ ([0-9][0-9.]*)$ ]]; then
+    VERSION="${BASH_REMATCH[1]}"
+else
+    VERSION="1.0.$(runuser -u "$OWNER" -- git -C "$REPO" log -1 --format=%cd --date=format:%d%m)"
+fi
 echo "== Version $VERSION"
 runuser -u "$OWNER" -- bash -c "cd '$REPO/server' && '$GO' test ./... && '$GO' build -trimpath -ldflags='-s -w -X main.version=$VERSION' -o .build/buddymusic-api ."
 
