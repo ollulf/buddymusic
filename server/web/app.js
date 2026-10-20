@@ -2,7 +2,7 @@ import { renderUpload } from "./upload.js";
 import { renderLibrary } from "./library.js";
 import { renderSearch, searchBox } from "./search.js";
 import { renderFavorites } from "./favorites.js";
-import { renderBar, settings, setSaver } from "./player.js";
+import { renderBar, settings, setQuality, onChange, QUALITIES, qualityHint } from "./player.js";
 import { renderPlaylists, setPlaylistUser } from "./playlists.js";
 import { renderAdmin } from "./admin.js";
 import { renderSettings, GEAR, AVATAR, paintAvatar } from "./settings.js";
@@ -171,19 +171,34 @@ function profileMenu(user, admin, avatar) {
   return h("div", { class: "profile" }, btn, menu);
 }
 
-function saverToggle() {
-  const btn = h("button", { type: "button", class: "saver-btn" });
-  btn.innerHTML = '<svg viewBox="0 0 16 16" width="20" height="20" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M2 11h2v3H2zM6 8h2v6H6zM10 5h2v9h-2zM14 2h2v12h-2z"/></svg>';
+const QUALITY_LABELS = { auto: ["A", "Auto"], original: ["O", "Original"], normal: ["N", "Normal"], low: ["L", "Low"] };
+
+function qualityButton() {
+  const btn = h("button", { type: "button", class: "saver-btn", "aria-haspopup": "true", "aria-expanded": "false" });
+  const menu = h("div", { class: "quality-menu", hidden: true, role: "menu" });
+  const close = () => { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); };
   const paint = () => {
-    const on = settings().saver;
-    btn.classList.toggle("on", on);
-    btn.setAttribute("aria-pressed", on ? "true" : "false");
-    btn.setAttribute("aria-label", "Data saver");
-    btn.title = `Data saver: ${on ? "on" : "off"} (stream Opus 128 kbps)`;
+    const q = settings().quality;
+    btn.textContent = QUALITY_LABELS[q][0];
+    btn.classList.toggle("on", q === "normal" || q === "low");
+    btn.setAttribute("aria-label", `Streaming quality: ${QUALITY_LABELS[q][1]}`);
+    btn.title = `Streaming quality: ${QUALITY_LABELS[q][1]}`;
+    menu.replaceChildren(...QUALITIES.map((k) => h("button", {
+      type: "button", role: "menuitemradio", "aria-checked": String(k === q), class: k === q ? "on" : "",
+      onclick: () => { setQuality(k); close(); },
+    }, `${QUALITY_LABELS[k][1]} `, h("span", { class: "muted" }, qualityHint(k)))));
   };
-  btn.addEventListener("click", () => { setSaver(!settings().saver); paint(); });
+  btn.addEventListener("click", () => {
+    if (!menu.hidden) return close();
+    menu.hidden = false;
+    btn.setAttribute("aria-expanded", "true");
+  });
+  document.addEventListener("click", (e) => { if (!wrap.contains(e.target)) close(); });
+  const wrap = h("div", { class: "saver-toggle" }, btn, menu);
+  wrap.addEventListener("keydown", (e) => { if (e.key === "Escape") { close(); btn.focus(); } });
+  onChange(paint);
   paint();
-  return h("div", { class: "saver-toggle" }, btn);
+  return wrap;
 }
 
 function showApp(user, admin, avatar) {
@@ -205,7 +220,7 @@ function showApp(user, admin, avatar) {
       h("span", { class: "brand" }, h("strong", {}, "buddymusic"), h("span", { class: "powered" }, "powered by Navidrome")),
       h("nav", { class: "tabs" }, Object.values(links)),
       searchBox(),
-      saverToggle(),
+      qualityButton(),
       profileMenu(user, admin, avatar)),
     ...Object.values(views),
     settingsView,

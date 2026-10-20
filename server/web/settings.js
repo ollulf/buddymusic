@@ -1,3 +1,5 @@
+import { settings, setQuality, setFormat, onChange, QUALITIES, FORMATS, qualityHint, opusSupported } from "./player.js";
+
 const h = (tag, attrs = {}, ...kids) => {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
@@ -27,6 +29,31 @@ async function squareAvatar(file) {
   const blob = (type, q) => new Promise((ok) => canvas.toBlob(ok, type, q));
   const png = await blob("image/png");
   return png && png.size <= 200 * 1024 ? png : blob("image/jpeg", 0.9);
+}
+
+const QUALITY_NAMES = { auto: "Auto", original: "Original", normal: "Normal", low: "Low" };
+const FORMAT_NAMES = { flac: "FLAC (original file as stored)", mp3: "MP3 320 kbps" };
+
+function radios(name, keys, label, get, set) {
+  const inputs = keys.map((k) => h("input", { type: "radio", name, value: k, onchange: () => set(k) }));
+  const sync = () => inputs.forEach((i) => { i.checked = i.value === get(); });
+  sync();
+  const el = h("div", { class: "settings-radios", role: "radiogroup" }, keys.map((k, i) => h("label", {}, inputs[i], " ", label(k))));
+  const off = onChange(() => { if (!el.isConnected) { off(); return; } sync(); });
+  return el;
+}
+
+function qualityRow() {
+  return h("div", {},
+    h("p", { class: "muted" }, "Saved on this device. Auto picks Original, Normal or Low per song from how fast the music loads."),
+    radios("quality", QUALITIES, (k) => [QUALITY_NAMES[k], " ", h("span", { class: "muted" }, qualityHint(k))], () => settings().quality, setQuality),
+    opusSupported ? null : h("p", { class: "muted" }, "This browser can't play Opus, so Normal and Low use MP3 192 and MP3 128."));
+}
+
+function formatRow() {
+  return h("div", {},
+    h("p", { class: "muted" }, "What Original streams."),
+    radios("origformat", FORMATS, (k) => FORMAT_NAMES[k], () => settings().format, setFormat));
 }
 
 export async function saveAvatar(file) {
@@ -94,7 +121,10 @@ function profileHeader({ user, avatar, onAvatar, onLogin }) {
   return h("div", { class: "settings-profile" }, pic, picker, h("div", { class: "settings-user" }, user), reset, status);
 }
 
-const ITEMS = [];
+const ITEMS = [
+  { id: "quality", label: "Streaming quality", render: qualityRow },
+  { id: "format", label: "Original format", render: formatRow },
+];
 
 export function renderSettings(el, { onClose, ...profile }) {
   const close = h("button", { class: "ghost settings-close", type: "button", "aria-label": "Close settings", onclick: onClose }, "✕ Close");

@@ -254,17 +254,36 @@ func (a *App) handleStream(w http.ResponseWriter, r *http.Request, user string) 
 		writeError(w, http.StatusBadRequest, "bad-request")
 		return
 	}
-	q := url.Values{"id": {id}}
-	saver := r.URL.Query().Get("format") == "opus"
-	if saver {
-		rate := 128
-		if b, err := strconv.Atoi(r.URL.Query().Get("maxBitRate")); err == nil && b >= 32 && b <= 320 {
-			rate = b
-		}
-		q.Set("format", "opus")
-		q.Set("maxBitRate", strconv.Itoa(rate))
+	q, ok := streamParams(id, r.URL.Query())
+	if !ok {
+		writeError(w, http.StatusBadRequest, "bad-request")
+		return
 	}
+	saver := q.Get("format") != ""
 	a.recordStream(r, user, id, a.proxyBinary(w, r, "stream.view", q, "private, no-cache"), saver)
+}
+
+func streamParams(id string, in url.Values) (url.Values, bool) {
+	q := url.Values{"id": {id}}
+	format := in.Get("format")
+	def := 0
+	switch format {
+	case "":
+		return q, true
+	case "opus":
+		def = 128
+	case "mp3":
+		def = 320
+	default:
+		return nil, false
+	}
+	rate := def
+	if b, err := strconv.Atoi(in.Get("maxBitRate")); err == nil && b >= 32 && b <= 320 {
+		rate = b
+	}
+	q.Set("format", format)
+	q.Set("maxBitRate", strconv.Itoa(rate))
+	return q, true
 }
 
 func (a *App) handleScrobble(w http.ResponseWriter, r *http.Request, user string) {

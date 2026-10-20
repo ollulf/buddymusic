@@ -2,6 +2,11 @@ import { h, coverURL, fmtTime } from "./dom.js";
 import { heartButton, retarget } from "./favs.js";
 
 const SAVER_KEY = "bm.dataSaver";
+const QUALITY_KEY = "bm.quality";
+const FORMAT_KEY = "bm.originalFormat";
+export const QUALITIES = ["auto", "original", "normal", "low"];
+export const FORMATS = ["flac", "mp3"];
+const TIERS = ["original", "normal", "low"];
 
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
@@ -19,7 +24,12 @@ const state = {
   index: -1,
   shuffle: false,
   repeat: "off",
-  saver: store.get(SAVER_KEY) === "1",
+  quality: (() => {
+    const q = store.get(QUALITY_KEY);
+    if (QUALITIES.includes(q)) return q;
+    return store.get(SAVER_KEY) === "1" ? "normal" : "auto";
+  })(),
+  format: FORMATS.includes(store.get(FORMAT_KEY)) ? store.get(FORMAT_KEY) : "flac",
   scrobbled: false,
   order: [],
 };
@@ -28,10 +38,85 @@ const listeners = new Set();
 const emit = () => listeners.forEach((fn) => fn());
 export const onChange = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 
-const streamURL = (song) => {
+export const opusSupported = (() => {
+  try { return audio.canPlayType("audio/ogg; codecs=opus") !== ""; } catch { return false; }
+})();
+
+const auto = { tier: 0, speed: 0, measuredKbps: 0, ups: 0, stalls: 0, next: null };
+
+function streamSpec(song, tier) {
+  if (tier === "normal") return opusSupported ? { format: "opus", kbps: 128 } : { format: "mp3", kbps: 192 };
+  if (tier === "low") return opusSupported ? { format: "opus", kbps: 80 } : { format: "mp3", kbps: 128 };
+  if (state.format === "mp3") return { format: "mp3", kbps: 320 };
+  const known = +song.bitRate > 0;
+  return { format: "", kbps: known ? +song.bitRate : 1000, known, suffix: song.suffix || "" };
+}
+
+export function qualityHint(q) {
+  if (q === "auto") return "by connection";
+  if (q === "original") return state.format === "mp3" ? "MP3 320" : "original file";
+  const spec = streamSpec({}, q);
+  return `${spec.format === "opus" ? "Opus" : "MP3"} ${spec.kbps}`;
+}
+
+function streamURL(song, spec) {
   const base = `/api/music/stream/${encodeURIComponent(song.id)}`;
-  return state.saver ? `${base}?format=opus&maxBitRate=128` : base;
-};
+  return spec.format ? `${base}?format=${spec.format}&maxBitRate=${spec.kbps}` : base;
+}
+
+function decideAuto(song) {
+  let t = auto.tier;
+  if (auto.stalls > 0) {
+    auto.stalls = 0;
+    auto.ups = 0;
+    return Math.min(t + 1, TIERS.length - 1);
+  }
+  if (!auto.speed) return t;
+  const throughput = auto.speed * auto.measuredKbps;
+  if (throughput < 1.5 * streamSpec(song, TIERS[t]).kbps && t < TIERS.length - 1) {
+    auto.ups = 0;
+    return t + 1;
+  }
+  if (t > 0 && throughput > 4 * streamSpec(song, TIERS[t - 1]).kbps) {
+    auto.ups += 1;
+    if (auto.ups >= 2) { auto.ups = 0; return t - 1; }
+  } else auto.ups = 0;
+  return t;
+}
+
+function pickTier(song, commit) {
+  if (state.quality !== "auto") return state.quality;
+  if (auto.next && auto.next.id === song.id) {
+    const t = auto.next.tier;
+    if (commit) { auto.tier = t; auto.next = null; }
+    return TIERS[t];
+  }
+  const t = decideAuto(song);
+  if (commit) auto.tier = t;
+  else auto.next = { id: song.id, tier: t };
+  return TIERS[t];
+}
+
+const meter = { t0: 0, b0: 0, done: false, playing: null, started: false };
+
+function bufferedEnd() {
+  const b = audio.buffered;
+  return b.length ? b.end(b.length - 1) : 0;
+}
+
+function measure() {
+  if (meter.done || !meter.playing || !meter.t0) return;
+  const now = performance.now();
+  const secs = (now - meter.t0) / 1000;
+  const ahead = bufferedEnd() - meter.b0;
+  const d = duration();
+  const full = d > 0 && bufferedEnd() >= d - 0.5;
+  if (secs >= 2 || full) {
+    auto.speed = Math.max(0.01, ahead / Math.max(secs, 0.25));
+    auto.measuredKbps = meter.playing.kbps;
+  }
+  if (full) meter.done = true;
+}
 
 export const current = () => state.queue[state.index] || null;
 export const queue = () => state.queue.slice();
@@ -81,6 +166,12 @@ function report(playing) {
   fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
 }
 
+function startStream(song, tier, from = 0) {
+  const spec = streamSpec(song, tier);
+  Object.assign(meter, { t0: performance.now(), b0: from, done: false, started: false, playing: { ...spec, tier } });
+  audio.src = streamURL(song, spec);
+}
+
 function load(i, autoplay = true) {
   if (listen.song) report(false);
   state.index = i;
@@ -88,7 +179,7 @@ function load(i, autoplay = true) {
   state.scrobbled = false;
   const song = current();
   if (!song) { audio.removeAttribute("src"); audio.load(); emit(); return; }
-  audio.src = streamURL(song);
+  startStream(song, pickTier(song, true));
   if (autoplay) audio.play().catch(() => {});
   fetch(`/api/music/scrobble/${encodeURIComponent(song.id)}?submission=false`, { method: "POST" }).catch(() => {});
   updateSession();
@@ -146,15 +237,29 @@ export function prev() {
 export function seek(t) { if (isFinite(t)) audio.currentTime = t; }
 export function toggleShuffle() { state.shuffle = !state.shuffle; rebuildOrder(); emit(); }
 export function cycleRepeat() { state.repeat = { off: "all", all: "one", one: "off" }[state.repeat]; emit(); }
-export const settings = () => ({ shuffle: state.shuffle, repeat: state.repeat, saver: state.saver });
-export function setSaver(on) {
-  state.saver = on;
-  store.set(SAVER_KEY, on ? "1" : "0");
+export const settings = () => ({ shuffle: state.shuffle, repeat: state.repeat, quality: state.quality, format: state.format });
+export const streamInfo = () => (meter.playing && current() ? { ...meter.playing, auto: state.quality === "auto" } : null);
+export function setFormat(f) {
+  if (!FORMATS.includes(f)) return;
+  state.format = f;
+  store.set(FORMAT_KEY, f);
+  if (meter.playing && meter.playing.tier === "original") restream("original");
+  emit();
+}
+export function setQuality(q) {
+  if (!QUALITIES.includes(q)) return;
+  state.quality = q;
+  store.set(QUALITY_KEY, q);
+  auto.next = null;
+  if (q !== "auto") restream(q);
+  emit();
+}
+function restream(tier) {
   const song = current();
   if (song) {
     const t = audio.currentTime;
     const playing = !audio.paused;
-    audio.src = streamURL(song);
+    startStream(song, tier, t);
     audio.addEventListener("loadedmetadata", () => { audio.currentTime = t; }, { once: true });
     if (playing) audio.play().catch(() => {});
   }
@@ -164,7 +269,9 @@ export function setSaver(on) {
 function preloadNext() {
   const i = state.repeat === "one" ? -1 : step(1);
   const song = state.queue[i];
-  const url = song ? streamURL(song) : "";
+  if (!song) return;
+  if (state.quality === "auto" && (meter.playing ? !meter.done && auto.speed < 4 : false)) return;
+  const url = streamURL(song, streamSpec(song, pickTier(song, false)));
   if (url && !preloader.src.endsWith(url)) { preloader.src = url; preloader.load(); }
 }
 
@@ -195,6 +302,13 @@ audio.addEventListener("ended", () => {
 audio.addEventListener("pause", () => { listen.last = -1; report(false); });
 audio.addEventListener("play", () => { listen.last = audio.currentTime; report(true); });
 audio.addEventListener("seeking", () => { listen.last = -1; });
+audio.addEventListener("progress", measure);
+audio.addEventListener("playing", () => { meter.started = true; });
+audio.addEventListener("waiting", () => {
+  if (!meter.started || audio.seeking || state.quality !== "auto") return;
+  auto.stalls += 1;
+  auto.next = null;
+});
 window.addEventListener("pagehide", () => report(false));
 audio.addEventListener("timeupdate", () => {
   const song = current();
@@ -246,6 +360,7 @@ export function renderBar(opts = {}) {
   const playB = btn("Play", "play big", toggle);
   const nextB = btn("Next", "next", next);
   const repeatB = btn("Repeat", "repeat", cycleRepeat);
+  const rateB = h("span", { class: "bar-rate" });
   const heartB = heartButton(null, "song", { cls: "bar-heart", get: current, onUnauthorized: opts.onUnauthorized });
   const muteB = h("button", { class: "icon mute", type: "button" });
   const volR = h("input", { type: "range", min: 0, max: 100, step: 1, value: vol.v, "aria-label": "Volume" });
@@ -269,7 +384,7 @@ export function renderBar(opts = {}) {
   const bar = h("footer", { class: "player", hidden: true },
     h("div", { class: "bar-seek" }, pos, range, dur),
     h("div", { class: "bar-row" },
-      art, h("div", { class: "bar-meta" }, title, sub), heartB,
+      art, h("div", { class: "bar-meta" }, title, sub), rateB, heartB,
       h("div", { class: "bar-ctl" }, shuffleB, prevB, playB, nextB, repeatB),
       volBox));
 
@@ -297,6 +412,14 @@ export function renderBar(opts = {}) {
     }
     if (song.albumId) art.href = `#/library/album/${encodeURIComponent(song.albumId)}`;
     else art.removeAttribute("href");
+    const info = streamInfo();
+    rateB.hidden = !info;
+    if (info) {
+      rateB.textContent = info.format ? `${info.format.toUpperCase()} ${info.kbps}` : [info.suffix ? info.suffix.toUpperCase() : "ORIG", info.known ? info.kbps : ""].filter(Boolean).join(" ");
+      const down = info.auto && info.tier !== "original";
+      rateB.classList.toggle("down", down);
+      rateB.title = `${info.auto ? "Auto" : "Fixed"} quality: ${info.tier}${info.format ? `, ${info.format} ${info.kbps} kbps` : ", original file"}${down ? " (stepped down for a slow connection)" : ""}`;
+    }
     const s = settings();
     playB.classList.toggle("pause", isPlaying());
     playB.setAttribute("aria-label", isPlaying() ? "Pause" : "Play");
