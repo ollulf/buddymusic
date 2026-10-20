@@ -167,9 +167,6 @@ button.ghost { background: none; }
 button.danger { color: var(--bad); border-color: var(--bad); background: var(--card); }
 button.icon.danger { border: 0; background: none; color: var(--muted); }
 button.icon.danger:hover, button.icon.danger:focus-visible { color: var(--bad); }
-.recent { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: .88rem; }
-.recent li { display: flex; gap: 8px; align-items: baseline; }
-.recent .fn { font-weight: 400; }
 .login { max-width: 360px; margin: 10vh auto 0; display: flex; flex-direction: column; gap: 10px; }
 .brand { display: flex; flex-direction: column; line-height: 1.15; }
 .brand .powered { color: var(--muted); font-size: .72rem; letter-spacing: .02em; }
