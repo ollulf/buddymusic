@@ -56,11 +56,10 @@ function formatRow() {
     radios("origformat", FORMATS, (k) => FORMAT_NAMES[k], () => settings().format, setFormat));
 }
 
-const PRELOAD_NAMES = { auto: "Auto", always: "Always", off: "Off" };
+const PRELOAD_NAMES = { on: "On", off: "Off" };
 const PRELOAD_HINTS = {
-  auto: "Only on fast connections.",
-  always: "Next song is ready instantly, but uses more data.",
-  off: "Saves data, short pause between songs.",
+  on: "Next song starts instantly, uses a bit more data",
+  off: "Saves data, short pause between songs",
 };
 
 function preloadRow() {

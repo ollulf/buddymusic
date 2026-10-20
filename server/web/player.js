@@ -5,7 +5,7 @@ const SAVER_KEY = "bm.dataSaver";
 const QUALITY_KEY = "bm.quality";
 const FORMAT_KEY = "bm.originalFormat";
 const PRELOAD_KEY = "bm.preload";
-export const PRELOADS = ["auto", "always", "off"];
+export const PRELOADS = ["on", "off"];
 export const QUALITIES = ["auto", "original", "normal", "low"];
 export const FORMATS = ["flac", "mp3"];
 const TIERS = ["original", "normal", "low"];
@@ -32,7 +32,7 @@ const state = {
     return store.get(SAVER_KEY) === "1" ? "normal" : "auto";
   })(),
   format: FORMATS.includes(store.get(FORMAT_KEY)) ? store.get(FORMAT_KEY) : "flac",
-  preload: PRELOADS.includes(store.get(PRELOAD_KEY)) ? store.get(PRELOAD_KEY) : "auto",
+  preload: store.get(PRELOAD_KEY) === "off" ? "off" : "on",
   scrobbled: false,
   order: [],
 };
@@ -321,7 +321,6 @@ function preloadNext() {
   const i = state.repeat === "one" ? -1 : step(1);
   const song = state.queue[i];
   if (!song || state.preload === "off") return;
-  if (state.preload === "auto" && state.quality === "auto" && (meter.playing ? !meter.done && auto.speed < 4 : false)) return;
   const spec = streamSpec(song, pickTier(song, false));
   const url = streamURL(song, spec);
   if (!spec.format) {
