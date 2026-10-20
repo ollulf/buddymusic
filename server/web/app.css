@@ -53,6 +53,7 @@ h1 { font-size: 1.4rem; margin: 0; line-height: 1.25; }
 .album-head { display: flex; gap: 18px; align-items: flex-end; }
 .album-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .album-info .actions { margin-top: 8px; flex-wrap: wrap; }
+.uploaded-by { color: var(--muted); font: .82rem/1.4 var(--pix); overflow-wrap: anywhere; }
 .songs { list-style: none; margin: 0; padding: 4px 6px; }
 .song-row { display: flex; align-items: center; gap: 2px; border-bottom: 1px solid var(--line); }
 .song-row:last-child { border-bottom: 0; }
