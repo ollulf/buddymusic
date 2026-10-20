@@ -1,3 +1,4 @@
+import { t } from "./i18n.js";
 import { h, api, apiJSON, fmtTime, Unauthorized } from "./dom.js";
 import { songRow } from "./library.js";
 import * as player from "./player.js";
@@ -7,14 +8,14 @@ export const setPlaylistUser = (user) => { me = (user || "").toLowerCase(); };
 const mine = (pl) => (pl.owner || "").toLowerCase() === me;
 
 const ERRORS = {
-  "not-owner": "Only the owner can change this playlist.",
-  "not-found": "This playlist no longer exists.",
-  "navidrome-unreachable": "Navidrome is not answering.",
+  "not-owner": t("playlists.notOwner"),
+  "not-found": t("playlists.notFound"),
+  "navidrome-unreachable": t("common.navidrome"),
 };
 
 function report(e, opts, what) {
   if (e instanceof Unauthorized) { opts.onUnauthorized?.(); return; }
-  alert(`${what} failed: ${ERRORS[e.message] || e.message}`);
+  alert(t(`playlists.fail.${what}`, { error: ERRORS[e.message] || e.message }));
 }
 
 const listPlaylists = async () => (await api("/api/music/playlists")).playlist || [];
@@ -29,34 +30,34 @@ async function createPlaylist(name, songIds, opts) {
   try {
     return await apiJSON("POST", "/api/music/playlists", { name, songIds });
   } catch (e) {
-    report(e, opts, "Creating the playlist");
+    report(e, opts, "create");
     return null;
   }
 }
 
 function deleteButton(pl, opts, after) {
-  return h("button", { class: "icon more danger", title: "Delete playlist", "aria-label": `Delete playlist ${pl.name}`, onclick: async () => {
-    if (!confirm(`Delete the playlist "${pl.name}"?\n\nThe songs stay in the library; only the playlist goes away.`)) return;
+  return h("button", { class: "icon more danger", title: t("playlists.delete"), "aria-label": t("playlists.deleteNamed", { name: pl.name }), onclick: async () => {
+    if (!confirm(t("playlists.confirmDelete", { name: pl.name }))) return;
     try {
       await apiJSON("DELETE", `/api/music/playlist/${encodeURIComponent(pl.id)}`);
       after();
-    } catch (e) { report(e, opts, "Deleting"); }
+    } catch (e) { report(e, opts, "delete"); }
   } }, "✕");
 }
 
 function playlistRow(pl, opts, reload) {
   const own = mine(pl);
-  const sub = [`${pl.songCount || 0} songs`, pl.duration ? fmtTime(pl.duration) : null, own ? null : `by ${pl.owner}`].filter(Boolean).join(" · ");
+  const sub = [t("common.songCount", { n: pl.songCount || 0 }), pl.duration ? fmtTime(pl.duration) : null, own ? null : t("playlists.byLower", { owner: pl.owner })].filter(Boolean).join(" · ");
   return h("li", { class: "pl-row" },
     h("a", { class: "pl-main", href: `#/playlists/${encodeURIComponent(pl.id)}` },
       h("span", { class: "s-meta" },
-        h("span", { class: "s-title" }, pl.name || "Untitled", own && pl.public ? h("span", { class: "badge" }, "Public") : null),
+        h("span", { class: "s-title" }, pl.name || t("playlists.untitled"), own && pl.public ? h("span", { class: "badge" }, t("playlists.publicBadge")) : null),
         h("span", { class: "s-sub" }, sub))),
-    h("button", { class: "icon more", title: "Play", "aria-label": `Play ${pl.name}`, onclick: async () => {
+    h("button", { class: "icon more", title: t("player.play"), "aria-label": t("playlists.playNamed", { name: pl.name }), onclick: async () => {
       try {
         const full = await api(`/api/music/playlist/${encodeURIComponent(pl.id)}`);
         if (full.entry?.length) player.playList(full.entry, 0);
-      } catch (e) { report(e, opts, "Loading"); }
+      } catch (e) { report(e, opts, "load"); }
     } }, "▶"),
     own ? deleteButton(pl, opts, reload) : null);
 }
@@ -64,41 +65,41 @@ function playlistRow(pl, opts, reload) {
 async function renderOverview(container, opts) {
   const reload = () => renderOverview(container, opts);
   const newBtn = h("button", { class: "primary", onclick: async () => {
-    const name = prompt("Name of the new playlist");
+    const name = prompt(t("playlists.newName"));
     if (!name || !name.trim()) return;
     const pl = await createPlaylist(name.trim(), [], opts);
     if (pl) location.hash = `#/playlists/${encodeURIComponent(pl.id)}`;
-  } }, "New playlist");
-  container.replaceChildren(h("div", { class: "pl-top" }, h("h1", {}, "Playlists"), newBtn), h("div", { class: "muted" }, "Loading…"));
+  } }, t("playlists.new"));
+  container.replaceChildren(h("div", { class: "pl-top" }, h("h1", {}, t("tab.playlists")), newBtn), h("div", { class: "muted" }, t("common.loading")));
   try {
     const all = await listPlaylists();
     const own = all.filter(mine);
     const friends = all.filter((pl) => !mine(pl));
     container.replaceChildren(
-      h("div", { class: "pl-top" }, h("h1", {}, "Playlists"), newBtn),
+      h("div", { class: "pl-top" }, h("h1", {}, t("tab.playlists")), newBtn),
       h("section", {},
-        h("h2", {}, `My playlists (${own.length})`),
+        h("h2", {}, t("playlists.mine", { n: own.length })),
         own.length ? h("ul", { class: "songs card" }, own.map((pl) => playlistRow(pl, opts, reload)))
-          : h("p", { class: "card muted" }, "No playlists yet. Create one, or use the ☰ button next to any song.")),
+          : h("p", { class: "card muted" }, t("playlists.noneMine"))),
       h("section", {},
-        h("h2", {}, `From friends (${friends.length})`),
+        h("h2", {}, t("playlists.friends", { n: friends.length })),
         friends.length ? h("ul", { class: "songs card" }, friends.map((pl) => playlistRow(pl, opts, reload)))
-          : h("p", { class: "card muted" }, "Nobody has shared a public playlist yet.")));
+          : h("p", { class: "card muted" }, t("playlists.noneFriends"))));
   } catch (e) {
     if (e instanceof Unauthorized) return opts.onUnauthorized?.();
-    container.replaceChildren(h("h1", {}, "Playlists"), h("div", { class: "card muted" }, ERRORS[e.message] || "Could not load playlists."));
+    container.replaceChildren(h("h1", {}, t("tab.playlists")), h("div", { class: "card muted" }, ERRORS[e.message] || t("playlists.loadFailed")));
   }
 }
 
 async function renderPlaylist(container, id, opts) {
-  const back = h("a", { class: "back", href: "#/playlists" }, "‹ Playlists");
-  container.replaceChildren(back, h("div", { class: "muted" }, "Loading…"));
+  const back = h("a", { class: "back", href: "#/playlists" }, t("playlists.back"));
+  container.replaceChildren(back, h("div", { class: "muted" }, t("common.loading")));
   let pl;
   try {
     pl = await api(`/api/music/playlist/${encodeURIComponent(id)}`);
   } catch (e) {
     if (e instanceof Unauthorized) return opts.onUnauthorized?.();
-    container.replaceChildren(back, h("div", { class: "card muted" }, ERRORS[e.message] || "Could not load the playlist."));
+    container.replaceChildren(back, h("div", { class: "card muted" }, ERRORS[e.message] || t("playlists.loadOneFailed")));
     return;
   }
   const own = mine(pl);
@@ -106,12 +107,12 @@ async function renderPlaylist(container, id, opts) {
   const reload = () => renderPlaylist(container, id, opts);
   const patch = async (body) => {
     try { await apiJSON("PATCH", `/api/music/playlist/${encodeURIComponent(pl.id)}`, body); }
-    catch (e) { report(e, opts, "Saving"); }
+    catch (e) { report(e, opts, "save"); }
     reload();
   };
   const saveSongs = async (list) => {
     try { await apiJSON("PUT", `/api/music/playlist/${encodeURIComponent(pl.id)}/songs`, { songIds: list.map((s) => s.id) }); }
-    catch (e) { report(e, opts, "Saving"); }
+    catch (e) { report(e, opts, "save"); }
     reload();
   };
   const move = (i, d) => {
@@ -124,38 +125,38 @@ async function renderPlaylist(container, id, opts) {
   const rows = songs.map((_, i) => songRow(songs, i, {
     showArtist: true, showCover: true, onUnauthorized: opts.onUnauthorized,
     extra: own ? [
-      h("button", { class: "icon more", title: "Move up", "aria-label": "Move up", disabled: i === 0, onclick: () => move(i, -1) }, "↑"),
-      h("button", { class: "icon more", title: "Move down", "aria-label": "Move down", disabled: i === songs.length - 1, onclick: () => move(i, 1) }, "↓"),
-      h("button", { class: "icon more danger", title: "Remove from playlist", "aria-label": "Remove from playlist", onclick: () => saveSongs(songs.filter((_, j) => j !== i)) }, "−"),
+      h("button", { class: "icon more", title: t("playlists.moveUp"), "aria-label": t("playlists.moveUp"), disabled: i === 0, onclick: () => move(i, -1) }, "↑"),
+      h("button", { class: "icon more", title: t("playlists.moveDown"), "aria-label": t("playlists.moveDown"), disabled: i === songs.length - 1, onclick: () => move(i, 1) }, "↓"),
+      h("button", { class: "icon more danger", title: t("playlists.remove"), "aria-label": t("playlists.remove"), onclick: () => saveSongs(songs.filter((_, j) => j !== i)) }, "−"),
     ] : null,
   }));
   container.replaceChildren(
     back,
     h("section", { class: "pl-head" },
-      h("h1", {}, pl.name || "Untitled", own && pl.public ? h("span", { class: "badge" }, "Public") : null),
-      h("div", { class: "muted" }, [own ? "Your playlist" : `By ${pl.owner}`, `${songs.length} songs`, fmtTime(total)].join(" · ")),
+      h("h1", {}, pl.name || t("playlists.untitled"), own && pl.public ? h("span", { class: "badge" }, t("playlists.publicBadge")) : null),
+      h("div", { class: "muted" }, [own ? t("playlists.yours") : t("playlists.by", { owner: pl.owner }), t("common.songCount", { n: songs.length }), fmtTime(total)].join(" · ")),
       h("div", { class: "actions" },
-        h("button", { class: "primary", disabled: !songs.length, onclick: () => player.playList(songs, 0) }, "Play all"),
-        h("button", { disabled: !songs.length, onclick: () => shuffle(songs) }, "Shuffle"),
-        h("button", { disabled: !songs.length, onclick: () => player.addToQueue(songs) }, "Add to queue"),
+        h("button", { class: "primary", disabled: !songs.length, onclick: () => player.playList(songs, 0) }, t("favorites.playAll")),
+        h("button", { disabled: !songs.length, onclick: () => shuffle(songs) }, t("player.shuffle")),
+        h("button", { disabled: !songs.length, onclick: () => player.addToQueue(songs) }, t("song.addToQueue")),
         own ? h("button", { onclick: () => {
-          const name = prompt("New name", pl.name || "");
+          const name = prompt(t("playlists.renamePrompt"), pl.name || "");
           if (name && name.trim() && name.trim() !== pl.name) patch({ name: name.trim() });
-        } }, "Rename") : null,
+        } }, t("playlists.rename")) : null,
         own ? null : h("button", { onclick: async () => {
-          const copy = await createPlaylist(pl.name || "Copy", songs.map((s) => s.id), opts);
+          const copy = await createPlaylist(pl.name || t("playlists.copyName"), songs.map((s) => s.id), opts);
           if (copy) location.hash = `#/playlists/${encodeURIComponent(copy.id)}`;
-        } }, "Copy to my playlists"),
+        } }, t("playlists.copy")),
         own ? h("button", { class: "danger", onclick: async () => {
-          if (!confirm(`Delete the playlist "${pl.name}"?\n\nThe songs stay in the library; only the playlist goes away.`)) return;
+          if (!confirm(t("playlists.confirmDelete", { name: pl.name }))) return;
           try {
             await apiJSON("DELETE", `/api/music/playlist/${encodeURIComponent(pl.id)}`);
             location.hash = "#/playlists";
-          } catch (e) { report(e, opts, "Deleting"); }
-        } }, "Delete playlist") : null),
-      own ? h("label", { class: "pl-public" }, publicBox, h("span", {}, "Public: every buddymusic user can see and play it (read-only)")) : null),
+          } catch (e) { report(e, opts, "delete"); }
+        } }, t("playlists.delete")) : null),
+      own ? h("label", { class: "pl-public" }, publicBox, h("span", {}, t("playlists.publicHint"))) : null),
     songs.length ? h("ol", { class: "songs card" }, rows)
-      : h("p", { class: "card muted" }, own ? "Empty. Add songs with the ☰ button next to any song." : "This playlist is empty."));
+      : h("p", { class: "card muted" }, own ? t("playlists.emptyOwn") : t("playlists.empty")));
 }
 
 export function renderPlaylists(container, parts, opts = {}) {
@@ -166,20 +167,20 @@ export function renderPlaylists(container, parts, opts = {}) {
 
 export async function openAddSheet(songs, opts = {}) {
   const ids = songs.map((s) => s.id);
-  const list = h("ul", { class: "sheet-list" }, h("li", { class: "muted" }, "Loading…"));
-  const name = h("input", { class: "search-box", placeholder: "New playlist name", "aria-label": "New playlist name" });
+  const list = h("ul", { class: "sheet-list" }, h("li", { class: "muted" }, t("common.loading")));
+  const name = h("input", { class: "search-box", placeholder: t("playlists.newPlaceholder"), "aria-label": t("playlists.newPlaceholder") });
   const status = h("div", { class: "muted", role: "status" });
   const dlg = h("dialog", { class: "sheet card" },
-    h("h2", {}, songs.length === 1 ? `Add "${songs[0].title || "song"}" to…` : `Add ${songs.length} songs to…`),
+    h("h2", {}, songs.length === 1 && songs[0].title ? t("playlists.addOne", { title: songs[0].title }) : t("playlists.addMany", { n: songs.length })),
     list,
     h("form", { class: "sheet-new", onsubmit: async (e) => {
       e.preventDefault();
       if (!name.value.trim()) return name.focus();
       const pl = await createPlaylist(name.value.trim(), ids, opts);
-      if (pl) { dlg.close(); toast(`Added to ${pl.name}`); }
-    } }, name, h("button", { class: "primary", type: "submit" }, "Create")),
+      if (pl) { dlg.close(); toast(t("playlists.added", { name: pl.name })); }
+    } }, name, h("button", { class: "primary", type: "submit" }, t("playlists.create"))),
     status,
-    h("button", { class: "ghost", type: "button", onclick: () => dlg.close() }, "Cancel"));
+    h("button", { class: "ghost", type: "button", onclick: () => dlg.close() }, t("common.cancel")));
   dlg.addEventListener("close", () => dlg.remove());
   document.body.append(dlg);
   dlg.showModal();
@@ -189,20 +190,20 @@ export async function openAddSheet(songs, opts = {}) {
       try {
         await apiJSON("POST", `/api/music/playlist/${encodeURIComponent(pl.id)}/songs`, { songIds: ids });
         dlg.close();
-        toast(`Added to ${pl.name}`);
-      } catch (e) { report(e, opts, "Adding"); }
-    } }, h("span", {}, pl.name), h("span", { class: "muted" }, `${pl.songCount || 0} songs`)))) : [h("li", { class: "muted" }, "No playlists yet. Name a new one below.")]));
+        toast(t("playlists.added", { name: pl.name }));
+      } catch (e) { report(e, opts, "add"); }
+    } }, h("span", {}, pl.name), h("span", { class: "muted" }, t("common.songCount", { n: pl.songCount || 0 }))))) : [h("li", { class: "muted" }, t("playlists.noneBelow"))]));
   } catch (e) {
     if (e instanceof Unauthorized) { dlg.close(); return opts.onUnauthorized?.(); }
-    list.replaceChildren(h("li", { class: "muted" }, "Could not load your playlists."));
+    list.replaceChildren(h("li", { class: "muted" }, t("playlists.loadYoursFailed")));
   }
 }
 
 function toast(text) {
-  const t = h("div", { class: "toast", role: "status" }, text);
-  document.body.append(t);
-  setTimeout(() => t.remove(), 2200);
+  const el = h("div", { class: "toast", role: "status" }, text);
+  document.body.append(el);
+  setTimeout(() => el.remove(), 2200);
 }
 
 export const addToPlaylistButton = (songs, opts = {}, cls = "icon more") =>
-  h("button", { class: cls, title: "Add to playlist", "aria-label": "Add to playlist", onclick: () => openAddSheet(songs, opts) }, cls.includes("icon") ? "☰" : "Add to playlist");
+  h("button", { class: cls, title: t("playlists.addTo"), "aria-label": t("playlists.addTo"), onclick: () => openAddSheet(songs, opts) }, cls.includes("icon") ? "☰" : t("playlists.addTo"));
