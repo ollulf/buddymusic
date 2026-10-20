@@ -50,18 +50,6 @@ func TestStoreFriends(t *testing.T) {
 		t.Fatalf("offline friends last: %+v", list)
 	}
 
-	if on, _ := s.ShareListening("ann"); !on {
-		t.Fatal("share should default on")
-	}
-	if err := s.SetShareListening("ann", false); err != nil {
-		t.Fatal(err)
-	}
-	list, _ = s.Friends("max", now)
-	for _, f := range list {
-		if f.User == "ann" && (!f.Online || f.State != "idle" || f.Title != "" || f.Artist != "") {
-			t.Fatalf("ann private: %+v", f)
-		}
-	}
 }
 
 func TestFriendsHandlers(t *testing.T) {
@@ -90,36 +78,19 @@ func TestFriendsHandlers(t *testing.T) {
 	}
 	var out struct {
 		Friends []Friend
-		Share   bool
 	}
 	json.Unmarshal(rec.Body.Bytes(), &out)
-	if !out.Share || len(out.Friends) != 1 || out.Friends[0].User != "boss" || out.Friends[0].Title != "Song" {
+	if len(out.Friends) != 1 || out.Friends[0].User != "boss" || out.Friends[0].Title != "Song" {
 		t.Fatalf("out: %s", body)
 	}
 
-	put := func(c *http.Cookie, b string) int {
-		req := httptest.NewRequest("PUT", "/api/friends/share", strings.NewReader(b))
-		req.AddCookie(c)
-		return do(t, a.Routes(), req).Code
-	}
-	if code := put(boss, `{}`); code != http.StatusBadRequest {
-		t.Fatalf("empty put %d", code)
-	}
-	if code := put(boss, `{"share":false}`); code != 200 {
-		t.Fatalf("put %d", code)
-	}
-	out.Friends = nil
-	json.Unmarshal(get(max, "/api/friends").Body.Bytes(), &out)
-	if len(out.Friends) != 1 || out.Friends[0].Title != "" || out.Friends[0].State != "idle" || !out.Friends[0].Online {
-		t.Fatalf("private: %+v", out.Friends)
-	}
-	out.Friends = nil
-	json.Unmarshal(get(boss, "/api/friends").Body.Bytes(), &out)
-	if out.Share {
-		t.Fatal("boss share should be off")
+	req := httptest.NewRequest("PUT", "/api/friends/share", strings.NewReader(`{"share":false}`))
+	req.AddCookie(boss)
+	if rec := do(t, a.Routes(), req); rec.Code == 200 {
+		t.Fatal("share toggle should be gone")
 	}
 
-	req := httptest.NewRequest("GET", "/api/friends", nil)
+	req = httptest.NewRequest("GET", "/api/friends", nil)
 	if rec := do(t, a.Routes(), req); rec.Code != http.StatusUnauthorized {
 		t.Fatalf("anon %d", rec.Code)
 	}

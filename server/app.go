@@ -34,7 +34,6 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("DELETE /api/avatar", a.requireUser(a.handleDeleteAvatar))
 	mux.Handle("GET /api/avatar/{user}", a.requireUser(a.handleFriendAvatar))
 	mux.Handle("GET /api/friends", a.requireUser(a.handleFriends))
-	mux.Handle("PUT /api/friends/share", a.requireUser(a.handlePutShare))
 	mux.Handle("POST /api/uploads", a.requireUser(a.handleUpload))
 	mux.Handle("GET /api/uploads", a.requireUser(a.handleListUploads))
 	mux.Handle("GET /api/uploads/{id}", a.requireUser(a.handleGetUpload))

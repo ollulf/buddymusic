@@ -5,7 +5,7 @@ import { renderFavorites } from "./favorites.js";
 import { renderBar, settings, setSaver } from "./player.js";
 import { renderPlaylists, setPlaylistUser } from "./playlists.js";
 import { renderAdmin } from "./admin.js";
-import { renderSettings, GEAR } from "./settings.js";
+import { renderSettings, GEAR, AVATAR, paintAvatar } from "./settings.js";
 
 const root = document.getElementById("app");
 
@@ -56,7 +56,7 @@ function showLogin() {
     h("label", { class: "field" }, h("span", {}, "Password"), pass),
     h("label", { class: "check" }, remember, h("span", {}, "Keep me logged in")),
     err, btn,
-    h("p", { class: "muted privacy" }, "Admins can see when you log in and how much you listen. Friends can see what you are playing (you can turn that off in your profile)."));
+    h("p", { class: "muted privacy" }, "Admins can see when you log in and how much you listen. Friends can see what you are playing."));
   root.replaceChildren(h("main", {}, form));
   user.focus();
 }
@@ -70,27 +70,10 @@ const BASE_TABS = [["library", "Library"], ["search", "Search"], ["favorites", "
 let routeHandler = null;
 let playerBar = null;
 
-const AVATAR = '<svg viewBox="0 0 8 8" width="20" height="20" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M3 1h2v1h1v2h-1v1h-2v-1h-1v-2h1zM1 6h1v-1h4v1h1v2h-6z"/></svg>';
 let closeProfile = null;
 
 document.addEventListener("click", (e) => { if (closeProfile && !e.target.closest(".profile")) closeProfile(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && closeProfile) closeProfile(true); });
-
-const AVATAR_SIZE = 128;
-
-async function squareAvatar(file) {
-  const bmp = await createImageBitmap(file);
-  const side = Math.min(bmp.width, bmp.height);
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = AVATAR_SIZE;
-  const ctx = canvas.getContext("2d");
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, AVATAR_SIZE, AVATAR_SIZE);
-  bmp.close();
-  const blob = (type, q) => new Promise((ok) => canvas.toBlob(ok, type, q));
-  const png = await blob("image/png");
-  return png && png.size <= 200 * 1024 ? png : blob("image/jpeg", 0.9);
-}
 
 const ago = (sec) => {
   const min = Math.max(0, Math.round((Date.now() / 1000 - sec) / 60));
@@ -121,8 +104,6 @@ function friendRow(f) {
 function friendsPanel() {
   const list = h("ul", { class: "friends" });
   const empty = h("p", { class: "muted friends-empty" }, "No friends online right now.");
-  const share = h("input", { type: "checkbox", checked: true });
-  const toggle = h("label", { class: "check share-toggle" }, share, h("span", {}, "Share my listening"));
   let timer = null;
   const stop = () => {
     clearInterval(timer);
@@ -138,7 +119,6 @@ function friendsPanel() {
       }
       if (!res.ok) throw new Error();
       const body = await res.json();
-      share.checked = body.share !== false;
       list.replaceChildren(...body.friends.map(friendRow));
       empty.hidden = body.friends.some((f) => f.online);
       empty.textContent = body.friends.length ? "Nobody else is online right now." : "No friends online right now.";
@@ -147,21 +127,8 @@ function friendsPanel() {
       empty.textContent = "Could not load friends";
     }
   };
-  share.addEventListener("change", async () => {
-    const want = share.checked;
-    share.disabled = true;
-    try {
-      const res = await fetch("/api/friends/share", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ share: want }) });
-      if (res.status === 401) return showLogin();
-      if (!res.ok) throw new Error();
-    } catch {
-      share.checked = !want;
-    } finally {
-      share.disabled = false;
-    }
-  });
   const el = h("section", { class: "friends-panel", "aria-label": "Friends online" },
-    h("h3", {}, "Friends online"), list, empty, toggle);
+    h("h3", {}, "Friends online"), list, empty);
   return {
     el,
     start() {
@@ -173,62 +140,19 @@ function friendsPanel() {
   };
 }
 
+let headerAvatar = { version: 0, paint() {} };
+
 function profileMenu(user, admin, avatar) {
-  let version = avatar || 0;
   const btn = h("button", { class: "avatar", type: "button", "aria-haspopup": "menu", "aria-expanded": "false", "aria-label": "Profile", title: user });
-  const status = h("div", { class: "profile-status", role: "status" });
-  const picker = h("input", { type: "file", accept: "image/png,image/jpeg,image/webp", hidden: true });
-  const change = h("button", { class: "ghost", type: "button", role: "menuitem", onclick: () => picker.click() }, "Change picture");
-  const reset = h("button", { class: "ghost", type: "button", role: "menuitem" }, "Reset picture");
-  const paint = () => {
-    btn.replaceChildren();
-    if (version) {
-      const img = h("img", { src: `/api/avatar?v=${version}`, alt: "", width: AVATAR_SIZE, height: AVATAR_SIZE });
-      img.addEventListener("error", () => { btn.innerHTML = AVATAR; });
-      btn.append(img);
-    } else btn.innerHTML = AVATAR;
-    btn.classList.toggle("has-pic", !!version);
-    reset.hidden = !version;
-  };
-  const send = async (method, body) => {
-    status.textContent = method === "PUT" ? "Saving…" : "";
-    change.disabled = reset.disabled = true;
-    try {
-      const res = await fetch("/api/avatar", { method, body, headers: body ? { "Content-Type": body.type } : {} });
-      if (res.status === 401) return showLogin();
-      if (!res.ok) throw new Error();
-      version = method === "PUT" ? (await res.json()).avatar : 0;
-      status.textContent = "";
-      paint();
-    } catch {
-      status.textContent = "Could not save the picture";
-    } finally {
-      change.disabled = reset.disabled = false;
-    }
-  };
-  picker.addEventListener("change", async () => {
-    const file = picker.files[0];
-    picker.value = "";
-    if (!file) return;
-    let blob;
-    try {
-      blob = await squareAvatar(file);
-    } catch {}
-    if (!blob) {
-      status.textContent = "That file is not a picture";
-      return;
-    }
-    send("PUT", blob);
-  });
-  reset.addEventListener("click", () => send("DELETE"));
-  paint();
+  headerAvatar = { version: avatar || 0, paint() { paintAvatar(btn, this.version); } };
+  headerAvatar.paint();
   const friends = friendsPanel();
   const settingsItem = h("button", { class: "ghost settings-item", type: "button", role: "menuitem", onclick: () => { close(); location.hash = "#/settings"; } });
   settingsItem.innerHTML = GEAR;
   settingsItem.append("Settings");
   const menu = h("div", { class: "profile-menu", role: "menu", hidden: true },
     h("div", { class: "profile-name" }, user, admin ? h("span", { class: "tag" }, "admin") : null),
-    change, reset, picker, status, friends.el, settingsItem,
+    friends.el, settingsItem,
     h("button", { class: "ghost", type: "button", role: "menuitem", onclick: logout }, "Log out"));
   const close = (focus) => {
     menu.hidden = true;
@@ -296,7 +220,13 @@ function showApp(user, admin, avatar) {
       cameFromApp = lastTab !== "";
       settingsView.hidden = false;
       document.body.classList.add("settings-open");
-      renderSettings(settingsView, { onClose: closeSettings });
+      renderSettings(settingsView, {
+        onClose: closeSettings,
+        user,
+        avatar: headerAvatar.version,
+        onAvatar: (v) => { headerAvatar.version = v; headerAvatar.paint(); },
+        onLogin: showLogin,
+      });
     } else if (!inSettings && !settingsView.hidden) {
       settingsView.hidden = true;
       document.body.classList.remove("settings-open");
