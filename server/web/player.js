@@ -66,8 +66,25 @@ function step(dir) {
   return state.order[next];
 }
 
+const listen = { song: null, secs: 0, last: -1, sent: 0 };
+
+function report(playing) {
+  const song = listen.song;
+  if (!song) return;
+  listen.sent = Date.now();
+  const body = JSON.stringify({ seconds: Math.floor(listen.secs), playing, title: song.title || "", artist: song.artist || "" });
+  const url = `/api/music/progress/${encodeURIComponent(song.id)}`;
+  if (!playing && document.visibilityState === "hidden" && navigator.sendBeacon) {
+    navigator.sendBeacon(url, new Blob([body], { type: "application/json" }));
+    return;
+  }
+  fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+}
+
 function load(i, autoplay = true) {
+  if (listen.song) report(false);
   state.index = i;
+  Object.assign(listen, { song: current(), secs: 0, last: -1, sent: 0 });
   state.scrobbled = false;
   const song = current();
   if (!song) { audio.removeAttribute("src"); audio.load(); emit(); return; }
@@ -175,9 +192,17 @@ audio.addEventListener("ended", () => {
   if (state.repeat === "one") { audio.currentTime = 0; audio.play().catch(() => {}); return; }
   next();
 });
+audio.addEventListener("pause", () => { listen.last = -1; report(false); });
+audio.addEventListener("play", () => { listen.last = audio.currentTime; report(true); });
+audio.addEventListener("seeking", () => { listen.last = -1; });
+window.addEventListener("pagehide", () => report(false));
 audio.addEventListener("timeupdate", () => {
   const song = current();
   if (!song) return;
+  const t = audio.currentTime;
+  if (listen.last >= 0 && t > listen.last && t - listen.last < 2) listen.secs += t - listen.last;
+  listen.last = t;
+  if (!audio.paused && Date.now() - listen.sent > 30000) report(true);
   const d = duration();
   if (!state.scrobbled && d > 30 && (audio.currentTime >= d / 2 || audio.currentTime >= 240)) {
     state.scrobbled = true;

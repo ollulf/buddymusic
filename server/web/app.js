@@ -4,6 +4,7 @@ import { renderSearch } from "./search.js";
 import { renderFavorites } from "./favorites.js";
 import { renderBar, settings, setSaver } from "./player.js";
 import { renderPlaylists, setPlaylistUser } from "./playlists.js";
+import { renderAdmin } from "./admin.js";
 
 const root = document.getElementById("app");
 
@@ -53,7 +54,8 @@ function showLogin() {
     h("label", { class: "field" }, h("span", {}, "Username"), user),
     h("label", { class: "field" }, h("span", {}, "Password"), pass),
     h("label", { class: "check" }, remember, h("span", {}, "Keep me logged in")),
-    err, btn);
+    err, btn,
+    h("p", { class: "muted privacy" }, "Admins can see when you log in and how much you listen."));
   root.replaceChildren(h("main", {}, form));
   user.focus();
 }
@@ -63,7 +65,7 @@ async function logout() {
   showLogin();
 }
 
-const TABS = [["library", "Library"], ["search", "Search"], ["favorites", "Favorites"], ["playlists", "Playlists"], ["upload", "Upload"]];
+const BASE_TABS = [["library", "Library"], ["search", "Search"], ["favorites", "Favorites"], ["playlists", "Playlists"], ["upload", "Upload"]];
 let routeHandler = null;
 let playerBar = null;
 
@@ -173,6 +175,7 @@ function saverToggle() {
 }
 
 function showApp(user, admin, avatar) {
+  const TABS = admin === true ? [...BASE_TABS, ["admin", "Admin"]] : BASE_TABS;
   const opts = { onUnauthorized: showLogin, admin: admin === true };
   setPlaylistUser(user);
   const views = Object.fromEntries(TABS.map(([k]) => [k, h("main", { class: `view view-${k}`, hidden: true })]));
@@ -209,6 +212,7 @@ function showApp(user, admin, avatar) {
       renderPlaylists(views.playlists, parts.slice(1), opts);
       window.scrollTo(0, 0);
     }
+    if (tab === "admin" && lastTab !== "admin") renderAdmin(views.admin, opts);
     if (tab === "library" || tab === "playlists") shown = key;
     lastTab = tab;
   };
