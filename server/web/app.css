@@ -390,3 +390,18 @@ body.settings-open { overflow: hidden; }
 .settings-section { max-width: 720px; margin: 0 auto 12px; padding: 12px 16px; background: var(--card); border: 2px solid var(--ink); box-shadow: var(--bevel); }
 .settings-section p { margin: 0; }
 .settings-item { display: flex; align-items: center; gap: 8px; }
+.saver-toggle { position: relative; }
+.saver-btn { font: inherit; font-weight: bold; }
+.quality-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; display: flex; flex-direction: column; min-width: 240px; background: var(--card); border: 2px solid var(--ink); box-shadow: var(--bevel); }
+.quality-menu[hidden] { display: none; }
+.quality-menu button { display: flex; justify-content: space-between; gap: 12px; padding: 8px 12px; background: transparent; color: var(--fg); border: 0; text-align: left; font: inherit; cursor: pointer; }
+.quality-menu button:hover, .quality-menu button.on { background: var(--bg); }
+.quality-menu button.on { color: var(--accent); }
+.bar-rate { flex: none; padding: 2px 6px; font-size: 0.7rem; color: var(--muted); border: 2px solid var(--line); white-space: nowrap; }
+.bar-rate[hidden] { display: none; }
+.bar-rate.down { color: var(--orange); border-color: var(--orange); }
+.settings-section, .settings-head { box-sizing: border-box; width: 100%; min-width: 0; }
+.settings-section h3 { margin: 12px 0 4px; font-size: 1rem; }
+.settings-radios { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+.settings-radios label { display: flex; align-items: baseline; gap: 4px; cursor: pointer; }
+@media (max-width: 640px) { .bar-rate { display: none; } }
