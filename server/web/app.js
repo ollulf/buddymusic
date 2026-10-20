@@ -74,6 +74,31 @@ let openQuality = null;
 
 const SVG = "http://www.w3.org/2000/svg";
 
+const TAB_ICONS = {
+  library: ["............", "..##.##.###.", "..##.##.###.", "..##.##.###.", "..##.##.###.", "..##.##..###", "..##.##..###", "..##.##..###", "..##.##...##", "..##.##...##", "############", "............"],
+  favorites: ["............", ".###....###.", "#####..#####", "############", "############", "############", ".##########.", "..########..", "...######...", "....####....", ".....##.....", "............"],
+  playlists: ["............", "######....##", "..........##", "######....##", "..........##", "#####...####", ".......#####", "######.#####", "........###.", "............", "............", "............"],
+  upload: [".....##.....", "....####....", "...######...", "..########..", ".....##.....", ".....##.....", ".....##.....", ".....##.....", "##........##", "##........##", "############", "############"],
+  admin: ["............", ".##########.", ".#........#.", ".#.######.#.", ".#.######.#.", ".#.######.#.", ".#.######.#.", "..#.####.#..", "..#..##..#..", "...#....#...", "....####....", "............"],
+};
+
+function pixelIcon(rows) {
+  const svg = document.createElementNS(SVG, "svg");
+  svg.setAttribute("viewBox", `0 0 ${rows[0].length} ${rows.length}`);
+  svg.setAttribute("width", rows[0].length * 2);
+  svg.setAttribute("height", rows.length * 2);
+  svg.setAttribute("shape-rendering", "crispEdges");
+  svg.setAttribute("aria-hidden", "true");
+  rows.forEach((row, y) => [...row].forEach((c, x) => {
+    if (c !== "#") return;
+    const r = document.createElementNS(SVG, "rect");
+    r.setAttribute("x", x); r.setAttribute("y", y); r.setAttribute("width", 1); r.setAttribute("height", 1);
+    r.setAttribute("fill", "currentColor");
+    svg.append(r);
+  }));
+  return svg;
+}
+
 function diceIcon() {
   const svg = document.createElementNS(SVG, "svg");
   svg.setAttribute("viewBox", "0 0 16 16");
@@ -198,7 +223,8 @@ function profileMenu(user, admin, avatar) {
   const menu = h("div", { class: "profile-menu", role: "menu", hidden: true },
     h("div", { class: "profile-name" }, user, admin ? h("span", { class: "tag" }, "admin") : null),
     friends.el, settingsItem,
-    h("button", { class: "ghost", type: "button", role: "menuitem", onclick: logout }, "Log out"));
+    h("button", { class: "ghost", type: "button", role: "menuitem", onclick: logout }, "Log out"),
+    h("p", { class: "powered" }, "powered by Navidrome"));
   const close = (focus) => {
     menu.hidden = true;
     friends.stop();
@@ -258,7 +284,8 @@ function showApp(user, admin, avatar, me = {}) {
   const opts = { onUnauthorized: showLogin, admin: admin === true };
   setPlaylistUser(user);
   const views = Object.fromEntries(TABS.map(([k]) => [k, h("main", { class: `view view-${k}`, hidden: true })]));
-  const links = Object.fromEntries(TABS.filter(([k]) => k !== "search").map(([k, label]) => [k, h("a", { class: "tab", href: `#/${k}` }, label)]));
+  const links = Object.fromEntries(TABS.filter(([k]) => k !== "search").map(([k, label]) => [k, h("a", { class: "tab", href: `#/${k}`, title: label, "aria-label": label }, pixelIcon(TAB_ICONS[k]), h("span", { class: "tab-label", "aria-hidden": "true" }, label))]));
+  const titleEl = h("div", { class: "page-title" });
   const settingsView = h("main", { class: "view view-settings", hidden: true });
   let cameFromApp = false;
   const closeSettings = () => {
@@ -269,12 +296,11 @@ function showApp(user, admin, avatar, me = {}) {
   playerBar ||= renderBar({ onUnauthorized: showLogin, onQuality: () => openQuality && openQuality() });
   root.replaceChildren(
     h("header", { class: "top" },
-      h("span", { class: "brand" }, h("strong", {}, "buddymusic"), h("span", { class: "powered" }, "powered by Navidrome")),
-      h("nav", { class: "tabs" }, Object.values(links)),
-      searchBox(),
+      h("nav", { class: "tabs", "aria-label": "Sections" }, Object.values(links)),
       randomButton(),
       qualityButton(),
       profileMenu(user, admin, avatar)),
+    h("div", { class: "title-row" }, titleEl, searchBox()),
     ...Object.values(views),
     settingsView,
     playerBar);
@@ -299,7 +325,10 @@ function showApp(user, admin, avatar, me = {}) {
       settingsView.hidden = true;
       document.body.classList.remove("settings-open");
     }
-    if (inSettings) return;
+    if (inSettings) {
+      titleEl.textContent = "Settings";
+      return;
+    }
     const tab = TABS.some(([k]) => k === parts[0]) ? parts[0] : "library";
     for (const [k] of TABS) {
       views[k].hidden = k !== tab;
@@ -308,6 +337,7 @@ function showApp(user, admin, avatar, me = {}) {
       if (k === tab) links[k].setAttribute("aria-current", "page");
       else links[k].removeAttribute("aria-current");
     }
+    titleEl.textContent = TABS.find(([k]) => k === tab)[1];
     const key = [tab, ...parts.slice(1)].join("/");
     if (tab === "library" && key !== shown) {
       renderLibrary(views.library, parts.slice(1), opts);
