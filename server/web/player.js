@@ -491,10 +491,104 @@ const volumeSettable = (() => {
   try { const t = new Audio(); t.volume = 0.5; return t.volume === 0.5; } catch { return false; }
 })();
 
+const SVG = "http://www.w3.org/2000/svg";
+const svgEl = (tag, attrs = {}) => {
+  const el = document.createElementNS(SVG, tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+};
+const KNOB_A0 = -135, KNOB_SPAN = 270, KNOB_R = 39;
+function wedge(t1) {
+  if (t1 <= 0) return "";
+  const n = Math.max(1, Math.round(t1 * 54)), outer = [], inner = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / 54, a = (KNOB_A0 + t * KNOB_SPAN) * Math.PI / 180;
+    const w = 2 + Math.round(t * 5) * 2;
+    const sx = Math.sin(a), cy = -Math.cos(a);
+    outer.push(`${(50 + sx * (KNOB_R + w)).toFixed(1)} ${(50 + cy * (KNOB_R + w)).toFixed(1)}`);
+    inner.unshift(`${(50 + sx * KNOB_R).toFixed(1)} ${(50 + cy * KNOB_R).toFixed(1)}`);
+  }
+  return "M" + outer.join(" L") + " L" + inner.join(" L") + " Z";
+}
+
+const SETTING_TAGS = { auto: "AUTO", original: "ORIG", normal: "NORM", low: "LOW" };
+const LOSSLESS = new Set(["flac", "wav", "alac", "ape", "wv", "aif", "aiff"]);
+function streamTag(info) {
+  const set = SETTING_TAGS[state.quality] || "AUTO";
+  if (!info) return set;
+  if (info.format) return `${set} · ${info.format.toUpperCase()} ${info.kbps}`;
+  const suf = (info.suffix || "").toLowerCase();
+  const name = suf ? suf.toUpperCase() : "FILE";
+  return `${set} · ${name}${info.known && !LOSSLESS.has(suf) ? ` ${info.kbps}` : ""}`;
+}
+
+function volumeKnob() {
+  const fg = svgEl("path", { class: "fg" });
+  const arc = svgEl("svg", { class: "arc", viewBox: "0 0 100 100", "aria-hidden": "true" });
+  arc.append(svgEl("path", { class: "bg", d: wedge(1) }), fg);
+  const val = h("span", { class: "val" });
+  const knob = h("div", { class: "pb-knob" + (volumeSettable ? "" : " ios"), role: "slider", tabindex: "0", "aria-label": "Volume", "aria-valuemin": "0", "aria-valuemax": "100" },
+    arc, h("div", { class: "kc" }), val);
+  const paint = () => {
+    knob.style.setProperty("--a", `${KNOB_A0 + vol.v * KNOB_SPAN / 100}deg`);
+    fg.setAttribute("d", volumeSettable && !vol.m ? wedge(vol.v / 100) : "");
+    knob.classList.toggle("muted", vol.m);
+    val.textContent = vol.m ? "MUTE" : volumeSettable ? String(vol.v) : "HW";
+    knob.setAttribute("aria-valuenow", String(vol.v));
+    knob.setAttribute("aria-valuetext", vol.m ? "Muted" : volumeSettable ? `${vol.v}%` : "Hardware volume");
+    knob.title = vol.m ? "Unmute" : volumeSettable ? `Volume ${vol.v}%` : "Use the device buttons; tap to mute";
+  };
+  const set = (v) => {
+    if (!volumeSettable) return;
+    vol.v = Math.max(0, Math.min(100, Math.round(v)));
+    vol.m = false;
+    applyVolume(); paint();
+  };
+  const toggleMute = () => {
+    if (vol.m || vol.v > 0 || !volumeSettable) vol.m = !vol.m; else { vol.v = 50; vol.m = false; }
+    applyVolume(); paint();
+  };
+  let drag = null, hide = 0;
+  const flash = () => {
+    knob.classList.add("drag");
+    clearTimeout(hide);
+    hide = setTimeout(() => { if (!drag) knob.classList.remove("drag"); }, 700);
+  };
+  const angle = (e) => {
+    const r = knob.getBoundingClientRect();
+    return Math.atan2(e.clientX - r.left - r.width / 2, -(e.clientY - r.top - r.height / 2)) * 180 / Math.PI;
+  };
+  knob.addEventListener("pointerdown", (e) => {
+    try { knob.setPointerCapture(e.pointerId); } catch {}
+    drag = { moved: false, x: e.clientX, y: e.clientY };
+  });
+  knob.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 4) drag.moved = true;
+    if (!drag.moved) return;
+    knob.classList.add("drag");
+    const a = angle(e);
+    if (a < -140 || a > 140) return;
+    set((Math.max(KNOB_A0, Math.min(KNOB_A0 + KNOB_SPAN, a)) - KNOB_A0) * 100 / KNOB_SPAN);
+  });
+  knob.addEventListener("pointerup", () => { if (drag && !drag.moved) toggleMute(); drag = null; flash(); });
+  knob.addEventListener("pointercancel", () => { drag = null; flash(); });
+  knob.addEventListener("wheel", (e) => { e.preventDefault(); set(vol.v + (e.deltaY < 0 ? 5 : -5)); flash(); }, { passive: false });
+  knob.addEventListener("keydown", (e) => {
+    const d = { ArrowUp: 5, ArrowRight: 5, ArrowDown: -5, ArrowLeft: -5, PageUp: 20, PageDown: -20 }[e.key];
+    if (d) { e.preventDefault(); set(vol.v + d); flash(); }
+    else if (e.key === "Home") { e.preventDefault(); set(0); flash(); }
+    else if (e.key === "End") { e.preventDefault(); set(100); flash(); }
+    else if (e.key === "m" || e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleMute(); }
+  });
+  paint();
+  return knob;
+}
+
 export function renderBar(opts = {}) {
-  const art = h("a", { class: "bar-art", "aria-label": "Open album" });
-  const title = h("div", { class: "bar-title" });
-  const sub = h("div", { class: "bar-sub" });
+  const title = h("div", { class: "pb-title" });
+  const sub = h("div", { class: "pb-sub" });
+  const info = h("a", { class: "pb-info", "aria-label": "Open album" }, title, sub);
   const pos = h("span", { class: "bar-time" }, "0:00");
   const dur = h("span", { class: "bar-time" }, "0:00");
   const range = h("input", { type: "range", min: 0, max: 0, step: "any", value: 0, "aria-label": "Seek" });
@@ -502,79 +596,102 @@ export function renderBar(opts = {}) {
   const paintSeek = () => { const m = +range.max; range.style.setProperty("--p", String(m > 0 ? Math.min(1, Math.max(0, +range.value / m)) : 0)); };
   range.addEventListener("input", () => { dragging = true; pos.textContent = fmtTime(+range.value); paintSeek(); });
   range.addEventListener("change", () => { dragging = false; seek(+range.value); });
-  const btn = (label, cls, fn) => h("button", { class: `icon ${cls}`, "aria-label": label, title: label, onclick: fn });
-  const shuffleB = btn("Shuffle", "shuffle", toggleShuffle);
+  const btn = (label, cls, fn) => h("button", { type: "button", class: `pb-b ${cls}`, "aria-label": label, title: label, onclick: fn });
   const prevB = btn("Previous", "prev", prev);
   const playB = btn("Play", "play big", toggle);
   const nextB = btn("Next", "next", next);
-  const repeatB = btn("Repeat", "repeat", cycleRepeat);
-  const rateB = h("span", { class: "bar-rate" });
-  const heartB = heartButton(null, "song", { cls: "bar-heart", get: current, onUnauthorized: opts.onUnauthorized });
-  const muteB = h("button", { class: "icon mute", type: "button" });
-  const volR = h("input", { type: "range", min: 0, max: 100, step: 1, value: vol.v, "aria-label": "Volume" });
-  const paintVol = () => {
-    const off = vol.m || vol.v === 0;
-    muteB.classList.toggle("off", off);
-    muteB.classList.toggle("low", !off && vol.v < 50);
-    muteB.setAttribute("aria-pressed", String(vol.m));
-    muteB.setAttribute("aria-label", vol.m ? "Unmute" : "Mute");
-    muteB.title = vol.m ? "Unmute" : "Mute";
-    volR.value = vol.v;
-    volR.style.setProperty("--fill", `${vol.m ? 0 : vol.v}%`);
+  const shuffleB = btn("Shuffle", "sm shuffle", toggleShuffle);
+  const repeatB = btn("Repeat", "sm repeat", cycleRepeat);
+  const heartB = heartButton(null, "song", { cls: "pb-b sm bar-heart", get: current, onUnauthorized: opts.onUnauthorized });
+  const rateB = h("button", { type: "button", class: "pb-rate", "aria-haspopup": "true" });
+  rateB.addEventListener("click", (e) => { e.stopPropagation(); if (opts.onQuality) opts.onQuality(); });
+
+  const labelImg = h("img", { alt: "", decoding: "async", draggable: "false" });
+  const labelT = h("span", { class: "lt" });
+  const labelA = h("span", { class: "la" });
+  const rim = svgEl("svg", { viewBox: "0 0 40 40", "aria-hidden": "true" });
+  rim.append(
+    svgEl("circle", { cx: 20, cy: 20, r: 20, fill: "#0b0c14" }),
+    svgEl("circle", { cx: 20, cy: 20, r: 19.2, fill: "#ffcd75" }),
+    svgEl("circle", { cx: 20, cy: 20, r: 18.6, fill: "#0b0c14" }));
+  const label = h("div", { class: "pb-label" }, labelImg, labelT, h("span", { class: "hole" }), labelA, h("span", { class: "shine" }));
+  const disc = h("button", { type: "button", class: "pb-disc" }, h("div", { class: "pb-spin" }, rim, label));
+
+  const bar = h("footer", { class: "player pb", hidden: true },
+    h("div", { class: "pb-bay" }, disc),
+    h("div", { class: "pb-tab" }, prevB, playB, nextB),
+    h("div", { class: "pb-main" },
+      h("div", { class: "bar-seek" }, pos, range, dur),
+      h("div", { class: "pb-left" },
+        h("div", { class: "pb-screen" }, rateB, info),
+        h("div", { class: "pb-btns" }, heartB, repeatB, shuffleB, h("i", { class: "pb-grille" }))),
+      volumeKnob()));
+
+  const narrow = window.matchMedia ? window.matchMedia("(max-width: 760px)") : { matches: false };
+  const setTucked = (on) => {
+    if (bar.classList.contains("tucked") === on) return;
+    bar.classList.toggle("tucked", on);
+    paint();
   };
-  muteB.addEventListener("click", () => {
-    if (vol.m || vol.v > 0) vol.m = !vol.m; else { vol.v = 50; vol.m = false; }
-    applyVolume(); paintVol();
-  });
-  volR.addEventListener("input", () => { vol.v = +volR.value; vol.m = false; applyVolume(); paintVol(); });
-  paintVol();
-  const volBox = h("div", { class: "bar-vol" + (volumeSettable ? "" : " fixed") }, muteB, volR);
-  const bar = h("footer", { class: "player", hidden: true },
-    h("div", { class: "bar-seek" }, pos, range, dur),
-    h("div", { class: "bar-row" },
-      art, h("div", { class: "bar-meta" }, title, sub), rateB, heartB,
-      h("div", { class: "bar-ctl" }, shuffleB, prevB, playB, nextB, repeatB),
-      volBox));
+  disc.addEventListener("click", () => { if (bar.classList.contains("tucked")) setTucked(false); else toggle(); });
+  let lastY = window.scrollY;
+  window.addEventListener("scroll", () => {
+    const y = window.scrollY;
+    if (!narrow.matches || y <= 0) setTucked(false);
+    else if (y > lastY + 6) setTucked(true);
+    else if (y < lastY - 6) setTucked(false);
+    lastY = y;
+  }, { passive: true });
+
+  const paintSpin = () => bar.classList.toggle("spinning", !audio.paused && audio.readyState >= 3 && !!current());
+  for (const ev of ["play", "playing", "pause", "waiting", "stalled", "canplay", "emptied", "ended", "seeking", "seeked"]) audio.addEventListener(ev, paintSpin);
 
   let lastCover = null;
   const paint = () => {
     const song = current();
     bar.hidden = !song;
+    paintSpin();
     if (!song) return;
-    title.textContent = song.title || "Unknown title";
+    const name = song.title || "Unknown title";
+    title.textContent = name;
     sub.textContent = [song.artist, song.album].filter(Boolean).join(" · ");
+    labelT.textContent = name;
+    labelA.textContent = song.artist || "";
+    labelA.hidden = !song.artist;
+    const what = bar.classList.contains("tucked") ? "Show disc" : isPlaying() ? "Pause" : "Play";
+    disc.setAttribute("aria-label", `${what}: ${name}${song.artist ? `, ${song.artist}` : ""}`);
     if (heartB.dataset.id !== song.id) retarget(heartB, song);
     const ids = [...new Set([song.coverArt, song.albumId].filter(Boolean))];
     const key = ids.join("|");
     if (lastCover !== key) {
       lastCover = key;
-      const box = h("div", { class: "art small jc now" });
       const tryNext = (i) => {
-        if (i >= ids.length) { box.replaceChildren(); return; }
-        const img = h("img", { src: coverURL(ids[i], 96), alt: song.album || "Album cover", decoding: "async" });
-        img.addEventListener("error", () => tryNext(i + 1), { once: true });
-        box.replaceChildren(img);
+        if (i >= ids.length) { labelImg.removeAttribute("src"); labelImg.hidden = true; return; }
+        labelImg.hidden = false;
+        labelImg.onerror = () => tryNext(i + 1);
+        labelImg.src = coverURL(ids[i], 256);
       };
       tryNext(0);
-      art.replaceChildren(box);
     }
-    if (song.albumId) art.href = `#/library/album/${encodeURIComponent(song.albumId)}`;
-    else art.removeAttribute("href");
-    const info = streamInfo();
-    rateB.hidden = !info;
-    if (info) {
-      rateB.textContent = info.format ? `${info.format.toUpperCase()} ${info.kbps}` : [info.suffix ? info.suffix.toUpperCase() : "ORIG", info.known ? info.kbps : ""].filter(Boolean).join(" ");
-      const down = info.auto && info.tier !== "original";
-      rateB.classList.toggle("down", down);
-      rateB.title = `${info.auto ? "Auto" : "Fixed"} quality: ${info.tier}${info.format ? `, ${info.format} ${info.kbps} kbps` : ", original file"}${down ? " (stepped down for a slow connection)" : ""}`;
-    }
+    if (song.albumId) info.href = `#/library/album/${encodeURIComponent(song.albumId)}`;
+    else info.removeAttribute("href");
+    const si = streamInfo();
+    rateB.textContent = streamTag(si);
+    const down = !!si && si.auto && si.tier !== "original";
+    rateB.classList.toggle("down", down);
+    const tip = si ? `${si.auto ? "Auto" : "Fixed"} quality: ${si.tier}${si.format ? `, ${si.format} ${si.kbps} kbps` : ", original file"}${down ? " (stepped down for a slow connection)" : ""}` : "Streaming quality";
+    rateB.title = `${tip}. Tap to change.`;
+    rateB.setAttribute("aria-label", `Streaming quality ${rateB.textContent}, change`);
     const s = settings();
     playB.classList.toggle("pause", isPlaying());
     playB.setAttribute("aria-label", isPlaying() ? "Pause" : "Play");
+    playB.title = isPlaying() ? "Pause" : "Play";
     shuffleB.classList.toggle("on", s.shuffle);
+    shuffleB.setAttribute("aria-pressed", String(s.shuffle));
     repeatB.classList.toggle("on", s.repeat !== "off");
     repeatB.dataset.mode = s.repeat;
     repeatB.title = `Repeat: ${s.repeat}`;
+    repeatB.setAttribute("aria-label", `Repeat: ${s.repeat}`);
     const d = duration();
     const t = d ? Math.min(position(), d) : position();
     range.max = String(d);

@@ -70,6 +70,7 @@ async function logout() {
 const BASE_TABS = [["library", "Library"], ["search", "Search"], ["favorites", "Favorites"], ["playlists", "Playlists"], ["upload", "Upload"]];
 let routeHandler = null;
 let playerBar = null;
+let openQuality = null;
 
 const SVG = "http://www.w3.org/2000/svg";
 
@@ -237,6 +238,12 @@ function qualityButton() {
     menu.hidden = false;
     btn.setAttribute("aria-expanded", "true");
   });
+  openQuality = () => {
+    menu.hidden = false;
+    btn.setAttribute("aria-expanded", "true");
+    const on = menu.querySelector("button.on") || menu.querySelector("button");
+    if (on) on.focus();
+  };
   document.addEventListener("click", (e) => { if (!wrap.contains(e.target)) close(); });
   const wrap = h("div", { class: "saver-toggle" }, btn, menu);
   wrap.addEventListener("keydown", (e) => { if (e.key === "Escape") { close(); btn.focus(); } });
@@ -259,7 +266,7 @@ function showApp(user, admin, avatar, me = {}) {
     else location.hash = "#/library";
   };
   settingsView.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSettings(); });
-  playerBar ||= renderBar({ onUnauthorized: showLogin });
+  playerBar ||= renderBar({ onUnauthorized: showLogin, onQuality: () => openQuality && openQuality() });
   root.replaceChildren(
     h("header", { class: "top" },
       h("span", { class: "brand" }, h("strong", {}, "buddymusic"), h("span", { class: "powered" }, "powered by Navidrome")),
