@@ -98,7 +98,8 @@ function pickTier(song, commit) {
 }
 
 const meter = { t0: 0, b0: 0, done: false, playing: null, started: false };
-const play = { offset: 0, tries: 0, blob: "", heard: 0 };
+const play = { offset: 0, tries: 0, blob: "", heard: 0, heardAt: 0, gen: 0 };
+const watch = { t: -1, at: 0, stalled: false, sent: 0 };
 const pre = { url: "", blob: "", ctrl: null, speed: 0 };
 
 function bufferedEnd() {
@@ -181,12 +182,16 @@ function startStream(song, tier, from = 0) {
   play.blob = blob;
   play.offset = off;
   play.heard = Math.max(0, from - off);
+  play.heardAt = Date.now();
+  play.gen += 1;
+  watch.t = -1;
   listen.last = -1;
   const seekTo = from - off;
   Object.assign(meter, { t0: performance.now(), b0: Math.max(0, seekTo), done: !!blob, started: false, playing: { ...spec, tier } });
   if (blob && pre.speed) { auto.speed = pre.speed; auto.measuredKbps = spec.kbps; }
   audio.src = blob || (off ? `${base}&timeOffset=${off}` : base);
-  if (seekTo > 0.5) audio.addEventListener("loadedmetadata", () => { audio.currentTime = seekTo; }, { once: true });
+  const gen = play.gen;
+  if (seekTo > 0.5) audio.addEventListener("loadedmetadata", () => { if (play.gen === gen) audio.currentTime = seekTo; }, { once: true });
 }
 
 function load(i, autoplay = true) {
@@ -201,6 +206,7 @@ function load(i, autoplay = true) {
   if (autoplay) audio.play().catch(() => {});
   fetch(`/api/music/scrobble/${encodeURIComponent(song.id)}?submission=false`, { method: "POST" }).catch(() => {});
   updateSession();
+  syncSession();
   emit();
 }
 
@@ -346,10 +352,10 @@ audio.addEventListener("ended", () => {
   const song = current();
   const known = song && +song.duration > 0 ? +song.duration : 0;
   const t = audio.currentTime || 0;
-  const at = play.offset + (t - play.heard > 2 ? play.heard : t);
+  const at = play.offset + (heardOK(t) ? t : play.heard);
   if (song && meter.playing && known - at > 3 && play.tries < 2) {
     play.tries += 1;
-    startStream(song, meter.playing.tier, at);
+    startStream(song, meter.playing.tier, Math.max(0, at - 0.5));
     audio.play().catch(() => {});
     emit();
     return;
@@ -357,14 +363,69 @@ audio.addEventListener("ended", () => {
   if (state.repeat === "one") { seek(0); audio.play().catch(() => {}); return; }
   next();
 });
+function heardOK(t) {
+  return t >= play.heard && t - play.heard < 2 + Math.max(0, Date.now() - play.heardAt) / 1000 * (audio.playbackRate || 1);
+}
+
+function agentFamily() {
+  const ua = navigator.userAgent || "";
+  const standalone = navigator.standalone === true || (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+  const os = /iPhone|iPad|iPod/.test(ua) ? "ios" : /Android/.test(ua) ? "android" : /Mac OS X/.test(ua) ? "mac" : /Windows/.test(ua) ? "windows" : /Linux/.test(ua) ? "linux" : "other";
+  const br = /CriOS|Chrome\//.test(ua) ? "chrome" : /FxiOS|Firefox\//.test(ua) ? "firefox" : /Safari\//.test(ua) ? "safari" : "webview";
+  return `${os}-${br}${standalone ? "-app" : ""}`;
+}
+
+function reportJump(from, to, expected) {
+  if (watch.sent >= 20) return;
+  watch.sent += 1;
+  const song = current();
+  const spec = meter.playing || {};
+  const body = JSON.stringify({
+    track: song ? song.id : "", format: spec.format || "original", kbps: spec.kbps || 0, quality: state.quality,
+    from: play.offset + from, to: play.offset + to, expected: play.offset + expected, gap: to - expected,
+    visibility: document.visibilityState, stalled: watch.stalled, buffered: play.offset + bufferedEnd(),
+    ready: audio.readyState, blob: !!play.blob, offset: play.offset, agent: agentFamily(),
+  });
+  fetch("/api/music/jumplog", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+}
+
+function checkJump() {
+  const t = audio.currentTime || 0;
+  const now = Date.now();
+  if (audio.paused || audio.seeking) { watch.t = -1; return; }
+  if (watch.t >= 0) {
+    const expected = watch.t + Math.max(0, now - watch.at) / 1000 * (audio.playbackRate || 1);
+    if (t < watch.t - 0.75 || t > expected + 0.75) reportJump(watch.t, t, expected);
+  }
+  watch.t = t;
+  watch.at = now;
+  watch.stalled = false;
+}
+
+function syncSession() {
+  if (!("mediaSession" in navigator) || !current()) return;
+  const ms = navigator.mediaSession;
+  const stalled = audio.readyState < 3 && !audio.paused;
+  try { ms.playbackState = audio.paused || stalled ? "paused" : "playing"; } catch {}
+  const d = duration();
+  if (!d || !ms.setPositionState) return;
+  try { ms.setPositionState({ duration: d, position: Math.min(Math.max(0, position()), d), playbackRate: audio.playbackRate || 1 }); } catch {}
+}
+
+const rebase = () => { watch.t = -1; };
+for (const ev of ["play", "pause", "seeking", "seeked", "emptied", "loadstart", "ratechange"]) audio.addEventListener(ev, rebase);
+audio.addEventListener("playing", () => { watch.t = audio.currentTime || 0; watch.at = Date.now(); });
+for (const ev of ["play", "pause", "playing", "waiting", "seeked", "ratechange", "loadedmetadata", "durationchange"]) audio.addEventListener(ev, syncSession);
+
 audio.addEventListener("error", () => { if (play.tries > 0 && current()) next(); });
 audio.addEventListener("pause", () => { listen.last = -1; report(false); });
 audio.addEventListener("play", () => { listen.last = audio.currentTime; report(true); });
 audio.addEventListener("seeking", () => { listen.last = -1; });
-audio.addEventListener("seeked", () => { play.heard = audio.currentTime; });
+audio.addEventListener("seeked", () => { play.heard = audio.currentTime; play.heardAt = Date.now(); });
 audio.addEventListener("progress", measure);
 audio.addEventListener("playing", () => { meter.started = true; });
 audio.addEventListener("waiting", () => {
+  watch.stalled = true;
   if (!meter.started || audio.seeking || state.quality !== "auto") return;
   auto.stalls += 1;
   auto.next = null;
@@ -374,7 +435,9 @@ audio.addEventListener("timeupdate", () => {
   const song = current();
   if (!song) return;
   const t = audio.currentTime;
-  if (t >= play.heard && t - play.heard < 2) play.heard = t;
+  checkJump();
+  if (heardOK(t)) play.heard = t;
+  play.heardAt = Date.now();
   if (listen.last >= 0 && t > listen.last && t - listen.last < 2) listen.secs += t - listen.last;
   listen.last = t;
   if (!audio.paused && Date.now() - listen.sent > 30000) report(true);
@@ -496,9 +559,6 @@ export function renderBar(opts = {}) {
     dur.textContent = fmtTime(d);
     if (!dragging) { range.value = String(t); pos.textContent = fmtTime(t); }
     paintSeek();
-    if ("mediaSession" in navigator && d) {
-      try { navigator.mediaSession.setPositionState({ duration: d, position: t, playbackRate: 1 }); } catch {}
-    }
   };
   onChange(paint);
   audio.addEventListener("timeupdate", paint);
