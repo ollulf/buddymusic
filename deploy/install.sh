@@ -16,7 +16,9 @@ echo "== Build as $OWNER"
 GO="$(runuser -u "$OWNER" -- bash -lc 'command -v go' 2>/dev/null || true)"
 [ -n "$GO" ] || GO="$OWNER_HOME/.local/go/bin/go"
 [ -x "$GO" ] || { echo "Go not found for $OWNER"; exit 1; }
-runuser -u "$OWNER" -- bash -c "cd '$REPO/server' && '$GO' test ./... && '$GO' build -trimpath -ldflags='-s -w' -o .build/buddymusic-api ."
+VERSION="1.0.$(runuser -u "$OWNER" -- git -C "$REPO" log -1 --format=%cd --date=format:%d%m)"
+echo "== Version $VERSION"
+runuser -u "$OWNER" -- bash -c "cd '$REPO/server' && '$GO' test ./... && '$GO' build -trimpath -ldflags='-s -w -X main.version=$VERSION' -o .build/buddymusic-api ."
 
 echo
 echo "== System user buddymusic"
