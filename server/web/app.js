@@ -1,6 +1,6 @@
 import { renderUpload } from "./upload.js";
 import { renderLibrary } from "./library.js";
-import { renderSearch } from "./search.js";
+import { renderSearch, searchBox } from "./search.js";
 import { renderFavorites } from "./favorites.js";
 import { renderBar } from "./player.js";
 import { renderPlaylists, setPlaylistUser } from "./playlists.js";
@@ -161,12 +161,13 @@ function showApp(user, admin, avatar) {
   const opts = { onUnauthorized: showLogin, admin: admin === true };
   setPlaylistUser(user);
   const views = Object.fromEntries(TABS.map(([k]) => [k, h("main", { class: `view view-${k}`, hidden: true })]));
-  const links = Object.fromEntries(TABS.map(([k, label]) => [k, h("a", { class: "tab", href: `#/${k}` }, label)]));
+  const links = Object.fromEntries(TABS.filter(([k]) => k !== "search").map(([k, label]) => [k, h("a", { class: "tab", href: `#/${k}` }, label)]));
   playerBar ||= renderBar({ onUnauthorized: showLogin });
   root.replaceChildren(
     h("header", { class: "top" },
       h("span", { class: "brand" }, h("strong", {}, "buddymusic"), h("span", { class: "powered" }, "powered by Navidrome")),
       h("nav", { class: "tabs" }, Object.values(links)),
+      searchBox(),
       profileMenu(user, admin, avatar)),
     ...Object.values(views),
     playerBar);
@@ -178,6 +179,7 @@ function showApp(user, admin, avatar) {
     const tab = TABS.some(([k]) => k === parts[0]) ? parts[0] : "library";
     for (const [k] of TABS) {
       views[k].hidden = k !== tab;
+      if (!links[k]) continue;
       links[k].classList.toggle("on", k === tab);
       if (k === tab) links[k].setAttribute("aria-current", "page");
       else links[k].removeAttribute("aria-current");
@@ -187,7 +189,7 @@ function showApp(user, admin, avatar) {
       renderLibrary(views.library, parts.slice(1), opts);
       window.scrollTo(0, 0);
     }
-    if (tab === "search" && !views.search.firstChild) renderSearch(views.search, opts);
+    if (tab === "search" && lastTab !== "search") renderSearch(views.search, opts);
     if (tab === "favorites" && lastTab !== "favorites") renderFavorites(views.favorites, opts);
     if (tab === "playlists" && key !== shown) {
       renderPlaylists(views.playlists, parts.slice(1), opts);

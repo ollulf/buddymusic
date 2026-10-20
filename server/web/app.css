@@ -318,3 +318,10 @@ button.heart[aria-pressed="true"]::before { content: ""; --i: var(--i-heartfull)
 .bar-vol .mute::before { content: ""; --i: var(--i-vol); }
 .bar-vol .mute.low::before { content: ""; --i: var(--i-vollow); }
 .bar-vol .mute.off::before { content: ""; --i: var(--i-mute); }
+header.top .hsearch { margin-left: auto; flex: 0 1 240px; min-width: 0; }
+header.top .hsearch + .profile { margin-left: 0; }
+header.top .hsearch .search-box { height: 34px; padding: 4px 10px; font-size: 15px; }
+@media (max-width: 520px) {
+  header.top .hsearch { order: 4; flex: 1 1 100%; margin-left: 0; }
+  header.top .hsearch + .profile { margin-left: auto; }
+}
