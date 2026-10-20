@@ -2,7 +2,7 @@ import { renderUpload } from "./upload.js";
 import { renderLibrary } from "./library.js";
 import { renderSearch, searchBox } from "./search.js";
 import { renderFavorites } from "./favorites.js";
-import { renderBar } from "./player.js";
+import { renderBar, settings, setSaver } from "./player.js";
 import { renderPlaylists, setPlaylistUser } from "./playlists.js";
 
 const root = document.getElementById("app");
@@ -157,6 +157,21 @@ function profileMenu(user, admin, avatar) {
   return h("div", { class: "profile" }, btn, menu);
 }
 
+function saverToggle() {
+  const btn = h("button", { type: "button", class: "saver-btn" });
+  btn.innerHTML = '<svg viewBox="0 0 16 16" width="20" height="20" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M2 11h2v3H2zM6 8h2v6H6zM10 5h2v9h-2zM14 2h2v12h-2z"/></svg>';
+  const paint = () => {
+    const on = settings().saver;
+    btn.classList.toggle("on", on);
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.setAttribute("aria-label", "Data saver");
+    btn.title = `Data saver: ${on ? "on" : "off"} (stream Opus 128 kbps)`;
+  };
+  btn.addEventListener("click", () => { setSaver(!settings().saver); paint(); });
+  paint();
+  return h("div", { class: "saver-toggle" }, btn);
+}
+
 function showApp(user, admin, avatar) {
   const opts = { onUnauthorized: showLogin, admin: admin === true };
   setPlaylistUser(user);
@@ -168,6 +183,7 @@ function showApp(user, admin, avatar) {
       h("span", { class: "brand" }, h("strong", {}, "buddymusic"), h("span", { class: "powered" }, "powered by Navidrome")),
       h("nav", { class: "tabs" }, Object.values(links)),
       searchBox(),
+      saverToggle(),
       profileMenu(user, admin, avatar)),
     ...Object.values(views),
     playerBar);
