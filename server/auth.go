@@ -155,7 +155,8 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	} else {
 		a.admins.put(idHash, admin)
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"user": user, "admin": admin})
+	v, _ := a.store.AvatarVersion(user)
+	writeJSON(w, http.StatusOK, map[string]any{"user": user, "admin": admin, "avatar": v})
 }
 
 func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
@@ -167,7 +168,8 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleMe(w http.ResponseWriter, r *http.Request, user string) {
-	writeJSON(w, http.StatusOK, map[string]any{"user": user, "admin": a.cachedAdmin(r)})
+	v, _ := a.store.AvatarVersion(user)
+	writeJSON(w, http.StatusOK, map[string]any{"user": user, "admin": a.cachedAdmin(r), "avatar": v})
 }
 
 func (a *App) sessionUser(r *http.Request) (string, error) {

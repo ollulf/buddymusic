@@ -41,7 +41,7 @@ function showLogin() {
         body: JSON.stringify({ username: user.value, password: pass.value, remember: remember.checked }),
       });
       const body = await res.json().catch(() => ({}));
-      if (res.ok) return showApp(body.user, body.admin);
+      if (res.ok) return showApp(body.user, body.admin, body.avatar);
       err.textContent = LOGIN_ERRORS[body.error] || "Login failed";
     } catch {
       err.textContent = "No connection to the server";
@@ -73,11 +73,74 @@ let closeProfile = null;
 document.addEventListener("click", (e) => { if (closeProfile && !e.target.closest(".profile")) closeProfile(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && closeProfile) closeProfile(true); });
 
-function profileMenu(user, admin) {
+const AVATAR_SIZE = 128;
+
+async function squareAvatar(file) {
+  const bmp = await createImageBitmap(file);
+  const side = Math.min(bmp.width, bmp.height);
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = AVATAR_SIZE;
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, AVATAR_SIZE, AVATAR_SIZE);
+  bmp.close();
+  const blob = (type, q) => new Promise((ok) => canvas.toBlob(ok, type, q));
+  const png = await blob("image/png");
+  return png && png.size <= 200 * 1024 ? png : blob("image/jpeg", 0.9);
+}
+
+function profileMenu(user, admin, avatar) {
+  let version = avatar || 0;
   const btn = h("button", { class: "avatar", type: "button", "aria-haspopup": "menu", "aria-expanded": "false", "aria-label": "Profile", title: user });
-  btn.innerHTML = AVATAR;
+  const status = h("div", { class: "profile-status", role: "status" });
+  const picker = h("input", { type: "file", accept: "image/png,image/jpeg,image/webp", hidden: true });
+  const change = h("button", { class: "ghost", type: "button", role: "menuitem", onclick: () => picker.click() }, "Change picture");
+  const reset = h("button", { class: "ghost", type: "button", role: "menuitem" }, "Reset picture");
+  const paint = () => {
+    btn.replaceChildren();
+    if (version) {
+      const img = h("img", { src: `/api/avatar?v=${version}`, alt: "", width: AVATAR_SIZE, height: AVATAR_SIZE });
+      img.addEventListener("error", () => { btn.innerHTML = AVATAR; });
+      btn.append(img);
+    } else btn.innerHTML = AVATAR;
+    btn.classList.toggle("has-pic", !!version);
+    reset.hidden = !version;
+  };
+  const send = async (method, body) => {
+    status.textContent = method === "PUT" ? "Saving…" : "";
+    change.disabled = reset.disabled = true;
+    try {
+      const res = await fetch("/api/avatar", { method, body, headers: body ? { "Content-Type": body.type } : {} });
+      if (res.status === 401) return showLogin();
+      if (!res.ok) throw new Error();
+      version = method === "PUT" ? (await res.json()).avatar : 0;
+      status.textContent = "";
+      paint();
+    } catch {
+      status.textContent = "Could not save the picture";
+    } finally {
+      change.disabled = reset.disabled = false;
+    }
+  };
+  picker.addEventListener("change", async () => {
+    const file = picker.files[0];
+    picker.value = "";
+    if (!file) return;
+    let blob;
+    try {
+      blob = await squareAvatar(file);
+    } catch {}
+    if (!blob) {
+      status.textContent = "That file is not a picture";
+      return;
+    }
+    send("PUT", blob);
+  });
+  reset.addEventListener("click", () => send("DELETE"));
+  paint();
   const menu = h("div", { class: "profile-menu", role: "menu", hidden: true },
     h("div", { class: "profile-name" }, user, admin ? h("span", { class: "tag" }, "admin") : null),
+    change, reset, picker, status,
     h("button", { class: "ghost", type: "button", role: "menuitem", onclick: logout }, "Log out"));
   const close = (focus) => {
     menu.hidden = true;
@@ -94,7 +157,7 @@ function profileMenu(user, admin) {
   return h("div", { class: "profile" }, btn, menu);
 }
 
-function showApp(user, admin) {
+function showApp(user, admin, avatar) {
   const opts = { onUnauthorized: showLogin, admin: admin === true };
   setPlaylistUser(user);
   const views = Object.fromEntries(TABS.map(([k]) => [k, h("main", { class: `view view-${k}`, hidden: true })]));
@@ -104,7 +167,7 @@ function showApp(user, admin) {
     h("header", { class: "top" },
       h("span", { class: "brand" }, h("strong", {}, "buddymusic"), h("span", { class: "powered" }, "powered by Navidrome")),
       h("nav", { class: "tabs" }, Object.values(links)),
-      profileMenu(user, admin)),
+      profileMenu(user, admin, avatar)),
     ...Object.values(views),
     playerBar);
   renderUpload(views.upload, opts);
@@ -144,7 +207,7 @@ async function boot() {
     const res = await fetch("/api/me");
     if (res.ok) {
       const me = await res.json();
-      return showApp(me.user, me.admin);
+      return showApp(me.user, me.admin, me.avatar);
     }
   } catch {}
   showLogin();
