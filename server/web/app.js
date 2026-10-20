@@ -67,6 +67,33 @@ const TABS = [["library", "Library"], ["search", "Search"], ["favorites", "Favor
 let routeHandler = null;
 let playerBar = null;
 
+const AVATAR = '<svg viewBox="0 0 8 8" width="20" height="20" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M3 1h2v1h1v2h-1v1h-2v-1h-1v-2h1zM1 6h1v-1h4v1h1v2h-6z"/></svg>';
+let closeProfile = null;
+
+document.addEventListener("click", (e) => { if (closeProfile && !e.target.closest(".profile")) closeProfile(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && closeProfile) closeProfile(true); });
+
+function profileMenu(user, admin) {
+  const btn = h("button", { class: "avatar", type: "button", "aria-haspopup": "menu", "aria-expanded": "false", "aria-label": "Profile", title: user });
+  btn.innerHTML = AVATAR;
+  const menu = h("div", { class: "profile-menu", role: "menu", hidden: true },
+    h("div", { class: "profile-name" }, user, admin ? h("span", { class: "tag" }, "admin") : null),
+    h("button", { class: "ghost", type: "button", role: "menuitem", onclick: logout }, "Log out"));
+  const close = (focus) => {
+    menu.hidden = true;
+    btn.setAttribute("aria-expanded", "false");
+    closeProfile = null;
+    if (focus === true) btn.focus();
+  };
+  btn.addEventListener("click", () => {
+    if (!menu.hidden) return close();
+    menu.hidden = false;
+    btn.setAttribute("aria-expanded", "true");
+    closeProfile = close;
+  });
+  return h("div", { class: "profile" }, btn, menu);
+}
+
 function showApp(user, admin) {
   const opts = { onUnauthorized: showLogin, admin: admin === true };
   setPlaylistUser(user);
@@ -77,8 +104,7 @@ function showApp(user, admin) {
     h("header", { class: "top" },
       h("span", { class: "brand" }, h("strong", {}, "buddymusic"), h("span", { class: "powered" }, "powered by Navidrome")),
       h("nav", { class: "tabs" }, Object.values(links)),
-      h("span", { class: "who" }, admin ? `${user} (admin)` : user),
-      h("button", { class: "ghost", onclick: logout }, "Log out")),
+      profileMenu(user, admin)),
     ...Object.values(views),
     playerBar);
   renderUpload(views.upload, opts);
