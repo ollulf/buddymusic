@@ -364,8 +364,6 @@ footer.player.pb { --bh: 120px; --tw: 180px; --th: 52px; --tl: 12px; --sb: env(s
 @keyframes pb-rot { to { transform: rotate(360deg); } }
 .pb-label { position: absolute; left: 50%; top: 50%; width: 92%; height: 92%; transform: translate(-50%, -50%); border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: repeating-linear-gradient(45deg, var(--orange) 0 6px, #b13e53 6px 12px); }
 .pb-label img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.pb-label .lt { position: absolute; left: 16%; right: 16%; top: 19%; text-align: center; font-family: var(--mys); font-size: calc(var(--s) * .1); line-height: 1; color: var(--ink); background: var(--cream); padding: 2px 4px; box-shadow: 0 0 0 2px var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pb-label .la { position: absolute; left: 22%; right: 22%; bottom: 21%; text-align: center; font-size: calc(var(--s) * .065); line-height: 1.1; color: var(--ink); background: var(--accent); padding: 1px 4px; box-shadow: 0 0 0 2px var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pb-label .hole { position: relative; width: 12%; height: 12%; border-radius: 50%; background: var(--bg); box-shadow: 0 0 0 2px var(--ink), 0 0 0 7px rgb(255 243 201 / .75), 0 0 0 9px var(--ink); }
 .pb-label .shine { position: absolute; inset: 0; background: linear-gradient(135deg, rgb(255 255 255 / .28) 0 22%, transparent 22% 78%, rgb(115 239 247 / .18) 78%); pointer-events: none; }
 .pb-tab { position: absolute; left: var(--tl); bottom: calc(var(--bh) + var(--sb) - 4px); width: var(--tw); height: calc(var(--th) + 2px); background: var(--card); border: 2px solid var(--ink); border-bottom: 0; box-shadow: inset 2px 2px 0 var(--hi), inset -2px 0 0 var(--shade); display: flex; align-items: flex-end; justify-content: center; gap: 8px; padding: 0 8px 8px; z-index: 2; }
@@ -432,7 +430,7 @@ header.top .tab.on, header.top .tab.on:hover { color: var(--accent-fg); backgrou
 header.top .tab-label { display: none; }
 header.top .saver-toggle + .profile { margin-left: 4px; }
 .title-row { display: flex; align-items: center; gap: 10px; max-width: 820px; margin: 0 auto; padding: 12px 16px 0; }
-.page-title { font: 400 32px/1 var(--mys); letter-spacing: .04em; color: var(--accent); text-transform: uppercase; flex: none; }
+.page-title { font: 400 32px/1 var(--mys); letter-spacing: .02em; color: var(--accent); flex: none; }
 .title-row .hsearch { flex: 1 1 auto; min-width: 0; max-width: 420px; margin-left: auto; }
 .title-row .search-box { height: 40px; padding: 4px 10px; font-size: 15px; }
 .title-row.no-search .hsearch, .title-row.no-search > .search-box { visibility: hidden; }
