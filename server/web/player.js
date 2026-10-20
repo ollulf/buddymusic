@@ -607,14 +607,12 @@ export function renderBar(opts = {}) {
   rateB.addEventListener("click", (e) => { e.stopPropagation(); if (opts.onQuality) opts.onQuality(); });
 
   const labelImg = h("img", { alt: "", decoding: "async", draggable: "false" });
-  const labelT = h("span", { class: "lt" });
-  const labelA = h("span", { class: "la" });
   const rim = svgEl("svg", { viewBox: "0 0 40 40", "aria-hidden": "true" });
   rim.append(
     svgEl("circle", { cx: 20, cy: 20, r: 20, fill: "#0b0c14" }),
     svgEl("circle", { cx: 20, cy: 20, r: 19.2, fill: "#ffcd75" }),
     svgEl("circle", { cx: 20, cy: 20, r: 18.6, fill: "#0b0c14" }));
-  const label = h("div", { class: "pb-label" }, labelImg, labelT, h("span", { class: "hole" }), labelA, h("span", { class: "shine" }));
+  const label = h("div", { class: "pb-label" }, labelImg, h("span", { class: "hole" }), h("span", { class: "shine" }));
   const disc = h("button", { type: "button", class: "pb-disc" }, h("div", { class: "pb-spin" }, rim, label));
 
   const bar = h("footer", { class: "player pb", hidden: true },
@@ -655,9 +653,6 @@ export function renderBar(opts = {}) {
     const name = song.title || "Unknown title";
     title.textContent = name;
     sub.textContent = [song.artist, song.album].filter(Boolean).join(" · ");
-    labelT.textContent = name;
-    labelA.textContent = song.artist || "";
-    labelA.hidden = !song.artist;
     const what = bar.classList.contains("tucked") ? "Show disc" : isPlaying() ? "Pause" : "Play";
     disc.setAttribute("aria-label", `${what}: ${name}${song.artist ? `, ${song.artist}` : ""}`);
     if (heartB.dataset.id !== song.id) retarget(heartB, song);
