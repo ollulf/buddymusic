@@ -354,7 +354,8 @@ body.settings-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { .art.jc::after { transition: none !important; animation: none !important; } }
 .album .jc ~ .new-ribbon { top: 6px; right: 6px; }
 
-footer.player.pb { --bh: 120px; --tw: 180px; --th: 52px; --tl: 12px; --sb: env(safe-area-inset-bottom, 0px); --cream: #fff3c9; position: fixed; left: 0; right: 0; bottom: 0; z-index: 3; height: calc(var(--bh) + var(--sb)); padding: 0; background: none; border: 0; box-shadow: none; }
+footer.player.pb { --bh: 120px; --tw: 180px; --th: 52px; --tl: calc(50% - var(--tw) / 2); --sb: env(safe-area-inset-bottom, 0px); --cream: #fff3c9; position: fixed; left: 0; right: 0; bottom: 0; z-index: 3; height: calc(var(--bh) + var(--sb)); padding: 0; background: none; border: 0; box-shadow: none; }
+footer.player.pb::before { content: ""; position: absolute; left: 50%; bottom: calc(var(--bh) + var(--sb) - 20px); width: 340px; height: 260px; transform: translateX(-50%); background: radial-gradient(closest-side, rgb(0 0 0 / .65), rgb(0 0 0 / .35) 60%, transparent); pointer-events: none; }
 .pb-bay { position: absolute; left: var(--tl); bottom: calc(var(--bh) + var(--sb) + var(--th) - 6px); width: var(--tw); height: 150px; overflow: hidden; pointer-events: none; }
 .pb-disc { --s: 172px; position: absolute; left: 50%; bottom: -36px; width: var(--s); height: var(--s); margin-left: calc(var(--s) / -2); padding: 0; border: 0; border-radius: 50%; background: none; pointer-events: auto; cursor: pointer; transition: transform .3s steps(6); image-rendering: pixelated; }
 .pb-disc:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
@@ -411,7 +412,7 @@ button.pb-b.vol[aria-expanded="true"] { color: var(--accent); }
   footer.player.pb.tucked .pb-disc { transform: translateY(calc(var(--s) - 52px)); }
 }
 @media (min-width: 761px) {
-  footer.player.pb { --bh: 100px; --tl: 24px; }
+  footer.player.pb { --bh: 100px; }
   .pb-main { padding: 8px 24px calc(8px + var(--sb)); }
   .pb-left { flex-direction: row; align-items: center; gap: 12px; }
   .pb-screen { flex: 1; }
