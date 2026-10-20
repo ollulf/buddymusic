@@ -321,6 +321,7 @@ button.heart[aria-pressed="true"]::before { content: ""; --i: var(--i-heartfull)
 .bar-vol .mute.off::before { content: ""; --i: var(--i-mute); }
 
 .login .privacy { margin: 0; font-size: .8rem; }
+.view-admin > * { min-width: 0; }
 .admin-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; background: var(--card); border: 2px solid var(--ink); box-shadow: var(--bevel); padding: 10px 12px; }
