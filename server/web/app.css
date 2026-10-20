@@ -369,7 +369,7 @@ footer.player.pb::before { content: ""; position: absolute; left: 50%; bottom: c
 .pb-tab::before { content: ""; position: absolute; left: 4px; right: 4px; top: 4px; height: 4px; background: var(--ink); box-shadow: 0 2px 0 var(--shade), 0 -1px 0 #5d6d9e; }
 button.pb-b { width: 44px; height: 32px; padding: 0; border: 2px solid var(--ink); border-radius: 0; background: var(--card); color: var(--fg); box-shadow: var(--bevel); display: inline-grid; place-items: center; cursor: pointer; font-size: 0; line-height: 0; }
 button.pb-b:active { transform: translate(1px, 1px); }
-button.pb-b.big { width: 56px; background: var(--accent); color: var(--accent-fg); box-shadow: inset 2px 2px 0 var(--cream), inset -2px -2px 0 #b86f50; }
+button.pb-b.big { width: 56px; background: var(--accent); color: var(--accent-fg); box-shadow: inset 2px 2px 0 #fff3c9, inset -2px -2px 0 #b86f50; }
 button.pb-b.sm { width: 36px; height: 28px; }
 button.pb-b.sm::before { width: 14px; height: 14px; -webkit-mask-size: 14px 14px; mask-size: 14px 14px; }
 button.pb-b.on { color: var(--accent); }
@@ -432,6 +432,12 @@ header.top .tab { display: grid; grid-auto-flow: column; place-items: center; ga
 header.top .tab:hover, header.top .tab:focus-visible { color: var(--fg); border-color: var(--muted); }
 header.top .tab.on, header.top .tab.on:hover { color: var(--accent-fg); background: var(--accent); border-color: var(--ink); box-shadow: inset 2px 2px 0 #fff3c4, inset -2px -2px 0 #c58a3a; }
 header.top .tab-label { display: none; }
+header.top .tab, header.top .dice, header.top .saver-btn, header.top .avatar { border: 2px solid var(--ink); background: var(--card); box-shadow: var(--bevel); }
+header.top .tab:hover, header.top .tab:focus-visible, header.top .dice:hover, header.top .dice:focus-visible, header.top .saver-btn:hover, header.top .saver-btn:focus-visible, header.top .avatar:hover, header.top .avatar:focus-visible { border-color: var(--ink); }
+header.top .tab.on, header.top .tab.on:hover, header.top .saver-btn.on, header.top .avatar[aria-expanded="true"] { background: var(--accent); border-color: var(--ink); color: var(--accent-fg); box-shadow: inset 2px 2px 0 #fff3c9, inset -2px -2px 0 #b86f50; }
+header.top .tab:active, header.top .dice:active, header.top .saver-btn:active, header.top .avatar:active { transform: translate(2px, 2px); box-shadow: inset 2px 2px 0 var(--shade); }
+header.top .avatar.has-pic { position: relative; }
+header.top .avatar.has-pic::after { content: ""; position: absolute; inset: 0; box-shadow: inherit; pointer-events: none; }
 header.top .saver-toggle + .profile { margin-left: 4px; }
 .title-row { display: flex; align-items: center; gap: 10px; max-width: 820px; margin: 0 auto; padding: 12px 16px 0; }
 .page-title { font: 400 32px/1 var(--mys); letter-spacing: .02em; color: var(--accent); flex: none; }
