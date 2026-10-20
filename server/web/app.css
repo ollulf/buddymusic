@@ -5,8 +5,8 @@
 :root {
   --bg: #1a1c2c;
   --card: #29366f;
-  --fg: #f4f4f4;
-  --muted: #94b0c2;
+  --fg: #ffffff;
+  --muted: #b4cad8;
   --line: #0b0c14;
   --accent: #ffcd75;
   --accent-fg: #1a1c2c;
@@ -18,7 +18,7 @@
   --warn: #ffcd75;
   --warnbg: #3a2e16;
   --focus: #73eff7;
-  --ph: #566c86;
+  --ph: #7088a2;
   --ink: #0b0c14;
   --hi: #3b5dc9;
   --shade: #0f1330;
