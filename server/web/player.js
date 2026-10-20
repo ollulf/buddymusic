@@ -1,4 +1,4 @@
-import { h, coverURL, cover, fmtTime } from "./dom.js";
+import { h, coverURL, fmtTime } from "./dom.js";
 import { heartButton, retarget } from "./favs.js";
 
 const SAVER_KEY = "bm.dataSaver";
@@ -36,6 +36,13 @@ const streamURL = (song) => {
 export const current = () => state.queue[state.index] || null;
 export const queue = () => state.queue.slice();
 export const isPlaying = () => !audio.paused;
+export const duration = () => {
+  const d = audio.duration;
+  if (isFinite(d) && d > 0) return d;
+  const song = current();
+  return song && song.duration > 0 ? +song.duration : 0;
+};
+export const position = () => audio.currentTime || 0;
 
 function rebuildOrder() {
   const n = state.queue.length;
@@ -59,8 +66,25 @@ function step(dir) {
   return state.order[next];
 }
 
+const listen = { song: null, secs: 0, last: -1, sent: 0 };
+
+function report(playing) {
+  const song = listen.song;
+  if (!song) return;
+  listen.sent = Date.now();
+  const body = JSON.stringify({ seconds: Math.floor(listen.secs), playing, title: song.title || "", artist: song.artist || "" });
+  const url = `/api/music/progress/${encodeURIComponent(song.id)}`;
+  if (!playing && document.visibilityState === "hidden" && navigator.sendBeacon) {
+    navigator.sendBeacon(url, new Blob([body], { type: "application/json" }));
+    return;
+  }
+  fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+}
+
 function load(i, autoplay = true) {
+  if (listen.song) report(false);
   state.index = i;
+  Object.assign(listen, { song: current(), secs: 0, last: -1, sent: 0 });
   state.scrobbled = false;
   const song = current();
   if (!song) { audio.removeAttribute("src"); audio.load(); emit(); return; }
@@ -168,17 +192,42 @@ audio.addEventListener("ended", () => {
   if (state.repeat === "one") { audio.currentTime = 0; audio.play().catch(() => {}); return; }
   next();
 });
+audio.addEventListener("pause", () => { listen.last = -1; report(false); });
+audio.addEventListener("play", () => { listen.last = audio.currentTime; report(true); });
+audio.addEventListener("seeking", () => { listen.last = -1; });
+window.addEventListener("pagehide", () => report(false));
 audio.addEventListener("timeupdate", () => {
   const song = current();
   if (!song) return;
-  const d = audio.duration || song.duration || 0;
+  const t = audio.currentTime;
+  if (listen.last >= 0 && t > listen.last && t - listen.last < 2) listen.secs += t - listen.last;
+  listen.last = t;
+  if (!audio.paused && Date.now() - listen.sent > 30000) report(true);
+  const d = duration();
   if (!state.scrobbled && d > 30 && (audio.currentTime >= d / 2 || audio.currentTime >= 240)) {
     state.scrobbled = true;
     fetch(`/api/music/scrobble/${encodeURIComponent(song.id)}`, { method: "POST" }).catch(() => {});
   }
   if (d && d - audio.currentTime < 30) preloadNext();
 });
-for (const ev of ["play", "pause", "loadedmetadata"]) audio.addEventListener(ev, emit);
+for (const ev of ["play", "pause", "loadedmetadata", "durationchange", "seeking", "seeked", "emptied"]) audio.addEventListener(ev, emit);
+
+const vol = (() => {
+  let v = 80, m = false;
+  try { const n = parseInt(localStorage.getItem("bm.volume"), 10); if (n >= 0 && n <= 100) v = n; m = localStorage.getItem("bm.muted") === "1"; } catch {}
+  return { v, m };
+})();
+function applyVolume() {
+  audio.volume = vol.v / 100;
+  audio.muted = vol.m;
+  preloader.volume = vol.v / 100;
+  try { localStorage.setItem("bm.volume", String(vol.v)); localStorage.setItem("bm.muted", vol.m ? "1" : "0"); } catch {}
+}
+applyVolume();
+const volumeSettable = (() => {
+  if (/iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) return false;
+  try { const t = new Audio(); t.volume = 0.5; return t.volume === 0.5; } catch { return false; }
+})();
 
 export function renderBar(opts = {}) {
   const art = h("a", { class: "bar-art", "aria-label": "Open album" });
@@ -188,7 +237,8 @@ export function renderBar(opts = {}) {
   const dur = h("span", { class: "bar-time" }, "0:00");
   const range = h("input", { type: "range", min: 0, max: 0, step: "any", value: 0, "aria-label": "Seek" });
   let dragging = false;
-  range.addEventListener("input", () => { dragging = true; pos.textContent = fmtTime(+range.value); });
+  const paintSeek = () => { const m = +range.max; range.style.setProperty("--p", String(m > 0 ? Math.min(1, Math.max(0, +range.value / m)) : 0)); };
+  range.addEventListener("input", () => { dragging = true; pos.textContent = fmtTime(+range.value); paintSeek(); });
   range.addEventListener("change", () => { dragging = false; seek(+range.value); });
   const btn = (label, cls, fn) => h("button", { class: `icon ${cls}`, "aria-label": label, title: label, onclick: fn });
   const shuffleB = btn("Shuffle", "shuffle", toggleShuffle);
@@ -197,14 +247,31 @@ export function renderBar(opts = {}) {
   const nextB = btn("Next", "next", next);
   const repeatB = btn("Repeat", "repeat", cycleRepeat);
   const heartB = heartButton(null, "song", { cls: "bar-heart", get: current, onUnauthorized: opts.onUnauthorized });
-  const saver = h("input", { type: "checkbox" });
-  saver.addEventListener("change", () => setSaver(saver.checked));
+  const muteB = h("button", { class: "icon mute", type: "button" });
+  const volR = h("input", { type: "range", min: 0, max: 100, step: 1, value: vol.v, "aria-label": "Volume" });
+  const paintVol = () => {
+    const off = vol.m || vol.v === 0;
+    muteB.classList.toggle("off", off);
+    muteB.classList.toggle("low", !off && vol.v < 50);
+    muteB.setAttribute("aria-pressed", String(vol.m));
+    muteB.setAttribute("aria-label", vol.m ? "Unmute" : "Mute");
+    muteB.title = vol.m ? "Unmute" : "Mute";
+    volR.value = vol.v;
+    volR.style.setProperty("--fill", `${vol.m ? 0 : vol.v}%`);
+  };
+  muteB.addEventListener("click", () => {
+    if (vol.m || vol.v > 0) vol.m = !vol.m; else { vol.v = 50; vol.m = false; }
+    applyVolume(); paintVol();
+  });
+  volR.addEventListener("input", () => { vol.v = +volR.value; vol.m = false; applyVolume(); paintVol(); });
+  paintVol();
+  const volBox = h("div", { class: "bar-vol" + (volumeSettable ? "" : " fixed") }, muteB, volR);
   const bar = h("footer", { class: "player", hidden: true },
     h("div", { class: "bar-seek" }, pos, range, dur),
     h("div", { class: "bar-row" },
       art, h("div", { class: "bar-meta" }, title, sub), heartB,
       h("div", { class: "bar-ctl" }, shuffleB, prevB, playB, nextB, repeatB),
-      h("label", { class: "saver", title: "Stream Opus 128 kbps to save mobile data" }, saver, h("span", {}, "Data saver"))));
+      volBox));
 
   let lastCover = null;
   const paint = () => {
@@ -214,13 +281,19 @@ export function renderBar(opts = {}) {
     title.textContent = song.title || "Unknown title";
     sub.textContent = [song.artist, song.album].filter(Boolean).join(" · ");
     if (heartB.dataset.id !== song.id) retarget(heartB, song);
-    const cid = song.coverArt || song.albumId;
-    if (lastCover !== cid) {
-      lastCover = cid;
-      const c = cover(cid, 96, "art small");
-      const img = c.querySelector("img");
-      if (img) img.alt = song.album || "Album cover";
-      art.replaceChildren(c);
+    const ids = [...new Set([song.coverArt, song.albumId].filter(Boolean))];
+    const key = ids.join("|");
+    if (lastCover !== key) {
+      lastCover = key;
+      const box = h("div", { class: "art small" });
+      const tryNext = (i) => {
+        if (i >= ids.length) { box.replaceChildren(); return; }
+        const img = h("img", { src: coverURL(ids[i], 96), alt: song.album || "Album cover", decoding: "async" });
+        img.addEventListener("error", () => tryNext(i + 1), { once: true });
+        box.replaceChildren(img);
+      };
+      tryNext(0);
+      art.replaceChildren(box);
     }
     if (song.albumId) art.href = `#/library/album/${encodeURIComponent(song.albumId)}`;
     else art.removeAttribute("href");
@@ -231,13 +304,15 @@ export function renderBar(opts = {}) {
     repeatB.classList.toggle("on", s.repeat !== "off");
     repeatB.dataset.mode = s.repeat;
     repeatB.title = `Repeat: ${s.repeat}`;
-    saver.checked = s.saver;
-    const d = audio.duration || song.duration || 0;
-    range.max = d;
+    const d = duration();
+    const t = d ? Math.min(position(), d) : position();
+    range.max = String(d);
+    range.disabled = !d;
     dur.textContent = fmtTime(d);
-    if (!dragging) { range.value = audio.currentTime; pos.textContent = fmtTime(audio.currentTime); }
+    if (!dragging) { range.value = String(t); pos.textContent = fmtTime(t); }
+    paintSeek();
     if ("mediaSession" in navigator && d) {
-      try { navigator.mediaSession.setPositionState({ duration: d, position: Math.min(audio.currentTime, d), playbackRate: 1 }); } catch {}
+      try { navigator.mediaSession.setPositionState({ duration: d, position: t, playbackRate: 1 }); } catch {}
     }
   };
   onChange(paint);

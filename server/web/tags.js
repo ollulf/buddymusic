@@ -1,11 +1,10 @@
 export const REQUIRED = ["title", "artist", "album", "track", "cover"];
-export const TEXT_FIELDS = ["title", "artist", "album", "track", "album_artist", "year", "disc"];
+export const TEXT_FIELDS = ["title", "artist", "album", "track", "year", "disc"];
 export const LABELS = {
   title: "Title",
   artist: "Artist",
   album: "Album",
   track: "Track no.",
-  album_artist: "Album artist",
   year: "Year",
   disc: "Disc",
   cover: "Cover art",
@@ -39,7 +38,6 @@ export function fromMediaTags(t) {
     artist: tags.artist || "",
     album: tags.album || "",
     track: tags.track != null ? String(tags.track) : "",
-    album_artist: raw("TPE2") || raw("ALBUMARTIST") || raw("aART") || "",
     year: tags.year ? String(tags.year) : raw("DATE") || raw("TDRC") || raw("©day") || "",
     disc: raw("TPOS") || raw("DISCNUMBER") || "",
     cover: !!(tags.picture && tags.picture.data && tags.picture.data.length),

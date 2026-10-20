@@ -25,6 +25,7 @@ func main() {
 		log.Fatalf("db: %v", err)
 	}
 	defer store.Close()
+	store.PurgeStats(time.Now().Add(-statsRetention))
 
 	app := NewApp(cfg, store)
 	srv := &http.Server{

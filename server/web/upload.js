@@ -1,6 +1,6 @@
 import { LABELS, fromMediaTags, fromFileName, mostCommon, present, trackNumber } from "./tags.js";
 
-const ALBUM_FIELDS = ["artist", "album", "album_artist", "year"];
+const ALBUM_FIELDS = ["artist", "album", "year"];
 const ROW_FIELDS = ["title", "track"];
 const ERRORS = {
   "unsupported-type": "Not a supported audio file (FLAC, MP3, M4A, OGG, Opus)",
@@ -49,7 +49,7 @@ function album() {
 }
 
 function albumKey(a) {
-  const artist = (a.album_artist || a.artist || "").toLowerCase();
+  const artist = (a.artist || "").toLowerCase();
   const name = (a.album || "").toLowerCase();
   return artist && name ? artist + "\u0000" + name : "";
 }
@@ -61,7 +61,7 @@ function folderCover(a) {
   if (!key) return false;
   if (!folderCovers.has(key)) {
     folderCovers.set(key, "pending");
-    const q = new URLSearchParams({ artist: a.artist, album: a.album, album_artist: a.album_artist });
+    const q = new URLSearchParams({ artist: a.artist, album: a.album });
     fetch("/api/covers?" + q).then((r) => r.ok ? r.json() : { exists: false }).then((b) => {
       folderCovers.set(key, !!b.exists);
       refresh();
@@ -354,7 +354,6 @@ async function uploadAll() {
   }
   unlockAlbum();
   refresh();
-  loadRecent();
 }
 
 function unlockAlbum() {
@@ -364,16 +363,6 @@ function unlockAlbum() {
 }
 
 let onUnauthorized = () => {};
-
-async function loadRecent() {
-  const res = await fetch("/api/uploads");
-  if (!res.ok) return;
-  const list = await res.json();
-  ui.recent.replaceChildren(...list.slice(0, 20).map((u) =>
-    h("li", {}, h("span", { class: "fn" }, u.libraryPath || u.filename), h("span", { class: "chip " + (u.status === "in-library" ? "ok" : "bad") },
-      u.status === "in-library" ? "in library" : "rejected" + (u.missing?.length ? ": " + u.missing.join(", ") : "")))));
-  ui.recentBox.hidden = list.length === 0;
-}
 
 function albumInput(key) {
   const el = h("input", {
@@ -421,14 +410,10 @@ export function renderUpload(container, opts = {}) {
     state.files = state.files.filter((x) => x.status !== "done");
     refresh();
   } }, "Clear uploaded");
-  ui.recent = h("ul", { class: "recent" });
-  ui.recentBox = h("section", { class: "card", hidden: true }, h("h2", {}, "Recent uploads"), ui.recent);
 
   container.replaceChildren(
     drop, ui.albumBox,
     h("section", { class: "card files" }, h("h2", {}, "Songs"), ui.list,
-      h("div", { class: "foot" }, ui.summary, h("div", { class: "actions" }, ui.clear, ui.upload))),
-    ui.recentBox);
+      h("div", { class: "foot" }, ui.summary, h("div", { class: "actions" }, ui.clear, ui.upload))));
   refresh();
-  loadRecent();
 }

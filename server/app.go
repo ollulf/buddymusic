@@ -15,6 +15,7 @@ type App struct {
 	limiter loginLimiter
 	scanner *Scanner
 	admins  adminCache
+	seen    seenThrottle
 }
 
 func NewApp(cfg *Config, store *Store) *App {
@@ -28,6 +29,9 @@ func (a *App) Routes() http.Handler {
 	mux.HandleFunc("POST /api/login", a.handleLogin)
 	mux.HandleFunc("POST /api/logout", a.handleLogout)
 	mux.Handle("GET /api/me", a.requireUser(a.handleMe))
+	mux.Handle("GET /api/avatar", a.requireUser(a.handleGetAvatar))
+	mux.Handle("PUT /api/avatar", a.requireUser(a.handlePutAvatar))
+	mux.Handle("DELETE /api/avatar", a.requireUser(a.handleDeleteAvatar))
 	mux.Handle("POST /api/uploads", a.requireUser(a.handleUpload))
 	mux.Handle("GET /api/uploads", a.requireUser(a.handleListUploads))
 	mux.Handle("GET /api/uploads/{id}", a.requireUser(a.handleGetUpload))
@@ -50,6 +54,8 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("GET /api/music/cover/{id}", a.requireUser(a.handleCover))
 	mux.Handle("GET /api/music/stream/{id}", a.requireUser(a.handleStream))
 	mux.Handle("POST /api/music/scrobble/{id}", a.requireUser(a.handleScrobble))
+	mux.Handle("POST /api/music/progress/{id}", a.requireUser(a.handleProgress))
+	mux.Handle("GET /api/admin/stats", a.requireUser(a.handleAdminStats))
 	mux.Handle("DELETE /api/music/track/{id}", a.requireUser(a.adminDelete(a.loadTrack)))
 	mux.Handle("DELETE /api/music/album/{id}", a.requireUser(a.adminDelete(a.loadAlbum)))
 	mux.Handle("GET /", a.webHandler())

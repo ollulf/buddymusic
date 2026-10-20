@@ -22,7 +22,7 @@ const shellHead = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light dark">
+<meta name="color-scheme" content="dark">
 <title>buddymusic</title>
 <link rel="stylesheet" href="/app.css">
 <script src="/vendor/jsmediatags.min.js" defer></script>
@@ -33,6 +33,10 @@ const shellTail = `</head>
 <body><div id="app"></div></body>
 </html>
 `
+
+func init() {
+	mime.AddExtensionType(".ttf", "font/ttf")
+}
 
 type staticFile struct {
 	body  []byte

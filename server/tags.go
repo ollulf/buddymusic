@@ -15,21 +15,18 @@ import (
 
 var requiredFields = []string{"title", "artist", "album", "track", "cover"}
 
-var textFields = []string{"title", "artist", "album", "track", "album_artist", "year", "disc"}
+var textFields = []string{"title", "artist", "album", "track", "year", "disc"}
 
 var tagAliases = map[string]string{
-	"title":        "title",
-	"artist":       "artist",
-	"album":        "album",
-	"track":        "track",
-	"tracknumber":  "track",
-	"album_artist": "album_artist",
-	"albumartist":  "album_artist",
-	"album artist": "album_artist",
-	"date":         "year",
-	"year":         "year",
-	"disc":         "disc",
-	"discnumber":   "disc",
+	"title":       "title",
+	"artist":      "artist",
+	"album":       "album",
+	"track":       "track",
+	"tracknumber": "track",
+	"date":        "year",
+	"year":        "year",
+	"disc":        "disc",
+	"discnumber":  "disc",
 }
 
 const maxTagLen = 300
