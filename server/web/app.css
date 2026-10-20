@@ -403,15 +403,15 @@ body.settings-open { overflow: hidden; }
 .art.jc { --u: 4px; position: relative; padding: var(--u) var(--u) var(--u) calc(var(--u) * 4); background: repeating-linear-gradient(0deg, var(--shade) 0 2px, var(--card) 2px 4px) content-box, linear-gradient(var(--steel), var(--steel)) border-box; box-shadow: inset var(--u) var(--u) 0 var(--muted), inset calc(-1 * var(--u)) calc(-1 * var(--u)) 0 var(--line), 4px 4px 0 var(--ink); }
 .art.jc img { box-shadow: 0 0 0 2px var(--line); }
 .art.jc::before { content: ""; position: absolute; z-index: 2; left: var(--u); top: var(--u); bottom: var(--u); width: calc(var(--u) * 2); background: linear-gradient(var(--muted), var(--muted)) center calc(var(--u) * 2) / 100% calc(var(--u) * 3) no-repeat, linear-gradient(var(--muted), var(--muted)) center calc(100% - var(--u) * 2) / 100% calc(var(--u) * 3) no-repeat, var(--line); pointer-events: none; }
-.art.jc::after { content: ""; position: absolute; z-index: 3; inset: var(--u) var(--u) var(--u) calc(var(--u) * 4); background: linear-gradient(135deg, transparent 0 42%, rgb(244 244 244 / .28) 42% 48%, transparent 48% 52%, rgb(244 244 244 / .14) 52% 55%, transparent 55%) 0 0 / 300% 300% no-repeat; transition: background-position .3s steps(4); pointer-events: none; }
+.art.jc::after { content: ""; position: absolute; z-index: 3; inset: var(--u) var(--u) var(--u) calc(var(--u) * 4); background: linear-gradient(135deg, transparent 0 42%, rgb(244 244 244 / .28) 42% 48%, transparent 48% 52%, rgb(244 244 244 / .14) 52% 55%, transparent 55%) 0 0 / 300% 300% no-repeat; pointer-events: none; }
 .art.small.jc { --u: 2px; padding-left: calc(var(--u) * 3); box-shadow: inset var(--u) var(--u) 0 var(--muted), inset calc(-1 * var(--u)) calc(-1 * var(--u)) 0 var(--line); }
 .art.small.jc img { box-shadow: none; }
 .art.small.jc::before { width: var(--u); background: var(--line); }
 .art.small.jc::after { inset: var(--u) var(--u) var(--u) calc(var(--u) * 3); }
-.album:hover .jc::after, .album:focus-visible .jc::after, .bar-art:hover .jc::after, .bar-art:focus-visible .jc::after, .art.jc:hover::after { background-position: 100% 100%; }
+.album:hover .jc::after, .album:focus-visible .jc::after, .bar-art:hover .jc::after, .bar-art:focus-visible .jc::after, .art.jc:hover::after { background-position: 100% 100%; transition: background-position .3s steps(4); }
 .is-playing .jc.now::after { animation: jc-glare 4s steps(8) infinite; }
 @keyframes jc-glare { 0% { background-position: 0 0; } 55%, 100% { background-position: 100% 100%; } }
-@media (prefers-reduced-motion: reduce) { .art.jc::after { transition: none; animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .art.jc::after { transition: none !important; animation: none !important; } }
 .album .jc ~ .new-ribbon { top: 6px; right: 6px; }
 header.top .tabs { display: flex; gap: 4px; min-width: 0; }
 header.top .tab { display: grid; grid-auto-flow: column; place-items: center; gap: 8px; flex: none; min-width: 40px; height: 40px; padding: 0; border: 2px solid transparent; color: var(--muted); text-decoration: none; text-transform: uppercase; letter-spacing: .06em; font-size: 15px; }
