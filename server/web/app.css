@@ -163,9 +163,6 @@ button.ghost { background: none; }
 button.danger { color: var(--bad); border-color: var(--bad); background: var(--card); }
 button.icon.danger { border: 0; background: none; color: var(--muted); }
 button.icon.danger:hover, button.icon.danger:focus-visible { color: var(--bad); }
-.recent { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: .88rem; }
-.recent li { display: flex; gap: 8px; align-items: baseline; }
-.recent .fn { font-weight: 400; }
 .login { max-width: 360px; margin: 10vh auto 0; display: flex; flex-direction: column; gap: 10px; }
 .brand { display: flex; flex-direction: column; line-height: 1.15; }
 .brand .powered { color: var(--muted); font-size: .72rem; letter-spacing: .02em; }
@@ -233,7 +230,7 @@ h2 { font-family: var(--mys); font-size: 16px; font-weight: 400; color: var(--mu
 .brand strong { font-size: 20px; color: var(--accent); }
 .login .brand h2 { font-size: 28px; color: var(--accent); }
 .album .a-name { font-size: 16px; }
-.album .a-sub, .s-sub, .bar-sub, .muted, .field, .chip, .badge, .state, .msg, .saver, .brand .powered, .bar-time, .s-no, .s-dur, .pill, .recent { font-size: 14px; }
+.album .a-sub, .s-sub, .bar-sub, .muted, .field, .chip, .badge, .state, .msg, .saver, .brand .powered, .bar-time, .s-no, .s-dur, .pill { font-size: 14px; }
 .login .brand .powered { font-size: 14px; }
 header.top { background: var(--card); border-bottom: 2px solid var(--ink); box-shadow: 0 2px 0 var(--shade); }
 header.top .tab { text-transform: uppercase; letter-spacing: .06em; font-size: 15px; font-weight: 400; color: var(--muted); border: 2px solid transparent; padding: 2px 8px; }
