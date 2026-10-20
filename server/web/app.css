@@ -1,5 +1,5 @@
-@font-face { font-family: "Cubix"; src: url("/fonts/cubix.ttf") format("truetype"); font-display: swap; }
-@font-face { font-family: "Cubix Mystical"; src: url("/fonts/cubix-mystical.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Pixelify Sans"; src: url("/fonts/pixelify-sans.ttf") format("truetype"); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Jersey 10"; src: url("/fonts/jersey10.ttf") format("truetype"); font-display: swap; }
 :root {
   --bg: #1a1c2c;
   --card: #29366f;
@@ -21,8 +21,8 @@
   --hi: #3b5dc9;
   --shade: #0f1330;
   --bevel: inset 2px 2px 0 var(--hi), inset -2px -2px 0 var(--shade);
-  --pix: "Cubix", ui-monospace, monospace;
-  --mys: "Cubix Mystical", "Cubix", ui-monospace, monospace;
+  --pix: "Pixelify Sans", ui-monospace, monospace;
+  --mys: "Jersey 10", "Pixelify Sans", ui-monospace, monospace;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -229,11 +229,11 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / .45); }
 
 button, input, select, textarea { font-family: var(--pix); }
 h1, .album-info h1, .pl-head h1, .brand strong, .login .brand h2, .album .a-name { font-family: var(--mys); font-weight: 400; letter-spacing: .02em; }
-h1 { font-size: 28px; color: var(--accent); }
-h2 { font-family: var(--mys); font-size: 16px; font-weight: 400; color: var(--muted); }
-.brand strong { font-size: 20px; color: var(--accent); }
-.login .brand h2 { font-size: 28px; color: var(--accent); }
-.album .a-name { font-size: 16px; }
+h1 { font-size: 36px; color: var(--accent); }
+h2 { font-family: var(--mys); font-size: 20px; font-weight: 400; color: var(--muted); }
+.brand strong { font-size: 26px; color: var(--accent); }
+.login .brand h2 { font-size: 40px; color: var(--accent); }
+.album .a-name { font-size: 20px; }
 .album .a-sub, .s-sub, .bar-sub, .muted, .field, .chip, .badge, .state, .msg, .brand .powered, .bar-time, .s-no, .s-dur, .pill { font-size: 14px; }
 .login .brand .powered { font-size: 14px; }
 header.top { background: var(--card); border-bottom: 2px solid var(--ink); box-shadow: 0 2px 0 var(--shade); }
@@ -355,4 +355,13 @@ button.heart[aria-pressed="true"]::before { content: ""; --i: var(--i-heartfull)
   .admin-chart .cols { height: 150px; gap: 4px; }
   .admin-list li { grid-template-columns: 1fr auto; }
   .admin-list li > .muted { grid-column: 1 / -1; }
+}
+header.top .hsearch { margin-left: auto; flex: 0 1 240px; min-width: 0; }
+header.top .hsearch + .profile { margin-left: 0; }
+header.top .hsearch + .saver-toggle { margin-left: 8px; }
+header.top .hsearch .search-box { height: 34px; padding: 4px 10px; font-size: 15px; }
+@media (max-width: 520px) {
+  header.top .hsearch { order: 4; flex: 1 1 100%; margin-left: 0; }
+  header.top .hsearch + .profile { margin-left: auto; }
+  header.top .hsearch + .saver-toggle { margin-left: auto; }
 }
