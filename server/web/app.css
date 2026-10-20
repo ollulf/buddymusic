@@ -438,6 +438,7 @@ header.top .saver-toggle + .profile { margin-left: 4px; }
 .page-title { font: 400 32px/1 var(--mys); letter-spacing: .04em; color: var(--accent); text-transform: uppercase; flex: none; }
 .title-row .hsearch { flex: 1 1 auto; min-width: 0; max-width: 420px; margin-left: auto; }
 .title-row .search-box { height: 40px; padding: 4px 10px; font-size: 15px; }
+.title-row.no-search .hsearch, .title-row.no-search > .search-box { visibility: hidden; }
 .profile-menu .powered { margin: 0; color: var(--muted); font-size: 12px; text-align: center; }
 @media (min-width: 900px) {
   header.top { padding: 6px 16px; }

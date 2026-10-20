@@ -286,6 +286,7 @@ function showApp(user, admin, avatar, me = {}) {
   const views = Object.fromEntries(TABS.map(([k]) => [k, h("main", { class: `view view-${k}`, hidden: true })]));
   const links = Object.fromEntries(TABS.filter(([k]) => k !== "search").map(([k, label]) => [k, h("a", { class: "tab", href: `#/${k}`, title: label, "aria-label": label }, pixelIcon(TAB_ICONS[k]), h("span", { class: "tab-label", "aria-hidden": "true" }, label))]));
   const titleEl = h("div", { class: "page-title" });
+  const titleRow = h("div", { class: "title-row" }, titleEl, searchBox());
   const settingsView = h("main", { class: "view view-settings", hidden: true });
   let cameFromApp = false;
   const closeSettings = () => {
@@ -300,7 +301,7 @@ function showApp(user, admin, avatar, me = {}) {
       randomButton(),
       qualityButton(),
       profileMenu(user, admin, avatar)),
-    h("div", { class: "title-row" }, titleEl, searchBox()),
+    titleRow,
     ...Object.values(views),
     settingsView,
     playerBar);
@@ -327,6 +328,7 @@ function showApp(user, admin, avatar, me = {}) {
     }
     if (inSettings) {
       titleEl.textContent = "Settings";
+      titleRow.classList.remove("no-search");
       return;
     }
     const tab = TABS.some(([k]) => k === parts[0]) ? parts[0] : "library";
@@ -338,6 +340,7 @@ function showApp(user, admin, avatar, me = {}) {
       else links[k].removeAttribute("aria-current");
     }
     titleEl.textContent = TABS.find(([k]) => k === tab)[1];
+    titleRow.classList.toggle("no-search", tab === "upload" || tab === "admin");
     const key = [tab, ...parts.slice(1)].join("/");
     if (tab === "library" && key !== shown) {
       renderLibrary(views.library, parts.slice(1), opts);
