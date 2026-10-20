@@ -1,3 +1,4 @@
+import { t } from "./i18n.js";
 import { h, coverURL, fmtTime } from "./dom.js";
 import { heartButton, retarget } from "./favs.js";
 
@@ -64,8 +65,8 @@ function streamSpec(song, tier) {
 }
 
 export function qualityHint(q) {
-  if (q === "auto") return "by connection";
-  if (q === "original") return state.format === "mp3" ? "MP3 320" : "original file";
+  if (q === "auto") return t("quality.byConnection");
+  if (q === "original") return state.format === "mp3" ? "MP3 320" : t("quality.originalFile");
   const spec = streamSpec({}, q);
   return `${spec.format === "opus" ? "Opus" : "MP3"} ${spec.kbps}`;
 }

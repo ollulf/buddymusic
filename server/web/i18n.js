@@ -32,6 +32,39 @@ const en = {
   "avatar.change": "Change picture",
   "avatar.reset": "Reset picture",
   "common.saving": "Saving…",
+  "time.justNow": "just now",
+  "login.badLogin": "Wrong username or password",
+  "login.tooMany": "Too many attempts, wait a few minutes",
+  "login.navidrome": "Navidrome is not answering",
+  "login.button": "Log in",
+  "login.failed": "Login failed",
+  "login.noConnection": "No connection to the server",
+  "login.intro": "Log in with your Navidrome account.",
+  "login.username": "Username",
+  "login.password": "Password",
+  "login.remember": "Keep me logged in",
+  "login.privacy": "Admins can see when you log in and how much you listen. Friends can see what you are playing.",
+  "tab.library": "Library",
+  "tab.search": "Search",
+  "tab.favorites": "Favorites",
+  "tab.playlists": "Playlists",
+  "tab.upload": "Upload",
+  "tab.admin": "Admin",
+  "tab.sections": "Sections",
+  "dice.title": "Play random songs",
+  "dice.failed": "Couldn't load",
+  "friends.lastSeen": "last seen {when}",
+  "friends.paused": "paused: {track}",
+  "friends.idle": "idle",
+  "friends.none": "No friends online right now.",
+  "friends.nobody": "Nobody else is online right now.",
+  "friends.failed": "Could not load friends",
+  "friends.title": "Friends online",
+  "profile.label": "Profile",
+  "profile.logout": "Log out",
+  "quality.label": "Streaming quality: {q}",
+  "quality.byConnection": "by connection",
+  "quality.originalFile": "original file",
 };
 
 const de = {
@@ -64,6 +97,39 @@ const de = {
   "avatar.change": "Bild ändern",
   "avatar.reset": "Bild zurücksetzen",
   "common.saving": "Speichert…",
+  "time.justNow": "gerade eben",
+  "login.badLogin": "Falscher Benutzername oder falsches Passwort",
+  "login.tooMany": "Zu viele Versuche, warte ein paar Minuten",
+  "login.navidrome": "Navidrome antwortet nicht",
+  "login.button": "Einloggen",
+  "login.failed": "Login fehlgeschlagen",
+  "login.noConnection": "Keine Verbindung zum Server",
+  "login.intro": "Log dich mit deinem Navidrome-Konto ein.",
+  "login.username": "Benutzername",
+  "login.password": "Passwort",
+  "login.remember": "Eingeloggt bleiben",
+  "login.privacy": "Admins sehen, wann du dich einloggst und wie viel du hörst. Freunde sehen, was du gerade spielst.",
+  "tab.library": "Bibliothek",
+  "tab.search": "Suche",
+  "tab.favorites": "Favoriten",
+  "tab.playlists": "Playlists",
+  "tab.upload": "Upload",
+  "tab.admin": "Admin",
+  "tab.sections": "Bereiche",
+  "dice.title": "Zufällige Songs abspielen",
+  "dice.failed": "Laden fehlgeschlagen",
+  "friends.lastSeen": "zuletzt da {when}",
+  "friends.paused": "pausiert: {track}",
+  "friends.idle": "inaktiv",
+  "friends.none": "Gerade sind keine Freunde online.",
+  "friends.nobody": "Gerade ist sonst niemand online.",
+  "friends.failed": "Freunde konnten nicht geladen werden",
+  "friends.title": "Freunde online",
+  "profile.label": "Profil",
+  "profile.logout": "Ausloggen",
+  "quality.label": "Streaming-Qualität: {q}",
+  "quality.byConnection": "je nach Verbindung",
+  "quality.originalFile": "Originaldatei",
 };
 
 const DICTS = { en, de };
@@ -94,10 +160,10 @@ export function setLang(code) {
 
 const rtf = new Intl.RelativeTimeFormat(lang, { numeric: "auto" });
 
-export function relTime(ms) {
-  const sec = Math.round((ms - Date.now()) / 1000);
+export function relTime(unixSec) {
+  const sec = Math.round(unixSec - Date.now() / 1000);
   const abs = Math.abs(sec);
-  if (abs < 60) return rtf.format(sec, "second");
+  if (abs < 90) return t("time.justNow");
   if (abs < 3600) return rtf.format(Math.round(sec / 60), "minute");
   if (abs < 86400) return rtf.format(Math.round(sec / 3600), "hour");
   if (abs < 2592000) return rtf.format(Math.round(sec / 86400), "day");
