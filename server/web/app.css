@@ -437,3 +437,4 @@ body.settings-open { overflow: hidden; }
 .is-playing .jc.now::after { animation: jc-glare 4s steps(8) infinite; }
 @keyframes jc-glare { 0% { background-position: 0 0; } 55%, 100% { background-position: 100% 100%; } }
 @media (prefers-reduced-motion: reduce) { .art.jc::after { transition: none; animation: none !important; } }
+.album .jc ~ .new-ribbon { top: 6px; right: 6px; }
