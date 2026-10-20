@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS avatars (
 	mime TEXT NOT NULL,
 	data BLOB NOT NULL,
 	updated_at INTEGER NOT NULL
-);` + uploadsLibraryIndex + statsSchema)
+);` + uploadsLibraryIndex + statsSchema + friendsSchema)
 	if err != nil {
 		db.Close()
 		return nil, err
