@@ -6,6 +6,7 @@ import { renderBar, playList, settings, setQuality, onChange, QUALITIES, quality
 import { api, Unauthorized } from "./dom.js";
 import { renderPlaylists, setPlaylistUser } from "./playlists.js";
 import { renderAdmin } from "./admin.js";
+import { t, relTime } from "./i18n.js";
 import { renderSettings, GEAR, AVATAR, paintAvatar } from "./settings.js";
 
 const root = document.getElementById("app");
@@ -23,9 +24,9 @@ const h = (tag, attrs = {}, ...kids) => {
 };
 
 const LOGIN_ERRORS = {
-  "bad-login": "Wrong username or password",
-  "too-many-attempts": "Too many attempts, wait a few minutes",
-  "navidrome-unreachable": "Navidrome is not answering",
+  "bad-login": t("login.badLogin"),
+  "too-many-attempts": t("login.tooMany"),
+  "navidrome-unreachable": t("login.navidrome"),
 };
 
 function showLogin() {
@@ -33,7 +34,7 @@ function showLogin() {
   const pass = h("input", { name: "password", type: "password", autocomplete: "current-password", required: true });
   const remember = h("input", { name: "remember", type: "checkbox", checked: true });
   const err = h("div", { class: "err", role: "alert" });
-  const btn = h("button", { class: "primary", type: "submit" }, "Log in");
+  const btn = h("button", { class: "primary", type: "submit" }, t("login.button"));
   const form = h("form", { class: "card login", onsubmit: async (e) => {
     e.preventDefault();
     btn.disabled = true;
@@ -45,19 +46,19 @@ function showLogin() {
       });
       const body = await res.json().catch(() => ({}));
       if (res.ok) return showApp(body.user, body.admin, body.avatar, body);
-      err.textContent = LOGIN_ERRORS[body.error] || "Login failed";
+      err.textContent = LOGIN_ERRORS[body.error] || t("login.failed");
     } catch {
-      err.textContent = "No connection to the server";
+      err.textContent = t("login.noConnection");
     }
     btn.disabled = false;
   } },
-    h("div", { class: "brand" }, h("h2", {}, "buddymusic"), h("span", { class: "powered" }, "powered by Navidrome")),
-    h("p", { class: "muted" }, "Log in with your Navidrome account."),
-    h("label", { class: "field" }, h("span", {}, "Username"), user),
-    h("label", { class: "field" }, h("span", {}, "Password"), pass),
-    h("label", { class: "check" }, remember, h("span", {}, "Keep me logged in")),
+    h("div", { class: "brand" }, h("h2", {}, "buddymusic"), h("span", { class: "powered" }, t("app.powered"))),
+    h("p", { class: "muted" }, t("login.intro")),
+    h("label", { class: "field" }, h("span", {}, t("login.username")), user),
+    h("label", { class: "field" }, h("span", {}, t("login.password")), pass),
+    h("label", { class: "check" }, remember, h("span", {}, t("login.remember"))),
     err, btn,
-    h("p", { class: "muted privacy" }, "Admins can see when you log in and how much you listen. Friends can see what you are playing."));
+    h("p", { class: "muted privacy" }, t("login.privacy")));
   root.replaceChildren(h("main", {}, form));
   user.focus();
 }
@@ -67,7 +68,7 @@ async function logout() {
   showLogin();
 }
 
-const BASE_TABS = [["library", "Library"], ["search", "Search"], ["favorites", "Favorites"], ["playlists", "Playlists"], ["upload", "Upload"]];
+const BASE_TABS = ["library", "search", "favorites", "playlists", "upload"].map((k) => [k, t(`tab.${k}`)]);
 let routeHandler = null;
 let playerBar = null;
 let openQuality = null;
@@ -117,12 +118,12 @@ function diceIcon() {
 }
 
 function randomButton() {
-  const btn = h("button", { class: "dice", type: "button", title: "Play random songs", "aria-label": "Play random songs" }, diceIcon());
+  const btn = h("button", { class: "dice", type: "button", title: t("dice.title"), "aria-label": t("dice.title") }, diceIcon());
   btn.addEventListener("click", async () => {
     if (btn.classList.contains("busy")) return;
     btn.classList.add("busy");
     btn.classList.remove("fail");
-    btn.title = "Play random songs";
+    btn.title = t("dice.title");
     try {
       const res = await api("/api/music/random-songs?size=50");
       const songs = res?.song || [];
@@ -130,7 +131,7 @@ function randomButton() {
       playList(songs, 0);
     } catch (err) {
       if (err instanceof Unauthorized) return showLogin();
-      btn.title = "Couldn't load";
+      btn.title = t("dice.failed");
       void btn.offsetWidth;
       btn.classList.add("fail");
     } finally {
@@ -145,12 +146,6 @@ let closeProfile = null;
 document.addEventListener("click", (e) => { if (closeProfile && !e.target.closest(".profile")) closeProfile(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && closeProfile) closeProfile(true); });
 
-const ago = (sec) => {
-  const min = Math.max(0, Math.round((Date.now() / 1000 - sec) / 60));
-  if (min < 1) return "just now";
-  return `${min} min ago`;
-};
-
 function friendRow(f) {
   const pic = h("span", { class: "friend-pic" });
   if (f.avatar) {
@@ -159,11 +154,11 @@ function friendRow(f) {
     pic.append(img);
   } else pic.innerHTML = AVATAR;
   let what;
-  if (!f.online) what = `last seen ${ago(f.lastSeen)}`;
+  if (!f.online) what = t("friends.lastSeen", { when: relTime(f.lastSeen) });
   else if (f.state === "playing" || f.state === "paused") {
     const track = f.artist ? `${f.title} – ${f.artist}` : f.title;
-    what = f.state === "paused" ? `paused: ${track}` : track;
-  } else what = "idle";
+    what = f.state === "paused" ? t("friends.paused", { track }) : track;
+  } else what = t("friends.idle");
   return h("li", { class: `friend${f.online ? " online" : ""}${f.state === "playing" ? " playing" : ""}` },
     pic,
     h("span", { class: "friend-text" },
@@ -173,7 +168,7 @@ function friendRow(f) {
 
 function friendsPanel() {
   const list = h("ul", { class: "friends" });
-  const empty = h("p", { class: "muted friends-empty" }, "No friends online right now.");
+  const empty = h("p", { class: "muted friends-empty" }, t("friends.none"));
   let timer = null;
   const stop = () => {
     clearInterval(timer);
@@ -191,14 +186,14 @@ function friendsPanel() {
       const body = await res.json();
       list.replaceChildren(...body.friends.map(friendRow));
       empty.hidden = body.friends.some((f) => f.online);
-      empty.textContent = body.friends.length ? "Nobody else is online right now." : "No friends online right now.";
+      empty.textContent = body.friends.length ? t("friends.nobody") : t("friends.none");
     } catch {
       empty.hidden = false;
-      empty.textContent = "Could not load friends";
+      empty.textContent = t("friends.failed");
     }
   };
-  const el = h("section", { class: "friends-panel", "aria-label": "Friends online" },
-    h("h3", {}, "Friends online"), list, empty);
+  const el = h("section", { class: "friends-panel", "aria-label": t("friends.title") },
+    h("h3", {}, t("friends.title")), list, empty);
   return {
     el,
     start() {
@@ -213,18 +208,18 @@ function friendsPanel() {
 let headerAvatar = { version: 0, paint() {} };
 
 function profileMenu(user, admin, avatar) {
-  const btn = h("button", { class: "avatar", type: "button", "aria-haspopup": "menu", "aria-expanded": "false", "aria-label": "Profile", title: user });
+  const btn = h("button", { class: "avatar", type: "button", "aria-haspopup": "menu", "aria-expanded": "false", "aria-label": t("profile.label"), title: user });
   headerAvatar = { version: avatar || 0, paint() { paintAvatar(btn, this.version); } };
   headerAvatar.paint();
   const friends = friendsPanel();
   const settingsItem = h("button", { class: "ghost settings-item", type: "button", role: "menuitem", onclick: () => { close(); location.hash = "#/settings"; } });
   settingsItem.innerHTML = GEAR;
-  settingsItem.append("Settings");
+  settingsItem.append(t("settings.title"));
   const menu = h("div", { class: "profile-menu", role: "menu", hidden: true },
     h("div", { class: "profile-name" }, user, admin ? h("span", { class: "tag" }, "admin") : null),
     friends.el, settingsItem,
-    h("button", { class: "ghost", type: "button", role: "menuitem", onclick: logout }, "Log out"),
-    h("p", { class: "powered" }, "powered by Navidrome"));
+    h("button", { class: "ghost", type: "button", role: "menuitem", onclick: logout }, t("profile.logout")),
+    h("p", { class: "powered" }, t("app.powered")));
   const close = (focus) => {
     menu.hidden = true;
     friends.stop();
@@ -242,7 +237,7 @@ function profileMenu(user, admin, avatar) {
   return h("div", { class: "profile" }, btn, menu);
 }
 
-const QUALITY_LABELS = { auto: ["A", "Auto"], original: ["O", "Original"], normal: ["N", "Normal"], low: ["L", "Low"] };
+const QUALITY_LETTERS = { auto: "A", original: "O", normal: "N", low: "L" };
 
 function qualityButton() {
   const btn = h("button", { type: "button", class: "saver-btn", "aria-haspopup": "true", "aria-expanded": "false" });
@@ -250,14 +245,14 @@ function qualityButton() {
   const close = () => { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); };
   const paint = () => {
     const q = settings().quality;
-    btn.textContent = QUALITY_LABELS[q][0];
+    btn.textContent = QUALITY_LETTERS[q];
     btn.classList.toggle("on", q === "normal" || q === "low");
-    btn.setAttribute("aria-label", `Streaming quality: ${QUALITY_LABELS[q][1]}`);
-    btn.title = `Streaming quality: ${QUALITY_LABELS[q][1]}`;
+    btn.setAttribute("aria-label", t("quality.label", { q: t(`quality.${q}`) }));
+    btn.title = t("quality.label", { q: t(`quality.${q}`) });
     menu.replaceChildren(...QUALITIES.map((k) => h("button", {
       type: "button", role: "menuitemradio", "aria-checked": String(k === q), class: k === q ? "on" : "",
       onclick: () => { setQuality(k); close(); },
-    }, `${QUALITY_LABELS[k][1]} `, h("span", { class: "muted" }, qualityHint(k)))));
+    }, `${t(`quality.${k}`)} `, h("span", { class: "muted" }, qualityHint(k)))));
   };
   btn.addEventListener("click", () => {
     if (!menu.hidden) return close();
@@ -280,7 +275,7 @@ function qualityButton() {
 
 function showApp(user, admin, avatar, me = {}) {
   setNewAlbums(me.newSince, me.ownAlbums);
-  const TABS = admin === true ? [...BASE_TABS, ["admin", "Admin"]] : BASE_TABS;
+  const TABS = admin === true ? [...BASE_TABS, ["admin", t("tab.admin")]] : BASE_TABS;
   const opts = { onUnauthorized: showLogin, admin: admin === true };
   setPlaylistUser(user);
   const views = Object.fromEntries(TABS.map(([k]) => [k, h("main", { class: `view view-${k}`, hidden: true })]));
@@ -297,7 +292,7 @@ function showApp(user, admin, avatar, me = {}) {
   playerBar ||= renderBar({ onUnauthorized: showLogin, onQuality: () => openQuality && openQuality() });
   root.replaceChildren(
     h("header", { class: "top" },
-      h("nav", { class: "tabs", "aria-label": "Sections" }, Object.values(links)),
+      h("nav", { class: "tabs", "aria-label": t("tab.sections") }, Object.values(links)),
       randomButton(),
       qualityButton(),
       profileMenu(user, admin, avatar)),
@@ -327,7 +322,7 @@ function showApp(user, admin, avatar, me = {}) {
       document.body.classList.remove("settings-open");
     }
     if (inSettings) {
-      titleEl.textContent = "Settings";
+      titleEl.textContent = t("settings.title");
       titleRow.classList.remove("no-search");
       return;
     }

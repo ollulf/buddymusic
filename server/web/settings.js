@@ -1,4 +1,5 @@
 import { settings, setQuality, setFormat, setPreload, PRELOADS, onChange, QUALITIES, FORMATS, qualityHint, opusSupported } from "./player.js";
+import { t, lang, LANGS, setLang } from "./i18n.js";
 
 const h = (tag, attrs = {}, ...kids) => {
   const el = document.createElement(tag);
@@ -31,8 +32,6 @@ async function squareAvatar(file) {
   return png && png.size <= 200 * 1024 ? png : blob("image/jpeg", 0.9);
 }
 
-const QUALITY_NAMES = { auto: "Auto", original: "Original", normal: "Normal", low: "Low" };
-const FORMAT_NAMES = { flac: "FLAC (original file as stored)", mp3: "MP3 320 kbps" };
 
 function radios(name, keys, label, get, set) {
   const inputs = keys.map((k) => h("input", { type: "radio", name, value: k, onchange: () => set(k) }));
@@ -45,27 +44,22 @@ function radios(name, keys, label, get, set) {
 
 function qualityRow() {
   return h("div", {},
-    h("p", { class: "muted" }, "Saved on this device. Auto picks Original, Normal or Low per song from how fast the music loads."),
-    radios("quality", QUALITIES, (k) => [QUALITY_NAMES[k], " ", h("span", { class: "muted" }, qualityHint(k))], () => settings().quality, setQuality),
-    opusSupported ? null : h("p", { class: "muted" }, "This browser can't play Opus, so Normal and Low use MP3 192 and MP3 128."));
+    h("p", { class: "muted" }, t("settings.qualityHint")),
+    radios("quality", QUALITIES, (k) => [t(`quality.${k}`), " ", h("span", { class: "muted" }, qualityHint(k))], () => settings().quality, setQuality),
+    opusSupported ? null : h("p", { class: "muted" }, t("settings.noOpus")));
 }
 
 function formatRow() {
   return h("div", {},
-    h("p", { class: "muted" }, "What Original streams."),
-    radios("origformat", FORMATS, (k) => FORMAT_NAMES[k], () => settings().format, setFormat));
+    h("p", { class: "muted" }, t("settings.formatHint")),
+    radios("origformat", FORMATS, (k) => t(`format.${k}`), () => settings().format, setFormat));
 }
 
-const PRELOAD_NAMES = { on: "On", off: "Off" };
-const PRELOAD_HINTS = {
-  on: "Next song starts instantly, uses a bit more data",
-  off: "Saves data, short pause between songs",
-};
 
 function preloadRow() {
   return h("div", {},
-    h("p", { class: "muted" }, "Saved on this device. Loads the next song before the current one ends."),
-    radios("preload", PRELOADS, (k) => [PRELOAD_NAMES[k], " ", h("span", { class: "muted" }, PRELOAD_HINTS[k])], () => settings().preload, setPreload));
+    h("p", { class: "muted" }, t("settings.preloadHint")),
+    radios("preload", PRELOADS, (k) => [t(`preload.${k}`), " ", h("span", { class: "muted" }, t(`preload.${k}Hint`))], () => settings().preload, setPreload));
 }
 
 export async function saveAvatar(file) {
@@ -73,17 +67,17 @@ export async function saveAvatar(file) {
   try {
     blob = await squareAvatar(file);
   } catch {}
-  if (!blob) throw new Error("That file is not a picture");
+  if (!blob) throw new Error(t("avatar.notPicture"));
   const res = await fetch("/api/avatar", { method: "PUT", body: blob, headers: { "Content-Type": blob.type } });
   if (res.status === 401) throw Object.assign(new Error("login"), { login: true });
-  if (!res.ok) throw new Error("Could not save the picture");
+  if (!res.ok) throw new Error(t("avatar.saveFailed"));
   return (await res.json()).avatar;
 }
 
 export async function resetAvatar() {
   const res = await fetch("/api/avatar", { method: "DELETE" });
   if (res.status === 401) throw Object.assign(new Error("login"), { login: true });
-  if (!res.ok) throw new Error("Could not reset the picture");
+  if (!res.ok) throw new Error(t("avatar.resetFailed"));
   return 0;
 }
 
@@ -99,16 +93,16 @@ export function paintAvatar(el, version) {
 
 function profileHeader({ user, avatar, onAvatar, onLogin }) {
   let version = avatar || 0;
-  const pic = h("button", { class: "settings-pic", type: "button", "aria-label": "Change profile picture", title: "Change picture" });
+  const pic = h("button", { class: "settings-pic", type: "button", "aria-label": t("avatar.changeLabel"), title: t("avatar.change") });
   const picker = h("input", { type: "file", accept: "image/png,image/jpeg,image/webp", hidden: true });
-  const reset = h("button", { class: "linkish", type: "button" }, "Reset picture");
+  const reset = h("button", { class: "linkish", type: "button" }, t("avatar.reset"));
   const status = h("div", { class: "profile-status", role: "status" });
   const paint = () => {
     paintAvatar(pic, version);
     reset.hidden = !version;
   };
   const run = async (job) => {
-    status.textContent = "Saving…";
+    status.textContent = t("common.saving");
     pic.disabled = reset.disabled = true;
     try {
       version = await job();
@@ -133,18 +127,25 @@ function profileHeader({ user, avatar, onAvatar, onLogin }) {
   return h("div", { class: "settings-profile" }, pic, picker, h("div", { class: "settings-user" }, user), reset, status);
 }
 
+function languageRow() {
+  return h("div", {},
+    h("p", { class: "muted" }, t("settings.languageHint")),
+    radios("language", Object.keys(LANGS), (k) => LANGS[k], () => lang, setLang));
+}
+
 const ITEMS = [
-  { id: "quality", label: "Streaming quality", render: qualityRow },
-  { id: "format", label: "Original format", render: formatRow },
-  { id: "preload", label: "Preload next song", render: preloadRow },
+  { id: "language", label: () => t("settings.language"), render: languageRow },
+  { id: "quality", label: () => t("settings.quality"), render: qualityRow },
+  { id: "format", label: () => t("settings.format"), render: formatRow },
+  { id: "preload", label: () => t("settings.preload"), render: preloadRow },
 ];
 
 export function renderSettings(el, { onClose, ...profile }) {
-  const close = h("button", { class: "ghost settings-close", type: "button", "aria-label": "Close settings", onclick: onClose }, "✕ Close");
+  const close = h("button", { class: "ghost settings-close", type: "button", "aria-label": t("settings.closeLabel"), onclick: onClose }, t("settings.close"));
   el.replaceChildren(
-    h("div", { class: "settings-head" }, h("h1", {}, "Settings"), close),
+    h("div", { class: "settings-head" }, h("h1", {}, t("settings.title")), close),
     profileHeader(profile),
     h("ul", { class: "settings-list" }, ...ITEMS.map((item) =>
-      h("li", { class: "settings-row", id: `setting-${item.id}` }, h("span", { class: "settings-label" }, item.label), item.render()))));
+      h("li", { class: "settings-row", id: `setting-${item.id}` }, h("span", { class: "settings-label" }, item.label()), item.render()))));
   close.focus();
 }

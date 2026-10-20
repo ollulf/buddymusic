@@ -1,14 +1,16 @@
+import { t } from "./i18n.js";
 export const REQUIRED = ["title", "artist", "album", "track", "cover"];
 export const TEXT_FIELDS = ["title", "artist", "album", "track", "year", "disc"];
 export const LABELS = {
-  title: "Title",
-  artist: "Artist",
-  album: "Album",
-  track: "Track no.",
-  year: "Year",
-  disc: "Disc",
-  cover: "Cover art",
+  title: t("tag.title"),
+  artist: t("tag.artist"),
+  album: t("tag.album"),
+  track: t("tag.track"),
+  year: t("tag.year"),
+  disc: t("tag.disc"),
+  cover: t("tag.cover"),
 };
+export const fieldList = (keys) => keys.map((k) => (LABELS[k] ? t(`tagLower.${k}`) : k)).join(", ");
 
 export function trackNumber(v) {
   const n = parseInt(String(v ?? "").split("/")[0], 10);

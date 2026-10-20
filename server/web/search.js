@@ -1,3 +1,4 @@
+import { t } from "./i18n.js";
 import { h, api, Unauthorized } from "./dom.js";
 import { albumCard, artistList, songRow } from "./library.js";
 
@@ -14,25 +15,25 @@ async function run() {
   const out = target;
   const q = query;
   const mine = ++seq;
-  if (q.length < 2) { out.replaceChildren(h("p", { class: "muted" }, "Type in the search box at the top to search your library.")); return; }
+  if (q.length < 2) { out.replaceChildren(h("p", { class: "muted" }, t("search.hint"))); return; }
   try {
     const r = await api(`/api/music/search?q=${encodeURIComponent(q)}`);
     if (mine !== seq) return;
     const artists = r.artist || [], albums = r.album || [], songs = r.song || [];
-    if (!artists.length && !albums.length && !songs.length) { out.replaceChildren(h("p", { class: "muted" }, "Nothing found.")); return; }
+    if (!artists.length && !albums.length && !songs.length) { out.replaceChildren(h("p", { class: "muted" }, t("search.nothing"))); return; }
     out.replaceChildren(
-      artists.length ? h("section", {}, h("h2", {}, "Artists"), artistList(artists)) : null,
-      albums.length ? h("section", {}, h("h2", {}, "Albums"), h("div", { class: "grid" }, albums.map(albumCard))) : null,
-      songs.length ? h("section", {}, h("h2", {}, "Songs"), h("ol", { class: "songs card" }, songs.map((_, i) => songRow(songs, i, { showArtist: true, showCover: true, onUnauthorized: runOpts.onUnauthorized })))) : null);
+      artists.length ? h("section", {}, h("h2", {}, t("library.artists")), artistList(artists)) : null,
+      albums.length ? h("section", {}, h("h2", {}, t("search.albums")), h("div", { class: "grid" }, albums.map(albumCard))) : null,
+      songs.length ? h("section", {}, h("h2", {}, t("search.songs")), h("ol", { class: "songs card" }, songs.map((_, i) => songRow(songs, i, { showArtist: true, showCover: true, onUnauthorized: runOpts.onUnauthorized })))) : null);
   } catch (e) {
     if (mine !== seq) return;
     if (e instanceof Unauthorized) return runOpts.onUnauthorized?.();
-    out.replaceChildren(h("p", { class: "muted" }, "Search failed."));
+    out.replaceChildren(h("p", { class: "muted" }, t("search.failed")));
   }
 }
 
 export function searchBox() {
-  const input = h("input", { type: "search", class: "search-box", placeholder: "Search", "aria-label": "Search artists, albums, songs", title: "Search artists, albums, songs", value: query, autocapitalize: "none", autocomplete: "off", enterkeyhint: "search" });
+  const input = h("input", { type: "search", class: "search-box", placeholder: t("tab.search"), "aria-label": t("search.label"), title: t("search.label"), value: query, autocapitalize: "none", autocomplete: "off", enterkeyhint: "search" });
   box = input;
   let timer = 0;
   const go = () => {
