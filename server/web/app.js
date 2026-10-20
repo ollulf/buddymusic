@@ -5,6 +5,7 @@ import { renderFavorites } from "./favorites.js";
 import { renderBar, settings, setSaver } from "./player.js";
 import { renderPlaylists, setPlaylistUser } from "./playlists.js";
 import { renderAdmin } from "./admin.js";
+import { renderSettings, GEAR } from "./settings.js";
 
 const root = document.getElementById("app");
 
@@ -222,9 +223,12 @@ function profileMenu(user, admin, avatar) {
   reset.addEventListener("click", () => send("DELETE"));
   paint();
   const friends = friendsPanel();
+  const settingsItem = h("button", { class: "ghost settings-item", type: "button", role: "menuitem", onclick: () => { close(); location.hash = "#/settings"; } });
+  settingsItem.innerHTML = GEAR;
+  settingsItem.append("Settings");
   const menu = h("div", { class: "profile-menu", role: "menu", hidden: true },
     h("div", { class: "profile-name" }, user, admin ? h("span", { class: "tag" }, "admin") : null),
-    change, reset, picker, status, friends.el,
+    change, reset, picker, status, friends.el, settingsItem,
     h("button", { class: "ghost", type: "button", role: "menuitem", onclick: logout }, "Log out"));
   const close = (focus) => {
     menu.hidden = true;
@@ -264,6 +268,13 @@ function showApp(user, admin, avatar) {
   setPlaylistUser(user);
   const views = Object.fromEntries(TABS.map(([k]) => [k, h("main", { class: `view view-${k}`, hidden: true })]));
   const links = Object.fromEntries(TABS.filter(([k]) => k !== "search").map(([k, label]) => [k, h("a", { class: "tab", href: `#/${k}` }, label)]));
+  const settingsView = h("main", { class: "view view-settings", hidden: true });
+  let cameFromApp = false;
+  const closeSettings = () => {
+    if (cameFromApp) history.back();
+    else location.hash = "#/library";
+  };
+  settingsView.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSettings(); });
   playerBar ||= renderBar({ onUnauthorized: showLogin });
   root.replaceChildren(
     h("header", { class: "top" },
@@ -273,12 +284,24 @@ function showApp(user, admin, avatar) {
       saverToggle(),
       profileMenu(user, admin, avatar)),
     ...Object.values(views),
+    settingsView,
     playerBar);
   renderUpload(views.upload, opts);
   let shown = "";
   let lastTab = "";
   const route = () => {
     const parts = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);
+    const inSettings = parts[0] === "settings";
+    if (inSettings && settingsView.hidden) {
+      cameFromApp = lastTab !== "";
+      settingsView.hidden = false;
+      document.body.classList.add("settings-open");
+      renderSettings(settingsView, { onClose: closeSettings });
+    } else if (!inSettings && !settingsView.hidden) {
+      settingsView.hidden = true;
+      document.body.classList.remove("settings-open");
+    }
+    if (inSettings) return;
     const tab = TABS.some(([k]) => k === parts[0]) ? parts[0] : "library";
     for (const [k] of TABS) {
       views[k].hidden = k !== tab;
