@@ -2,7 +2,8 @@ import { renderUpload } from "./upload.js";
 import { renderLibrary, setNewAlbums } from "./library.js";
 import { renderSearch, searchBox } from "./search.js";
 import { renderFavorites } from "./favorites.js";
-import { renderBar, settings, setQuality, onChange, QUALITIES, qualityHint } from "./player.js";
+import { renderBar, playList, settings, setQuality, onChange, QUALITIES, qualityHint } from "./player.js";
+import { api, Unauthorized } from "./dom.js";
 import { renderPlaylists, setPlaylistUser } from "./playlists.js";
 import { renderAdmin } from "./admin.js";
 import { renderSettings, GEAR, AVATAR, paintAvatar } from "./settings.js";
@@ -69,6 +70,49 @@ async function logout() {
 const BASE_TABS = [["library", "Library"], ["search", "Search"], ["favorites", "Favorites"], ["playlists", "Playlists"], ["upload", "Upload"]];
 let routeHandler = null;
 let playerBar = null;
+
+const SVG = "http://www.w3.org/2000/svg";
+
+function diceIcon() {
+  const svg = document.createElementNS(SVG, "svg");
+  svg.setAttribute("viewBox", "0 0 16 16");
+  svg.setAttribute("width", "16");
+  svg.setAttribute("height", "16");
+  svg.setAttribute("shape-rendering", "crispEdges");
+  svg.setAttribute("aria-hidden", "true");
+  const rects = [[2, 1, 12, 1], [1, 2, 1, 12], [14, 2, 1, 12], [2, 14, 12, 1], [4, 4, 2, 2], [10, 4, 2, 2], [7, 7, 2, 2], [4, 10, 2, 2], [10, 10, 2, 2]];
+  for (const [x, y, w, hh] of rects) {
+    const r = document.createElementNS(SVG, "rect");
+    r.setAttribute("x", x); r.setAttribute("y", y); r.setAttribute("width", w); r.setAttribute("height", hh);
+    r.setAttribute("fill", "currentColor");
+    svg.append(r);
+  }
+  return svg;
+}
+
+function randomButton() {
+  const btn = h("button", { class: "dice", type: "button", title: "Play random songs", "aria-label": "Play random songs" }, diceIcon());
+  btn.addEventListener("click", async () => {
+    if (btn.classList.contains("busy")) return;
+    btn.classList.add("busy");
+    btn.classList.remove("fail");
+    btn.title = "Play random songs";
+    try {
+      const res = await api("/api/music/random-songs?size=50");
+      const songs = res?.song || [];
+      if (!songs.length) throw new Error("empty");
+      playList(songs, 0);
+    } catch (err) {
+      if (err instanceof Unauthorized) return showLogin();
+      btn.title = "Couldn't load";
+      void btn.offsetWidth;
+      btn.classList.add("fail");
+    } finally {
+      btn.classList.remove("busy");
+    }
+  });
+  return btn;
+}
 
 let closeProfile = null;
 
@@ -221,6 +265,7 @@ function showApp(user, admin, avatar, me = {}) {
       h("span", { class: "brand" }, h("strong", {}, "buddymusic"), h("span", { class: "powered" }, "powered by Navidrome")),
       h("nav", { class: "tabs" }, Object.values(links)),
       searchBox(),
+      randomButton(),
       qualityButton(),
       profileMenu(user, admin, avatar)),
     ...Object.values(views),
