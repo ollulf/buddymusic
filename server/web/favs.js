@@ -1,3 +1,4 @@
+import { t } from "./i18n.js";
 import { h, apiSend, Unauthorized } from "./dom.js";
 
 const overrides = new Map();
@@ -23,7 +24,7 @@ function paint(kind, id) {
 function setPressed(b, on) {
   b.setAttribute("aria-pressed", on ? "true" : "false");
   const what = b.dataset.kind === "album" ? "album" : "song";
-  const label = on ? `Remove ${what} from favorites` : `Add ${what} to favorites`;
+  const label = t(`favs.${on ? "remove" : "add"}.${what}`);
   b.setAttribute("aria-label", label);
   b.title = label;
 }
@@ -39,7 +40,7 @@ export async function toggleStar(item, kind = "song", opts = {}) {
     overrides.set(k, was);
     paint(kind, item.id);
     if (e instanceof Unauthorized) { opts.onUnauthorized?.(); return; }
-    alert("Could not update favorites. Try again.");
+    alert(t("favs.failed"));
   }
 }
 

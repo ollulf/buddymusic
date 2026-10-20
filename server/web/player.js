@@ -1,3 +1,4 @@
+import { t } from "./i18n.js";
 import { h, coverURL, fmtTime } from "./dom.js";
 import { heartButton, retarget } from "./favs.js";
 
@@ -64,8 +65,8 @@ function streamSpec(song, tier) {
 }
 
 export function qualityHint(q) {
-  if (q === "auto") return "by connection";
-  if (q === "original") return state.format === "mp3" ? "MP3 320" : "original file";
+  if (q === "auto") return t("quality.byConnection");
+  if (q === "original") return state.format === "mp3" ? "MP3 320" : t("quality.originalFile");
   const spec = streamSpec({}, q);
   return `${spec.format === "opus" ? "Opus" : "MP3"} ${spec.kbps}`;
 }
@@ -510,7 +511,7 @@ function streamTag(info) {
 
 function volumeControl() {
   const btn = h("button", { type: "button", class: "pb-b sm vol", "aria-haspopup": "true", "aria-expanded": "false" });
-  const range = h("input", { type: "range", min: 0, max: 100, step: 1, "aria-label": "Volume" });
+  const range = h("input", { type: "range", min: 0, max: 100, step: 1, "aria-label": t("player.volumeLabel") });
   const mute = h("button", { type: "button", class: "pb-b sm vol mute" });
   const val = h("span", { class: "pb-vol-val" });
   const pop = h("div", { class: "pb-vol-pop", hidden: true }, mute, range, val);
@@ -519,11 +520,11 @@ function volumeControl() {
   const paint = () => {
     btn.dataset.level = level();
     mute.dataset.level = vol.m ? "high" : "mute";
-    const label = vol.m ? "Unmute" : volumeSettable ? `Volume ${vol.v}%` : "Mute (use the phone's volume buttons)";
-    btn.title = volumeSettable ? label : vol.m ? "Unmute (use the phone's volume buttons)" : "Mute (use the phone's volume buttons)";
-    btn.setAttribute("aria-label", volumeSettable ? `Volume ${vol.m ? "muted" : vol.v + "%"}` : btn.title);
+    const label = vol.m ? t("player.unmute") : volumeSettable ? t("player.volume", { v: vol.v }) : t("player.mutePhone");
+    btn.title = volumeSettable ? label : vol.m ? t("player.unmutePhone") : t("player.mutePhone");
+    btn.setAttribute("aria-label", volumeSettable ? (vol.m ? t("player.volumeMuted") : t("player.volume", { v: vol.v })) : btn.title);
     if (!volumeSettable) btn.setAttribute("aria-pressed", String(vol.m)); else btn.removeAttribute("aria-pressed");
-    mute.title = vol.m ? "Unmute" : "Mute";
+    mute.title = vol.m ? t("player.unmute") : t("player.mute");
     mute.setAttribute("aria-label", mute.title);
     mute.setAttribute("aria-pressed", String(vol.m));
     range.value = String(vol.m ? 0 : vol.v);
@@ -555,20 +556,20 @@ function volumeControl() {
 export function renderBar(opts = {}) {
   const title = h("div", { class: "pb-title" });
   const sub = h("div", { class: "pb-sub" });
-  const info = h("a", { class: "pb-info", "aria-label": "Open album" }, title, sub);
+  const info = h("a", { class: "pb-info", "aria-label": t("player.openAlbum") }, title, sub);
   const pos = h("span", { class: "bar-time" }, "0:00");
   const dur = h("span", { class: "bar-time" }, "0:00");
-  const range = h("input", { type: "range", min: 0, max: 0, step: "any", value: 0, "aria-label": "Seek" });
+  const range = h("input", { type: "range", min: 0, max: 0, step: "any", value: 0, "aria-label": t("player.seek") });
   let dragging = false;
   const paintSeek = () => { const m = +range.max; range.style.setProperty("--p", String(m > 0 ? Math.min(1, Math.max(0, +range.value / m)) : 0)); };
   range.addEventListener("input", () => { dragging = true; pos.textContent = fmtTime(+range.value); paintSeek(); });
   range.addEventListener("change", () => { dragging = false; seek(+range.value); });
   const btn = (label, cls, fn) => h("button", { type: "button", class: `pb-b ${cls}`, "aria-label": label, title: label, onclick: fn });
-  const prevB = btn("Previous", "prev", prev);
-  const playB = btn("Play", "play big", toggle);
-  const nextB = btn("Next", "next", next);
-  const shuffleB = btn("Shuffle", "sm shuffle", toggleShuffle);
-  const repeatB = btn("Repeat", "sm repeat", cycleRepeat);
+  const prevB = btn(t("player.previous"), "prev", prev);
+  const playB = btn(t("player.play"), "play big", toggle);
+  const nextB = btn(t("player.next"), "next", next);
+  const shuffleB = btn(t("player.shuffle"), "sm shuffle", toggleShuffle);
+  const repeatB = btn(t("player.repeat"), "sm repeat", cycleRepeat);
   const heartB = heartButton(null, "song", { cls: "pb-b sm bar-heart", get: current, onUnauthorized: opts.onUnauthorized });
   const rateB = h("button", { type: "button", class: "pb-rate", "aria-haspopup": "true" });
   rateB.addEventListener("click", (e) => { e.stopPropagation(); if (opts.onQuality) opts.onQuality(); });
@@ -616,10 +617,10 @@ export function renderBar(opts = {}) {
     bar.hidden = !song;
     paintSpin();
     if (!song) return;
-    const name = song.title || "Unknown title";
+    const name = song.title || t("player.unknownTitle");
     title.textContent = name;
     sub.textContent = [song.artist, song.album].filter(Boolean).join(" · ");
-    const what = bar.classList.contains("tucked") ? "Show disc" : isPlaying() ? "Pause" : "Play";
+    const what = bar.classList.contains("tucked") ? t("player.showDisc") : isPlaying() ? t("player.pause") : t("player.play");
     disc.setAttribute("aria-label", `${what}: ${name}${song.artist ? `, ${song.artist}` : ""}`);
     if (heartB.dataset.id !== song.id) retarget(heartB, song);
     const ids = [...new Set([song.coverArt, song.albumId].filter(Boolean))];
@@ -640,25 +641,26 @@ export function renderBar(opts = {}) {
     rateB.textContent = streamTag(si);
     const down = !!si && si.auto && si.tier !== "original";
     rateB.classList.toggle("down", down);
-    const tip = si ? `${si.auto ? "Auto" : "Fixed"} quality: ${si.tier}${si.format ? `, ${si.format} ${si.kbps} kbps` : ", original file"}${down ? " (stepped down for a slow connection)" : ""}` : "Streaming quality";
-    rateB.title = `${tip}. Tap to change.`;
-    rateB.setAttribute("aria-label", `Streaming quality ${rateB.textContent}, change`);
+    const tier = t(`quality.${si ? si.tier : "auto"}`);
+    const tip = si ? `${t(si.auto ? "player.autoQuality" : "player.fixedQuality", { tier })}${si.format ? `, ${si.format} ${si.kbps} kbps` : `, ${t("quality.originalFile")}`}${down ? ` ${t("player.steppedDown")}` : ""}` : t("settings.quality");
+    rateB.title = t("player.tapToChange", { tip });
+    rateB.setAttribute("aria-label", t("player.rateLabel", { tag: rateB.textContent }));
     const s = settings();
     playB.classList.toggle("pause", isPlaying());
-    playB.setAttribute("aria-label", isPlaying() ? "Pause" : "Play");
-    playB.title = isPlaying() ? "Pause" : "Play";
+    playB.setAttribute("aria-label", isPlaying() ? t("player.pause") : t("player.play"));
+    playB.title = isPlaying() ? t("player.pause") : t("player.play");
     shuffleB.classList.toggle("on", s.shuffle);
     shuffleB.setAttribute("aria-pressed", String(s.shuffle));
     repeatB.classList.toggle("on", s.repeat !== "off");
     repeatB.dataset.mode = s.repeat;
-    repeatB.title = `Repeat: ${s.repeat}`;
-    repeatB.setAttribute("aria-label", `Repeat: ${s.repeat}`);
+    repeatB.title = t(`player.repeat.${s.repeat}`);
+    repeatB.setAttribute("aria-label", repeatB.title);
     const d = duration();
-    const t = d ? Math.min(position(), d) : position();
+    const at = d ? Math.min(position(), d) : position();
     range.max = String(d);
     range.disabled = !d;
     dur.textContent = fmtTime(d);
-    if (!dragging) { range.value = String(t); pos.textContent = fmtTime(t); }
+    if (!dragging) { range.value = String(at); pos.textContent = fmtTime(at); }
     paintSeek();
   };
   onChange(paint);
