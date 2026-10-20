@@ -403,7 +403,7 @@ export function renderUpload(container, opts = {}) {
     h("p", { class: "muted" }, t("upload.albumHint")),
     h("div", { class: "album-grid" }, ui.coverBox, h("div", { class: "fields" }, ...ALBUM_FIELDS.map(albumInput))));
 
-  ui.list = h("div", { class: "list" });
+  ui.list = h("div", { class: "list", "data-empty": t("upload.emptyList") });
   ui.summary = h("span", { class: "muted" });
   ui.upload = h("button", { class: "primary", onclick: uploadAll, disabled: true }, t("upload.upload"));
   ui.clear = h("button", { class: "ghost", hidden: true, onclick: () => {

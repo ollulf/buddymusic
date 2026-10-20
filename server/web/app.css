@@ -101,7 +101,7 @@ p { margin: 0 0 8px; }
 .drop { border: 2px dashed var(--line); border-radius: 0; padding: 22px 14px; text-align: center; display: flex; flex-direction: column; gap: 4px; cursor: pointer; background: var(--card); color: var(--muted); }
 .drop strong { color: var(--fg); }
 .drop.over, .drop:focus-visible { border-color: var(--accent); outline: none; }
-.list:empty::before { content: "Picked files show up here with their tags."; color: var(--muted); font-size: .9rem; }
+.list:empty::before { content: attr(data-empty); color: var(--muted); font-size: .9rem; }
 .row { border-bottom: 1px solid var(--line); padding: 10px 0; display: flex; flex-direction: column; gap: 6px; }
 .row:last-child { border-bottom: 0; }
 .row-head { display: flex; gap: 10px; align-items: baseline; }
