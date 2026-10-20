@@ -36,6 +36,35 @@
   --mys: "Jersey 10", "Pixelify Sans", ui-monospace, monospace;
   color-scheme: dark;
 }
+:root[data-theme="slate"] {
+  --bg: #171b22;
+  --card: #262c37;
+  --fg: #e6e9ef;
+  --muted: #a7b0c0;
+  --line: #0c0f14;
+  --accent: #8fb0d9;
+  --accent-fg: #12161d;
+  --orange: #d6a283;
+  --ok: #94c9a0;
+  --okbg: #1d2a24;
+  --bad: #e3949c;
+  --badbg: #2e2027;
+  --warn: #dcc58f;
+  --warnbg: #2c2a20;
+  --focus: #a9c8ec;
+  --ph: #6f7a8c;
+  --ink: #0c0f14;
+  --hi: #3b4453;
+  --shade: #12161d;
+  --steel: #303744;
+  --accent-hi: #c8d9ef;
+  --accent-lo: #5d7ca3;
+  --stripe: #66788f;
+  --screen: #0f1218;
+  --screen-rim: #252d3a;
+  --screen-fg: #bcd3ef;
+  --rail: #566174;
+}
 :root[data-theme="ember"] {
   --bg: #2a1a1f;
   --card: #4a2a2e;

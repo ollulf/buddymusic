@@ -128,7 +128,7 @@ function profileHeader({ user, avatar, onAvatar, onLogin }) {
 }
 
 const THEME_KEY = "bm.theme";
-const THEMES = ["classic", "ember", "terminal", "paper"];
+const THEMES = ["classic", "slate", "ember", "terminal", "paper"];
 
 function currentTheme() {
   const v = document.documentElement.getAttribute("data-theme");
