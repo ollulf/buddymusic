@@ -8,6 +8,32 @@ import (
 	"testing"
 )
 
+func TestRandomSongsParams(t *testing.T) {
+	cases := []struct {
+		q    string
+		ok   bool
+		size string
+	}{
+		{"", true, "50"},
+		{"size=1", true, "1"},
+		{"size=100", true, "100"},
+		{"size=0", false, ""},
+		{"size=101", false, ""},
+		{"size=-3", false, ""},
+		{"size=abc", false, ""},
+	}
+	for _, c := range cases {
+		r := httptest.NewRequest("GET", "/api/music/random-songs?"+c.q, nil)
+		v, ok := randomSongsParams(r)
+		if ok != c.ok {
+			t.Fatalf("%q: ok=%v want %v", c.q, ok, c.ok)
+		}
+		if ok && v.Get("size") != c.size {
+			t.Fatalf("%q: size=%q want %q", c.q, v.Get("size"), c.size)
+		}
+	}
+}
+
 func TestMusicAlbumsAndAlbum(t *testing.T) {
 	a := newTestApp(t)
 	rec := authed(t, a, httptest.NewRequest("GET", "/api/music/albums?type=recent", nil))

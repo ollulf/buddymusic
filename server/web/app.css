@@ -1,3 +1,5 @@
+@keyframes dice-spin { to { transform: rotate(360deg); } }
+@keyframes dice-shake { 0%, 100% { transform: translateX(0); } 33% { transform: translateX(-3px); } 66% { transform: translateX(3px); } }
 @font-face { font-family: "Cubix"; src: url("/fonts/cubix.ttf") format("truetype"); font-display: swap; }
 @font-face { font-family: "Cubix Mystical"; src: url("/fonts/cubix-mystical.ttf") format("truetype"); font-display: swap; }
 :root {
@@ -230,6 +232,14 @@ header.top .tab { text-transform: uppercase; letter-spacing: .06em; font-size: 1
 header.top .tab:hover { color: var(--fg); }
 header.top .tab.on { color: var(--accent-fg); background: var(--accent); border-color: var(--ink); }
 header.top .who { font-size: 14px; }
+header.top .dice { margin-left: auto; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; background: var(--card); color: var(--fg); border: 2px solid var(--ink); box-shadow: 2px 2px 0 var(--shade); cursor: pointer; }
+header.top .dice:hover { color: var(--accent); }
+header.top .dice:active { box-shadow: none; transform: translate(2px, 2px); }
+header.top .dice + .who { margin-left: 0; }
+header.top .dice.busy { opacity: .5; cursor: progress; }
+header.top .dice.busy svg { animation: dice-spin .6s steps(4) infinite; }
+header.top .dice.fail { color: var(--bad); animation: dice-shake .3s steps(3); }
+@media (max-width: 520px) { header.top .dice ~ button.ghost { margin-left: 0; } }
 .card, .artist-list, dialog.sheet { background: var(--card); border: 2px solid var(--ink); box-shadow: var(--bevel), 4px 4px 0 var(--ink); }
 dialog.sheet { background: var(--card); }
 button { border: 2px solid var(--ink); background: var(--card); color: var(--fg); box-shadow: var(--bevel); }

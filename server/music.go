@@ -160,6 +160,18 @@ func albumListParams(r *http.Request) (url.Values, bool) {
 	return url.Values{"type": {t}, "size": {strconv.Itoa(size)}, "offset": {strconv.Itoa(offset)}}, true
 }
 
+func randomSongsParams(r *http.Request) (url.Values, bool) {
+	size := 50
+	if v := r.URL.Query().Get("size"); v != "" {
+		s, err := strconv.Atoi(v)
+		if err != nil || s < 1 || s > 100 {
+			return nil, false
+		}
+		size = s
+	}
+	return url.Values{"size": {strconv.Itoa(size)}}, true
+}
+
 func idParam(r *http.Request) (url.Values, bool) {
 	id := r.PathValue("id")
 	return url.Values{"id": {id}}, validID(id)
