@@ -127,6 +127,27 @@ function profileHeader({ user, avatar, onAvatar, onLogin }) {
   return h("div", { class: "settings-profile" }, pic, picker, h("div", { class: "settings-user" }, user), reset, status);
 }
 
+const THEME_KEY = "bm.theme";
+const THEMES = ["classic", "ember", "terminal", "paper"];
+
+function currentTheme() {
+  const v = document.documentElement.getAttribute("data-theme");
+  return THEMES.includes(v) ? v : "classic";
+}
+
+function setTheme(k) {
+  if (!THEMES.includes(k)) return;
+  if (k === "classic") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", k);
+  try { localStorage.setItem(THEME_KEY, k); } catch {}
+}
+
+function themeRow() {
+  return h("div", {},
+    h("p", { class: "muted" }, t("settings.themeHint")),
+    radios("theme", THEMES, (k) => t(`theme.${k}`), currentTheme, setTheme));
+}
+
 function languageRow() {
   return h("div", {},
     h("p", { class: "muted" }, t("settings.languageHint")),
@@ -135,6 +156,7 @@ function languageRow() {
 
 const ITEMS = [
   { id: "language", label: () => t("settings.language"), render: languageRow },
+  { id: "theme", label: () => t("settings.theme"), render: themeRow },
   { id: "quality", label: () => t("settings.quality"), render: qualityRow },
   { id: "format", label: () => t("settings.format"), render: formatRow },
   { id: "preload", label: () => t("settings.preload"), render: preloadRow },
