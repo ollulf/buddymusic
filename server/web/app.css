@@ -466,5 +466,3 @@ header.top .saver-toggle + .profile { margin-left: 4px; }
   .page-title { font-size: 28px; }
 }
 .s-no, .s-dur, .bar-time, .pb-vol-val, .stat strong, .admin-table .num, .profile-menu .version { font-family: var(--num); font-variant-numeric: tabular-nums; }
-.s-dur, .bar-time, .pb-vol-val, .admin-table .num, .profile-menu .version { font-size: 11px; }
-.stat strong { font-size: 22px; }
