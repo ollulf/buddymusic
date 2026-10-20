@@ -234,7 +234,7 @@ h2 { font-family: var(--mys); font-size: 16px; font-weight: 400; color: var(--mu
 .brand strong { font-size: 20px; color: var(--accent); }
 .login .brand h2 { font-size: 28px; color: var(--accent); }
 .album .a-name { font-size: 16px; }
-.album .a-sub, .s-sub, .bar-sub, .muted, .field, .chip, .badge, .state, .msg, .brand .powered, .bar-time, .s-no, .s-dur, .pill, .recent { font-size: 14px; }
+.album .a-sub, .s-sub, .bar-sub, .muted, .field, .chip, .badge, .state, .msg, .brand .powered, .bar-time, .s-no, .s-dur, .pill { font-size: 14px; }
 .login .brand .powered { font-size: 14px; }
 header.top { background: var(--card); border-bottom: 2px solid var(--ink); box-shadow: 0 2px 0 var(--shade); }
 header.top .tab { text-transform: uppercase; letter-spacing: .06em; font-size: 15px; font-weight: 400; color: var(--muted); border: 2px solid transparent; padding: 2px 8px; }
