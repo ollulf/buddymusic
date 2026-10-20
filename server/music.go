@@ -177,7 +177,7 @@ var passHeaders = []string{"Content-Type", "Content-Length", "Content-Range", "A
 
 var streamClient = &http.Client{}
 
-func (a *App) proxyBinary(w http.ResponseWriter, r *http.Request, endpoint string, q url.Values, cache string) {
+func (a *App) proxyBinary(w http.ResponseWriter, r *http.Request, endpoint string, q url.Values, cache string) (sent int64) {
 	creds, err := a.sessionCreds(r)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
@@ -220,7 +220,9 @@ func (a *App) proxyBinary(w http.ResponseWriter, r *http.Request, endpoint strin
 	for {
 		n, rerr := res.Body.Read(buf)
 		if n > 0 {
-			if _, werr := w.Write(buf[:n]); werr != nil {
+			m, werr := w.Write(buf[:n])
+			sent += int64(m)
+			if werr != nil {
 				return
 			}
 			if flusher != nil {
@@ -253,7 +255,8 @@ func (a *App) handleStream(w http.ResponseWriter, r *http.Request, user string) 
 		return
 	}
 	q := url.Values{"id": {id}}
-	if r.URL.Query().Get("format") == "opus" {
+	saver := r.URL.Query().Get("format") == "opus"
+	if saver {
 		rate := 128
 		if b, err := strconv.Atoi(r.URL.Query().Get("maxBitRate")); err == nil && b >= 32 && b <= 320 {
 			rate = b
@@ -261,7 +264,7 @@ func (a *App) handleStream(w http.ResponseWriter, r *http.Request, user string) 
 		q.Set("format", "opus")
 		q.Set("maxBitRate", strconv.Itoa(rate))
 	}
-	a.proxyBinary(w, r, "stream.view", q, "private, no-cache")
+	a.recordStream(r, user, id, a.proxyBinary(w, r, "stream.view", q, "private, no-cache"), saver)
 }
 
 func (a *App) handleScrobble(w http.ResponseWriter, r *http.Request, user string) {

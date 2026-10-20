@@ -118,6 +118,7 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	creds := NewCreds(user, body.Password)
 	if err := a.nav.Ping(r.Context(), creds); err != nil {
 		if errors.Is(err, ErrBadLogin) {
+			a.store.RecordLogin(clip(user, 64), time.Now(), false, deviceName(r.UserAgent()), remember)
 			writeError(w, http.StatusUnauthorized, "bad-login")
 			return
 		}
@@ -141,6 +142,8 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.store.PurgeSessions()
+	a.store.RecordLogin(user, time.Now(), true, deviceName(r.UserAgent()), remember)
+	a.store.PurgeStats(time.Now().Add(-statsRetention))
 	cookie := &http.Cookie{
 		Name: sessionCookie, Value: id, Path: "/",
 		HttpOnly: true, Secure: a.cfg.SecureCookie, SameSite: http.SameSiteStrictMode,
@@ -201,6 +204,7 @@ func (a *App) requireUser(h userHandler) http.Handler {
 			writeError(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}
+		a.markSeen(r, user)
 		h(w, r, user)
 	})
 }
