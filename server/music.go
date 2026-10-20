@@ -230,6 +230,14 @@ func (a *App) proxyBinary(w http.ResponseWriter, r *http.Request, endpoint strin
 			}
 		}
 		if rerr != nil {
+			if endpoint != "stream.view" || r.Context().Err() != nil {
+				return
+			}
+			want := res.ContentLength
+			if rerr != io.EOF || (want > 0 && sent < want) {
+				log.Printf("music stream cut: user=%s track=%s sent=%d want=%d err=%v", creds.User, q.Get("id"), sent, want, rerr)
+				panic(http.ErrAbortHandler)
+			}
 			return
 		}
 	}
@@ -283,6 +291,15 @@ func streamParams(id string, in url.Values) (url.Values, bool) {
 	}
 	q.Set("format", format)
 	q.Set("maxBitRate", strconv.Itoa(rate))
+	if v := in.Get("timeOffset"); v != "" {
+		off, err := strconv.Atoi(v)
+		if err != nil || off < 0 || off > 86400 {
+			return nil, false
+		}
+		if off > 0 {
+			q.Set("timeOffset", strconv.Itoa(off))
+		}
+	}
 	return q, true
 }
 

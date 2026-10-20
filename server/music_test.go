@@ -87,6 +87,10 @@ func TestStreamParamsWhitelist(t *testing.T) {
 		{"format=mp3&maxBitRate=192", "mp3", "192", true},
 		{"format=mp3&maxBitRate=321", "mp3", "320", true},
 		{"format=flac", "", "", false},
+		{"format=opus&maxBitRate=80&timeOffset=1.5", "", "", false},
+		{"format=opus&maxBitRate=80&timeOffset=-1", "", "", false},
+		{"format=opus&maxBitRate=80&timeOffset=86401", "", "", false},
+		{"format=mp3&timeOffset=abc", "", "", false},
 		{"format=raw", "", "", false},
 	}
 	for _, c := range cases {
@@ -97,6 +101,19 @@ func TestStreamParamsWhitelist(t *testing.T) {
 		}
 		if ok && (q.Get("format") != c.format || q.Get("maxBitRate") != c.rate || q.Get("id") != "s1") {
 			t.Fatalf("%q -> %v", c.in, q)
+		}
+	}
+	for in, want := range map[string]string{
+		"format=opus&maxBitRate=80&timeOffset=42": "42",
+		"format=mp3&timeOffset=0":                 "",
+		"format=opus&timeOffset=86400":            "86400",
+		"timeOffset=42":                           "",
+		"format=opus":                             "",
+	} {
+		v, _ := url.ParseQuery(in)
+		q, ok := streamParams("s1", v)
+		if !ok || q.Get("timeOffset") != want {
+			t.Fatalf("%q -> %v %v", in, q, ok)
 		}
 	}
 }
