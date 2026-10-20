@@ -115,6 +115,8 @@ async function renderAlbum(container, id, opts) {
           h("h1", {}, al.name || "Unknown album"),
           h("a", { class: "muted", href: al.artistId ? `#/library/artist/${encodeURIComponent(al.artistId)}` : "#/library/artists" }, al.artist || ""),
           h("div", { class: "muted" }, [al.year, `${songs.length} songs`, fmtTime(total)].filter(Boolean).join(" · ")),
+          Array.isArray(al.uploadedBy) && al.uploadedBy.length
+            ? h("div", { class: "uploaded-by" }, `Uploaded by ${al.uploadedBy.join(", ")}`) : null,
           h("div", { class: "actions" },
             h("button", { class: "primary", onclick: () => player.playList(songs, 0), disabled: !songs.length }, "Play"),
             h("button", { onclick: () => { player.playList(songs, Math.floor(Math.random() * songs.length)); if (!player.settings().shuffle) player.toggleShuffle(); }, disabled: !songs.length }, "Shuffle"),

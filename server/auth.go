@@ -118,6 +118,7 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	creds := NewCreds(user, body.Password)
 	if err := a.nav.Ping(r.Context(), creds); err != nil {
 		if errors.Is(err, ErrBadLogin) {
+			a.store.RecordLogin(clip(user, 64), time.Now(), false, deviceName(r.UserAgent()), remember)
 			writeError(w, http.StatusUnauthorized, "bad-login")
 			return
 		}
@@ -141,6 +142,8 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.store.PurgeSessions()
+	a.store.RecordLogin(user, time.Now(), true, deviceName(r.UserAgent()), remember)
+	a.store.PurgeStats(time.Now().Add(-statsRetention))
 	cookie := &http.Cookie{
 		Name: sessionCookie, Value: id, Path: "/",
 		HttpOnly: true, Secure: a.cfg.SecureCookie, SameSite: http.SameSiteStrictMode,
@@ -155,7 +158,8 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	} else {
 		a.admins.put(idHash, admin)
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"user": user, "admin": admin})
+	v, _ := a.store.AvatarVersion(user)
+	writeJSON(w, http.StatusOK, map[string]any{"user": user, "admin": admin, "avatar": v})
 }
 
 func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
@@ -167,7 +171,8 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleMe(w http.ResponseWriter, r *http.Request, user string) {
-	writeJSON(w, http.StatusOK, map[string]any{"user": user, "admin": a.cachedAdmin(r)})
+	v, _ := a.store.AvatarVersion(user)
+	writeJSON(w, http.StatusOK, map[string]any{"user": user, "admin": a.cachedAdmin(r), "avatar": v})
 }
 
 func (a *App) sessionUser(r *http.Request) (string, error) {
@@ -199,6 +204,7 @@ func (a *App) requireUser(h userHandler) http.Handler {
 			writeError(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}
+		a.markSeen(r, user)
 		h(w, r, user)
 	})
 }

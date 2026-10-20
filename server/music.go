@@ -189,7 +189,7 @@ var passHeaders = []string{"Content-Type", "Content-Length", "Content-Range", "A
 
 var streamClient = &http.Client{}
 
-func (a *App) proxyBinary(w http.ResponseWriter, r *http.Request, endpoint string, q url.Values, cache string) {
+func (a *App) proxyBinary(w http.ResponseWriter, r *http.Request, endpoint string, q url.Values, cache string) (sent int64) {
 	creds, err := a.sessionCreds(r)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
@@ -232,7 +232,9 @@ func (a *App) proxyBinary(w http.ResponseWriter, r *http.Request, endpoint strin
 	for {
 		n, rerr := res.Body.Read(buf)
 		if n > 0 {
-			if _, werr := w.Write(buf[:n]); werr != nil {
+			m, werr := w.Write(buf[:n])
+			sent += int64(m)
+			if werr != nil {
 				return
 			}
 			if flusher != nil {
@@ -240,6 +242,14 @@ func (a *App) proxyBinary(w http.ResponseWriter, r *http.Request, endpoint strin
 			}
 		}
 		if rerr != nil {
+			if endpoint != "stream.view" || r.Context().Err() != nil {
+				return
+			}
+			want := res.ContentLength
+			if rerr != io.EOF || (want > 0 && sent < want) {
+				log.Printf("music stream cut: user=%s track=%s sent=%d want=%d err=%v", creds.User, q.Get("id"), sent, want, rerr)
+				panic(http.ErrAbortHandler)
+			}
 			return
 		}
 	}
@@ -264,16 +274,45 @@ func (a *App) handleStream(w http.ResponseWriter, r *http.Request, user string) 
 		writeError(w, http.StatusBadRequest, "bad-request")
 		return
 	}
-	q := url.Values{"id": {id}}
-	if r.URL.Query().Get("format") == "opus" {
-		rate := 128
-		if b, err := strconv.Atoi(r.URL.Query().Get("maxBitRate")); err == nil && b >= 32 && b <= 320 {
-			rate = b
-		}
-		q.Set("format", "opus")
-		q.Set("maxBitRate", strconv.Itoa(rate))
+	q, ok := streamParams(id, r.URL.Query())
+	if !ok {
+		writeError(w, http.StatusBadRequest, "bad-request")
+		return
 	}
-	a.proxyBinary(w, r, "stream.view", q, "private, no-cache")
+	saver := q.Get("format") != ""
+	a.recordStream(r, user, id, a.proxyBinary(w, r, "stream.view", q, "private, no-cache"), saver)
+}
+
+func streamParams(id string, in url.Values) (url.Values, bool) {
+	q := url.Values{"id": {id}}
+	format := in.Get("format")
+	def := 0
+	switch format {
+	case "":
+		return q, true
+	case "opus":
+		def = 128
+	case "mp3":
+		def = 320
+	default:
+		return nil, false
+	}
+	rate := def
+	if b, err := strconv.Atoi(in.Get("maxBitRate")); err == nil && b >= 32 && b <= 320 {
+		rate = b
+	}
+	q.Set("format", format)
+	q.Set("maxBitRate", strconv.Itoa(rate))
+	if v := in.Get("timeOffset"); v != "" {
+		off, err := strconv.Atoi(v)
+		if err != nil || off < 0 || off > 86400 {
+			return nil, false
+		}
+		if off > 0 {
+			q.Set("timeOffset", strconv.Itoa(off))
+		}
+	}
+	return q, true
 }
 
 func (a *App) handleScrobble(w http.ResponseWriter, r *http.Request, user string) {

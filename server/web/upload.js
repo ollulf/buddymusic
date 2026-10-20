@@ -354,7 +354,6 @@ async function uploadAll() {
   }
   unlockAlbum();
   refresh();
-  loadRecent();
 }
 
 function unlockAlbum() {
@@ -364,16 +363,6 @@ function unlockAlbum() {
 }
 
 let onUnauthorized = () => {};
-
-async function loadRecent() {
-  const res = await fetch("/api/uploads");
-  if (!res.ok) return;
-  const list = await res.json();
-  ui.recent.replaceChildren(...list.slice(0, 20).map((u) =>
-    h("li", {}, h("span", { class: "fn" }, u.libraryPath || u.filename), h("span", { class: "chip " + (u.status === "in-library" ? "ok" : "bad") },
-      u.status === "in-library" ? "in library" : "rejected" + (u.missing?.length ? ": " + u.missing.join(", ") : "")))));
-  ui.recentBox.hidden = list.length === 0;
-}
 
 function albumInput(key) {
   const el = h("input", {
@@ -421,14 +410,10 @@ export function renderUpload(container, opts = {}) {
     state.files = state.files.filter((x) => x.status !== "done");
     refresh();
   } }, "Clear uploaded");
-  ui.recent = h("ul", { class: "recent" });
-  ui.recentBox = h("section", { class: "card", hidden: true }, h("h2", {}, "Recent uploads"), ui.recent);
 
   container.replaceChildren(
     drop, ui.albumBox,
     h("section", { class: "card files" }, h("h2", {}, "Songs"), ui.list,
-      h("div", { class: "foot" }, ui.summary, h("div", { class: "actions" }, ui.clear, ui.upload))),
-    ui.recentBox);
+      h("div", { class: "foot" }, ui.summary, h("div", { class: "actions" }, ui.clear, ui.upload))));
   refresh();
-  loadRecent();
 }

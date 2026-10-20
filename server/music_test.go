@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path"
 	"strings"
 	"testing"
@@ -74,9 +75,72 @@ func TestMusicStreamRange(t *testing.T) {
 	if rec.Code != 200 || rec.Body.String() != "0123456789opus128" {
 		t.Fatalf("opus %d %q", rec.Code, rec.Body)
 	}
+	rec = authed(t, a, httptest.NewRequest("GET", "/api/music/stream/s1?format=opus&maxBitRate=80", nil))
+	if rec.Code != 200 || rec.Body.String() != "0123456789opus80" {
+		t.Fatalf("opus 80 %d %q", rec.Code, rec.Body)
+	}
+	rec = authed(t, a, httptest.NewRequest("GET", "/api/music/stream/s1?format=mp3", nil))
+	if rec.Code != 200 || rec.Body.String() != "0123456789mp3320" {
+		t.Fatalf("mp3 %d %q", rec.Code, rec.Body)
+	}
+	rec = authed(t, a, httptest.NewRequest("GET", "/api/music/stream/s1?format=wav", nil))
+	if rec.Code != 400 {
+		t.Fatalf("bad format status %d", rec.Code)
+	}
+	for _, f := range []string{"format=opus&maxBitRate=80", "format=mp3&maxBitRate=320"} {
+		req := httptest.NewRequest("GET", "/api/music/stream/s1?"+f, nil)
+		req.Header.Set("Range", "bytes=2-5")
+		rec = authed(t, a, req)
+		if rec.Code != 206 || rec.Body.String() != "2345" || rec.Header().Get("Content-Range") != "bytes 2-5/10" || rec.Header().Get("Accept-Ranges") != "bytes" {
+			t.Fatalf("transcoded range %s %d %q", f, rec.Code, rec.Body)
+		}
+	}
 	rec = authed(t, a, httptest.NewRequest("GET", "/api/music/stream/..%2Fx", nil))
 	if rec.Code != 400 {
 		t.Fatalf("bad id status %d", rec.Code)
+	}
+}
+
+func TestStreamParamsWhitelist(t *testing.T) {
+	cases := []struct {
+		in, format, rate string
+		ok               bool
+	}{
+		{"", "", "", true},
+		{"format=opus&maxBitRate=80", "opus", "80", true},
+		{"format=opus&maxBitRate=31", "opus", "128", true},
+		{"format=opus&maxBitRate=320", "opus", "320", true},
+		{"format=mp3&maxBitRate=192", "mp3", "192", true},
+		{"format=mp3&maxBitRate=321", "mp3", "320", true},
+		{"format=flac", "", "", false},
+		{"format=opus&maxBitRate=80&timeOffset=1.5", "", "", false},
+		{"format=opus&maxBitRate=80&timeOffset=-1", "", "", false},
+		{"format=opus&maxBitRate=80&timeOffset=86401", "", "", false},
+		{"format=mp3&timeOffset=abc", "", "", false},
+		{"format=raw", "", "", false},
+	}
+	for _, c := range cases {
+		in, _ := url.ParseQuery(c.in)
+		q, ok := streamParams("s1", in)
+		if ok != c.ok {
+			t.Fatalf("%q ok=%v", c.in, ok)
+		}
+		if ok && (q.Get("format") != c.format || q.Get("maxBitRate") != c.rate || q.Get("id") != "s1") {
+			t.Fatalf("%q -> %v", c.in, q)
+		}
+	}
+	for in, want := range map[string]string{
+		"format=opus&maxBitRate=80&timeOffset=42": "42",
+		"format=mp3&timeOffset=0":                 "",
+		"format=opus&timeOffset=86400":            "86400",
+		"timeOffset=42":                           "",
+		"format=opus":                             "",
+	} {
+		v, _ := url.ParseQuery(in)
+		q, ok := streamParams("s1", v)
+		if !ok || q.Get("timeOffset") != want {
+			t.Fatalf("%q -> %v %v", in, q, ok)
+		}
 	}
 }
 

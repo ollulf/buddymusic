@@ -15,6 +15,8 @@ type App struct {
 	limiter loginLimiter
 	scanner *Scanner
 	admins  adminCache
+	seen    seenThrottle
+	jumps   jumpLimiter
 }
 
 func NewApp(cfg *Config, store *Store) *App {
@@ -28,6 +30,11 @@ func (a *App) Routes() http.Handler {
 	mux.HandleFunc("POST /api/login", a.handleLogin)
 	mux.HandleFunc("POST /api/logout", a.handleLogout)
 	mux.Handle("GET /api/me", a.requireUser(a.handleMe))
+	mux.Handle("GET /api/avatar", a.requireUser(a.handleGetAvatar))
+	mux.Handle("PUT /api/avatar", a.requireUser(a.handlePutAvatar))
+	mux.Handle("DELETE /api/avatar", a.requireUser(a.handleDeleteAvatar))
+	mux.Handle("GET /api/avatar/{user}", a.requireUser(a.handleFriendAvatar))
+	mux.Handle("GET /api/friends", a.requireUser(a.handleFriends))
 	mux.Handle("POST /api/uploads", a.requireUser(a.handleUpload))
 	mux.Handle("GET /api/uploads", a.requireUser(a.handleListUploads))
 	mux.Handle("GET /api/uploads/{id}", a.requireUser(a.handleGetUpload))
@@ -35,7 +42,7 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("GET /api/music/artists", a.requireUser(a.musicJSON("getArtists.view", "artists", noParams)))
 	mux.Handle("GET /api/music/artist/{id}", a.requireUser(a.musicJSON("getArtist.view", "artist", idParam)))
 	mux.Handle("GET /api/music/albums", a.requireUser(a.musicJSON("getAlbumList2.view", "albumList2", albumListParams)))
-	mux.Handle("GET /api/music/album/{id}", a.requireUser(a.musicJSON("getAlbum.view", "album", idParam)))
+	mux.Handle("GET /api/music/album/{id}", a.requireUser(a.handleAlbum))
 	mux.Handle("GET /api/music/random-songs", a.requireUser(a.musicJSON("getRandomSongs.view", "randomSongs", randomSongsParams)))
 	mux.Handle("GET /api/music/search", a.requireUser(a.musicJSON("search3.view", "searchResult3", searchParams)))
 	mux.Handle("GET /api/music/starred", a.requireUser(a.musicJSON("getStarred2.view", "starred2", noParams)))
@@ -51,6 +58,9 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("GET /api/music/cover/{id}", a.requireUser(a.handleCover))
 	mux.Handle("GET /api/music/stream/{id}", a.requireUser(a.handleStream))
 	mux.Handle("POST /api/music/scrobble/{id}", a.requireUser(a.handleScrobble))
+	mux.Handle("POST /api/music/progress/{id}", a.requireUser(a.handleProgress))
+	mux.Handle("POST /api/music/jumplog", a.requireUser(a.handleJumpLog))
+	mux.Handle("GET /api/admin/stats", a.requireUser(a.handleAdminStats))
 	mux.Handle("DELETE /api/music/track/{id}", a.requireUser(a.adminDelete(a.loadTrack)))
 	mux.Handle("DELETE /api/music/album/{id}", a.requireUser(a.adminDelete(a.loadAlbum)))
 	mux.Handle("GET /", a.webHandler())
