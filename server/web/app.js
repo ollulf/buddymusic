@@ -52,7 +52,7 @@ function showLogin() {
     }
     btn.disabled = false;
   } },
-    h("div", { class: "brand" }, h("h2", {}, "buddymusic"), h("span", { class: "powered" }, "powered by Navidrome")),
+    h("div", { class: "brand" }, h("h2", {}, "buddymusic"), h("span", { class: "powered" }, t("app.powered"))),
     h("p", { class: "muted" }, t("login.intro")),
     h("label", { class: "field" }, h("span", {}, t("login.username")), user),
     h("label", { class: "field" }, h("span", {}, t("login.password")), pass),
@@ -219,7 +219,7 @@ function profileMenu(user, admin, avatar) {
     h("div", { class: "profile-name" }, user, admin ? h("span", { class: "tag" }, "admin") : null),
     friends.el, settingsItem,
     h("button", { class: "ghost", type: "button", role: "menuitem", onclick: logout }, t("profile.logout")),
-    h("p", { class: "powered" }, "powered by Navidrome"));
+    h("p", { class: "powered" }, t("app.powered")));
   const close = (focus) => {
     menu.hidden = true;
     friends.stop();

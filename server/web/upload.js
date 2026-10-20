@@ -1,15 +1,16 @@
-import { LABELS, fromMediaTags, fromFileName, mostCommon, present, trackNumber } from "./tags.js";
+import { t } from "./i18n.js";
+import { LABELS, fieldList, fromMediaTags, fromFileName, mostCommon, present, trackNumber } from "./tags.js";
 
 const ALBUM_FIELDS = ["artist", "album", "year"];
 const ROW_FIELDS = ["title", "track"];
 const ERRORS = {
-  "unsupported-type": "Not a supported audio file (FLAC, MP3, M4A, OGG, Opus)",
-  "too-large": "File is too big",
-  "cover-too-large": "Cover image is too big (10 MB max)",
-  "unsupported-cover-type": "Cover must be a JPEG or PNG",
-  "exists": "This track is already in your library",
-  "probe-failed": "The server could not read this file",
-  "unauthorized": "Logged out, please log in again",
+  "unsupported-type": t("upload.err.type"),
+  "too-large": t("upload.err.tooLarge"),
+  "cover-too-large": t("upload.err.coverTooLarge"),
+  "unsupported-cover-type": t("upload.err.coverType"),
+  "exists": t("upload.err.exists"),
+  "probe-failed": t("upload.err.probe"),
+  "unauthorized": t("upload.err.unauthorized"),
 };
 
 let state = { files: [], cover: null, edited: new Set(), busy: false, nextId: 1 };
@@ -142,8 +143,8 @@ function buildRow(entry) {
   const fields = h("div", { class: "song" });
   const bar = h("i");
   const msg = h("div", { class: "msg" });
-  const state_ = h("span", { class: "state" }, "reading tags…");
-  const remove = h("button", { class: "icon", title: "Remove", onclick: () => removeEntry(entry) }, "×");
+  const state_ = h("span", { class: "state" }, t("upload.reading"));
+  const remove = h("button", { class: "icon", title: t("upload.remove"), onclick: () => removeEntry(entry) }, "×");
   const row = h("div", { class: "row" },
     h("div", { class: "row-head" }, h("span", { class: "fn" }, entry.file.name), state_, remove),
     fields, chips, h("div", { class: "progress" }, bar), msg);
@@ -157,8 +158,8 @@ function rowInput(entry, key) {
     min: numeric ? "1" : null,
     inputmode: numeric ? "numeric" : null,
     value: entry[key] || "",
-    placeholder: "required",
-    "aria-label": LABELS[key] + " for " + entry.file.name,
+    placeholder: t("upload.required"),
+    "aria-label": t("upload.fieldFor", { field: LABELS[key], file: entry.file.name }),
     oninput: (e) => {
       entry[key] = e.target.value;
       entry.serverMissing = entry.serverMissing.filter((k) => k !== key);
@@ -194,20 +195,20 @@ function chip(text, cls) {
 }
 
 const COVER_CHIPS = {
-  picked: ["picked cover", "ok"],
-  own: ["own cover", "ok"],
-  album: ["album cover", "ok"],
-  folder: ["cover in library", "ok"],
-  unknown: ["cover checked on upload", "warn"],
+  picked: [t("upload.chip.picked"), "ok"],
+  own: [t("upload.chip.own"), "ok"],
+  album: [t("upload.chip.album"), "ok"],
+  folder: [t("upload.chip.folder"), "ok"],
+  unknown: [t("upload.chip.unknown"), "warn"],
 };
 
 function renderChips(entry, miss) {
   const el = entry.el.chips;
   if (entry.status === "reading" || entry.status === "done") return el.replaceChildren();
-  const out = miss.map((k) => chip(LABELS[k] + " missing", "bad"));
+  const out = miss.map((k) => chip(t("upload.missing", { field: LABELS[k] }), "bad"));
   const c = COVER_CHIPS[coverState(entry, album())];
   if (c) out.push(chip(c[0], c[1]));
-  if (entry.fileTags === null) out.push(chip("tags not readable here", "warn"));
+  if (entry.fileTags === null) out.push(chip(t("upload.unreadable"), "warn"));
   el.replaceChildren(...out);
 }
 
@@ -233,12 +234,12 @@ function renderCover(a) {
       blob = new Blob([new Uint8Array(withPic.picture.data)], { type: fmt.startsWith("image/") ? fmt : "image/" + fmt });
     }
     previewUrl = blob ? URL.createObjectURL(blob) : "";
-    ui.preview.replaceChildren(previewUrl ? h("img", { src: previewUrl, alt: "Cover preview" }) : h("span", {}, "No cover"));
+    ui.preview.replaceChildren(previewUrl ? h("img", { src: previewUrl, alt: t("upload.coverPreview") }) : h("span", {}, t("upload.noCover")));
   }
-  if (state.cover) ui.coverNote.textContent = "picked image, replaces the album's cover";
-  else if (withPic) ui.coverNote.textContent = "embedded in " + withPic.file.name;
-  else if (folderCover(a)) ui.coverNote.textContent = "album folder already has a cover";
-  else ui.coverNote.textContent = "pick a JPEG or PNG";
+  if (state.cover) ui.coverNote.textContent = t("upload.note.picked");
+  else if (withPic) ui.coverNote.textContent = t("upload.note.embedded", { file: withPic.file.name });
+  else if (folderCover(a)) ui.coverNote.textContent = t("upload.note.folder");
+  else ui.coverNote.textContent = t("upload.note.pick");
 }
 
 function refresh() {
@@ -249,15 +250,15 @@ function refresh() {
   const needAlbum = new Set();
   for (const e of state.files) {
     e.el.row.dataset.status = e.status;
-    if (e.status === "done") { done++; e.el.state.textContent = "in library"; renderChips(e, []); continue; }
+    if (e.status === "done") { done++; e.el.state.textContent = t("upload.inLibrary"); renderChips(e, []); continue; }
     if (e.status === "reading") { blocked++; renderChips(e, []); continue; }
     const miss = missingOf(e);
     renderChips(e, miss);
     for (const k of miss) if (ALBUM_FIELDS.includes(k)) needAlbum.add(k);
     for (const k of ROW_FIELDS) e.el.inputs[k]?.classList.toggle("need", miss.includes(k));
-    if (e.status === "uploading") { e.el.state.textContent = "uploading…"; continue; }
-    if (miss.length) { blocked++; e.el.state.textContent = "needs " + miss.map((k) => LABELS[k].toLowerCase()).join(", "); }
-    else { ready++; e.el.state.textContent = e.status === "error" ? "retry" : "ready"; }
+    if (e.status === "uploading") { e.el.state.textContent = t("upload.uploadingRow"); continue; }
+    if (miss.length) { blocked++; e.el.state.textContent = t("upload.needs", { fields: fieldList(miss) }); }
+    else { ready++; e.el.state.textContent = e.status === "error" ? t("upload.retry") : t("upload.ready"); }
     e.el.row.classList.toggle("blocked", miss.length > 0);
   }
   for (const k of ALBUM_FIELDS) ui.album[k].classList.toggle("need", needAlbum.has(k));
@@ -266,12 +267,12 @@ function refresh() {
   ui.coverBox.classList.toggle("need", coverMissing);
   const total = ready + blocked;
   ui.upload.disabled = state.busy || ready === 0 || blocked > 0;
-  ui.upload.textContent = state.busy ? "Uploading…" : total ? `Upload ${total} file${total === 1 ? "" : "s"}` : "Upload";
+  ui.upload.textContent = state.busy ? t("upload.uploading") : total ? t("upload.uploadN", { n: total }) : t("upload.upload");
   const parts = [];
-  if (total) parts.push(`${ready} of ${total} ready`);
-  if (blocked) parts.push(`${blocked} need${blocked === 1 ? "s" : ""} tags`);
-  if (done) parts.push(`${done} uploaded`);
-  ui.summary.textContent = parts.length ? parts.join(" · ") : "No files picked yet";
+  if (total) parts.push(t("upload.readyOf", { ready, total }));
+  if (blocked) parts.push(t("upload.needTags", { n: blocked }));
+  if (done) parts.push(t("upload.uploaded", { n: done }));
+  ui.summary.textContent = parts.length ? parts.join(" · ") : t("upload.noFiles");
   ui.clear.hidden = done === 0;
 }
 
@@ -329,7 +330,7 @@ async function uploadAll() {
     setRowEnabled(e, true);
     if (status === 201) {
       e.status = "done";
-      e.el.msg.textContent = "Added: " + (body.libraryPath || body.filename);
+      e.el.msg.textContent = t("upload.added", { path: body.libraryPath || body.filename });
       e.el.fields.replaceChildren();
       e.el.inputs = {};
       const key = albumKey(album());
@@ -337,7 +338,7 @@ async function uploadAll() {
     } else if (status === 422 && body.missing) {
       e.status = "error";
       e.serverMissing = body.missing;
-      e.el.msg.textContent = "Server: missing " + body.missing.map((k) => LABELS[k]?.toLowerCase() || k).join(", ");
+      e.el.msg.textContent = t("upload.serverMissing", { fields: fieldList(body.missing) });
       if (body.missing.includes("cover")) folderCovers.delete(albumKey(album()));
     } else if (status === 401) {
       e.status = "error";
@@ -348,7 +349,7 @@ async function uploadAll() {
       return;
     } else {
       e.status = "error";
-      e.el.msg.textContent = ERRORS[body.error] || `Upload failed (${body.error || status})`;
+      e.el.msg.textContent = ERRORS[body.error] || t("upload.failed", { error: body.error || status });
     }
     refresh();
   }
@@ -368,7 +369,7 @@ function albumInput(key) {
   const el = h("input", {
     type: "text",
     inputmode: key === "year" ? "numeric" : null,
-    placeholder: key === "artist" || key === "album" ? "required" : "optional",
+    placeholder: key === "artist" || key === "album" ? t("upload.required") : t("upload.optional"),
     oninput: () => { state.edited.add(key); refresh(); },
   });
   ui.album[key] = el;
@@ -387,33 +388,33 @@ export function renderUpload(container, opts = {}) {
     ondragover: (e) => { e.preventDefault(); drop.classList.add("over"); },
     ondragleave: () => drop.classList.remove("over"),
     ondrop: (e) => { e.preventDefault(); drop.classList.remove("over"); addFiles(e.dataTransfer.files); },
-  }, h("strong", {}, "Drop an album's audio files here"), h("span", {}, "or tap to pick · FLAC, MP3, M4A, OGG, Opus"), picker);
+  }, h("strong", {}, t("upload.drop")), h("span", {}, t("upload.dropHint")), picker);
 
   ui.coverInput = h("input", { type: "file", accept: "image/jpeg,image/png", onchange: (e) => {
     state.cover = e.target.files[0] || null;
     refresh();
   } });
-  ui.preview = h("div", { class: "preview" }, h("span", {}, "No cover"));
+  ui.preview = h("div", { class: "preview" }, h("span", {}, t("upload.noCover")));
   ui.coverNote = h("span", { class: "muted" });
   ui.coverBox = h("div", { class: "cover" }, ui.preview,
     h("label", { class: "field" }, h("span", {}, LABELS.cover), ui.coverInput, ui.coverNote));
   ui.albumBox = h("section", { class: "card album", hidden: true },
-    h("h2", {}, "Album"),
-    h("p", { class: "muted" }, "Applies to every file below. Prefilled from the files' tags."),
+    h("h2", {}, t("tag.album")),
+    h("p", { class: "muted" }, t("upload.albumHint")),
     h("div", { class: "album-grid" }, ui.coverBox, h("div", { class: "fields" }, ...ALBUM_FIELDS.map(albumInput))));
 
   ui.list = h("div", { class: "list" });
   ui.summary = h("span", { class: "muted" });
-  ui.upload = h("button", { class: "primary", onclick: uploadAll, disabled: true }, "Upload");
+  ui.upload = h("button", { class: "primary", onclick: uploadAll, disabled: true }, t("upload.upload"));
   ui.clear = h("button", { class: "ghost", hidden: true, onclick: () => {
     for (const e of state.files.filter((x) => x.status === "done")) e.el.row.remove();
     state.files = state.files.filter((x) => x.status !== "done");
     refresh();
-  } }, "Clear uploaded");
+  } }, t("upload.clear"));
 
   container.replaceChildren(
     drop, ui.albumBox,
-    h("section", { class: "card files" }, h("h2", {}, "Songs"), ui.list,
+    h("section", { class: "card files" }, h("h2", {}, t("search.songs")), ui.list,
       h("div", { class: "foot" }, ui.summary, h("div", { class: "actions" }, ui.clear, ui.upload))));
   refresh();
 }
