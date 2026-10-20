@@ -49,6 +49,9 @@ h1 { font-size: 1.4rem; margin: 0; line-height: 1.25; }
 .art.tiny { width: 32px; border-radius: 0; }
 .art.big { width: 220px; flex: none; }
 .album:hover .art, .album:focus-visible .art { border-color: var(--accent); }
+.album.is-new { position: relative; }
+.new-ribbon { position: absolute; top: 0; right: 0; width: 62px; height: 62px; overflow: hidden; pointer-events: none; }
+.new-ribbon span { position: absolute; top: 12px; right: -24px; width: 92px; transform: rotate(45deg); background: var(--orange); color: var(--ink); border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); box-shadow: 0 2px 0 var(--shade); font-family: var(--pix); font-weight: 700; font-size: 12px; line-height: 16px; letter-spacing: 1px; text-align: center; -webkit-font-smoothing: none; }
 .back { text-decoration: none; color: var(--accent); font-size: .9rem; }
 .album-head { display: flex; gap: 18px; align-items: flex-end; }
 .album-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }

@@ -1,5 +1,5 @@
 import { renderUpload } from "./upload.js";
-import { renderLibrary } from "./library.js";
+import { renderLibrary, setNewAlbums } from "./library.js";
 import { renderSearch, searchBox } from "./search.js";
 import { renderFavorites } from "./favorites.js";
 import { renderBar, settings, setQuality, onChange, QUALITIES, qualityHint } from "./player.js";
@@ -43,7 +43,7 @@ function showLogin() {
         body: JSON.stringify({ username: user.value, password: pass.value, remember: remember.checked }),
       });
       const body = await res.json().catch(() => ({}));
-      if (res.ok) return showApp(body.user, body.admin, body.avatar);
+      if (res.ok) return showApp(body.user, body.admin, body.avatar, body);
       err.textContent = LOGIN_ERRORS[body.error] || "Login failed";
     } catch {
       err.textContent = "No connection to the server";
@@ -201,7 +201,8 @@ function qualityButton() {
   return wrap;
 }
 
-function showApp(user, admin, avatar) {
+function showApp(user, admin, avatar, me = {}) {
+  setNewAlbums(me.newSince, me.ownAlbums);
   const TABS = admin === true ? [...BASE_TABS, ["admin", "Admin"]] : BASE_TABS;
   const opts = { onUnauthorized: showLogin, admin: admin === true };
   setPlaylistUser(user);
@@ -281,7 +282,7 @@ async function boot() {
     const res = await fetch("/api/me");
     if (res.ok) {
       const me = await res.json();
-      return showApp(me.user, me.admin, me.avatar);
+      return showApp(me.user, me.admin, me.avatar, me);
     }
   } catch {}
   showLogin();

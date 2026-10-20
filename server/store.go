@@ -63,6 +63,9 @@ CREATE TABLE IF NOT EXISTS avatars (
 	data BLOB NOT NULL,
 	updated_at INTEGER NOT NULL
 );` + uploadsLibraryIndex + statsSchema + friendsSchema)
+	if err == nil {
+		err = migrateUserSeen(db)
+	}
 	if err != nil {
 		db.Close()
 		return nil, err

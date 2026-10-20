@@ -9,9 +9,25 @@ const liveAlbums = (list) => (list || []).filter((al) => !deletedAlbums.has(al.i
 
 const LISTS = [["newest", "New"], ["recent", "Recently played"], ["random", "Random"], ["artists", "Artists"]];
 
+let newSince = Infinity;
+let ownAlbums = new Set();
+const albumKey = (artist, name) => `${(artist || "").trim().toLowerCase()}|${(name || "").trim().toLowerCase()}`;
+
+export function setNewAlbums(since, own) {
+  newSince = Number(since) > 0 ? Number(since) * 1000 : Infinity;
+  ownAlbums = new Set(own || []);
+}
+
+function isNewAlbum(al) {
+  const created = Date.parse(al.created || "");
+  return created > newSince && !ownAlbums.has(albumKey(al.artist, al.name || al.title));
+}
+
 export function albumCard(al) {
-  return h("a", { class: "album", href: `#/library/album/${encodeURIComponent(al.id)}` },
+  const fresh = isNewAlbum(al);
+  return h("a", { class: fresh ? "album is-new" : "album", href: `#/library/album/${encodeURIComponent(al.id)}` },
     cover(al.coverArt || al.id, 300),
+    fresh ? h("span", { class: "new-ribbon", "aria-label": "New since your last visit" }, h("span", {}, "NEW")) : null,
     h("span", { class: "a-name" }, al.name || al.title || "Unknown album"),
     h("span", { class: "a-sub" }, [al.artist, al.year].filter(Boolean).join(" · ")));
 }

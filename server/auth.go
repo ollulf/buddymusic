@@ -158,8 +158,8 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	} else {
 		a.admins.put(idHash, admin)
 	}
-	v, _ := a.store.AvatarVersion(user)
-	writeJSON(w, http.StatusOK, map[string]any{"user": user, "admin": admin, "avatar": v})
+	a.markSeen(r, user)
+	writeJSON(w, http.StatusOK, a.meInfo(user, admin))
 }
 
 func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
@@ -171,8 +171,13 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleMe(w http.ResponseWriter, r *http.Request, user string) {
+	writeJSON(w, http.StatusOK, a.meInfo(user, a.cachedAdmin(r)))
+}
+
+func (a *App) meInfo(user string, admin any) map[string]any {
 	v, _ := a.store.AvatarVersion(user)
-	writeJSON(w, http.StatusOK, map[string]any{"user": user, "admin": a.cachedAdmin(r), "avatar": v})
+	return map[string]any{"user": user, "admin": admin, "avatar": v,
+		"newSince": a.store.NewSince(user, time.Now()), "ownAlbums": a.store.OwnAlbums(user)}
 }
 
 func (a *App) sessionUser(r *http.Request) (string, error) {
