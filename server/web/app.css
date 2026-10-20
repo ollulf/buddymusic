@@ -365,3 +365,21 @@ header.top .hsearch .search-box { height: 34px; padding: 4px 10px; font-size: 15
   header.top .hsearch + .profile { margin-left: auto; }
   header.top .hsearch + .saver-toggle { margin-left: auto; }
 }
+.profile-menu { width: 280px; }
+.friends-panel { display: grid; gap: 8px; border-top: 2px solid var(--ink); padding-top: 10px; }
+.friends-panel h3 { margin: 0; font-family: var(--mys); font-weight: 400; font-size: 20px; color: var(--accent); letter-spacing: .02em; }
+.friends { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 260px; overflow-y: auto; }
+.friend { display: flex; gap: 8px; align-items: center; min-width: 0; color: var(--muted); }
+.friend-pic { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border: 2px solid var(--ink); background: var(--bg); color: var(--ph); overflow: hidden; }
+.friend.online .friend-pic { color: var(--accent); }
+.friend-pic img { display: block; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.friend:not(.online) .friend-pic img { opacity: .5; }
+.friend-text { display: grid; min-width: 0; }
+.friend-name { display: flex; gap: 6px; align-items: center; color: var(--fg); font-size: 14px; overflow-wrap: anywhere; }
+.friend-name .dot { flex: none; width: 6px; height: 6px; background: var(--ph); }
+.friend.online .friend-name .dot { background: var(--ok); }
+.friend-what { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.friend.playing .friend-what { color: var(--orange); }
+.friends-empty { margin: 0; font-size: 13px; }
+.share-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.share-toggle input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }

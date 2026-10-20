@@ -55,7 +55,7 @@ function showLogin() {
     h("label", { class: "field" }, h("span", {}, "Password"), pass),
     h("label", { class: "check" }, remember, h("span", {}, "Keep me logged in")),
     err, btn,
-    h("p", { class: "muted privacy" }, "Admins can see when you log in and how much you listen."));
+    h("p", { class: "muted privacy" }, "Admins can see when you log in and how much you listen. Friends can see what you are playing (you can turn that off in your profile)."));
   root.replaceChildren(h("main", {}, form));
   user.focus();
 }
@@ -89,6 +89,87 @@ async function squareAvatar(file) {
   const blob = (type, q) => new Promise((ok) => canvas.toBlob(ok, type, q));
   const png = await blob("image/png");
   return png && png.size <= 200 * 1024 ? png : blob("image/jpeg", 0.9);
+}
+
+const ago = (sec) => {
+  const min = Math.max(0, Math.round((Date.now() / 1000 - sec) / 60));
+  if (min < 1) return "just now";
+  return `${min} min ago`;
+};
+
+function friendRow(f) {
+  const pic = h("span", { class: "friend-pic" });
+  if (f.avatar) {
+    const img = h("img", { src: `/api/avatar/${encodeURIComponent(f.user)}?v=${f.avatar}`, alt: "", width: 32, height: 32 });
+    img.addEventListener("error", () => { pic.innerHTML = AVATAR; });
+    pic.append(img);
+  } else pic.innerHTML = AVATAR;
+  let what;
+  if (!f.online) what = `last seen ${ago(f.lastSeen)}`;
+  else if (f.state === "playing" || f.state === "paused") {
+    const track = f.artist ? `${f.title} – ${f.artist}` : f.title;
+    what = f.state === "paused" ? `paused: ${track}` : track;
+  } else what = "idle";
+  return h("li", { class: `friend${f.online ? " online" : ""}${f.state === "playing" ? " playing" : ""}` },
+    pic,
+    h("span", { class: "friend-text" },
+      h("span", { class: "friend-name" }, h("span", { class: "dot", "aria-hidden": "true" }), f.user),
+      h("span", { class: "friend-what", title: what }, what)));
+}
+
+function friendsPanel() {
+  const list = h("ul", { class: "friends" });
+  const empty = h("p", { class: "muted friends-empty" }, "No friends online right now.");
+  const share = h("input", { type: "checkbox", checked: true });
+  const toggle = h("label", { class: "check share-toggle" }, share, h("span", {}, "Share my listening"));
+  let timer = null;
+  const stop = () => {
+    clearInterval(timer);
+    timer = null;
+  };
+  const load = async () => {
+    if (!list.isConnected) return stop();
+    try {
+      const res = await fetch("/api/friends");
+      if (res.status === 401) {
+        stop();
+        return showLogin();
+      }
+      if (!res.ok) throw new Error();
+      const body = await res.json();
+      share.checked = body.share !== false;
+      list.replaceChildren(...body.friends.map(friendRow));
+      empty.hidden = body.friends.some((f) => f.online);
+      empty.textContent = body.friends.length ? "Nobody else is online right now." : "No friends online right now.";
+    } catch {
+      empty.hidden = false;
+      empty.textContent = "Could not load friends";
+    }
+  };
+  share.addEventListener("change", async () => {
+    const want = share.checked;
+    share.disabled = true;
+    try {
+      const res = await fetch("/api/friends/share", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ share: want }) });
+      if (res.status === 401) return showLogin();
+      if (!res.ok) throw new Error();
+    } catch {
+      share.checked = !want;
+    } finally {
+      share.disabled = false;
+    }
+  });
+  const el = h("section", { class: "friends-panel", "aria-label": "Friends online" },
+    h("h3", {}, "Friends online"), list, empty, toggle);
+  return {
+    el,
+    start() {
+      stop();
+      timer = setInterval(load, 30000);
+      load();
+    },
+    stop,
+  };
 }
 
 function profileMenu(user, admin, avatar) {
@@ -140,12 +221,14 @@ function profileMenu(user, admin, avatar) {
   });
   reset.addEventListener("click", () => send("DELETE"));
   paint();
+  const friends = friendsPanel();
   const menu = h("div", { class: "profile-menu", role: "menu", hidden: true },
     h("div", { class: "profile-name" }, user, admin ? h("span", { class: "tag" }, "admin") : null),
-    change, reset, picker, status,
+    change, reset, picker, status, friends.el,
     h("button", { class: "ghost", type: "button", role: "menuitem", onclick: logout }, "Log out"));
   const close = (focus) => {
     menu.hidden = true;
+    friends.stop();
     btn.setAttribute("aria-expanded", "false");
     closeProfile = null;
     if (focus === true) btn.focus();
@@ -153,6 +236,7 @@ function profileMenu(user, admin, avatar) {
   btn.addEventListener("click", () => {
     if (!menu.hidden) return close();
     menu.hidden = false;
+    friends.start();
     btn.setAttribute("aria-expanded", "true");
     closeProfile = close;
   });
