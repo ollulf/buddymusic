@@ -37,6 +37,14 @@ const state = {
 const listeners = new Set();
 const emit = () => listeners.forEach((fn) => fn());
 export const onChange = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
+export const nowAlbum = () => (state.queue[state.index] || {}).albumId || "";
+const syncNow = () => {
+  const id = nowAlbum();
+  document.documentElement.classList.toggle("is-playing", !audio.paused && !!id);
+  document.querySelectorAll(".jc[data-album]").forEach((el) => el.classList.toggle("now", !!id && el.dataset.album === id));
+};
+listeners.add(syncNow);
+for (const ev of ["play", "pause", "emptied", "ended"]) audio.addEventListener(ev, syncNow);
 
 export const opusSupported = (() => {
   try { return audio.canPlayType("audio/ogg; codecs=opus") !== ""; } catch { return false; }
@@ -525,7 +533,7 @@ export function renderBar(opts = {}) {
     const key = ids.join("|");
     if (lastCover !== key) {
       lastCover = key;
-      const box = h("div", { class: "art small" });
+      const box = h("div", { class: "art small jc now" });
       const tryNext = (i) => {
         if (i >= ids.length) { box.replaceChildren(); return; }
         const img = h("img", { src: coverURL(ids[i], 96), alt: song.album || "Album cover", decoding: "async" });

@@ -9,9 +9,18 @@ const liveAlbums = (list) => (list || []).filter((al) => !deletedAlbums.has(al.i
 
 const LISTS = [["newest", "New"], ["recent", "Recently played"], ["random", "Random"], ["artists", "Artists"]];
 
+function caseCover(al, size, cls) {
+  const box = cover(al.coverArt || al.id, size, `${cls} jc`);
+  if (al.id) {
+    box.dataset.album = al.id;
+    if (player.nowAlbum() === al.id) box.classList.add("now");
+  }
+  return box;
+}
+
 export function albumCard(al) {
   return h("a", { class: "album", href: `#/library/album/${encodeURIComponent(al.id)}` },
-    cover(al.coverArt || al.id, 300),
+    caseCover(al, 300, "art"),
     h("span", { class: "a-name" }, al.name || al.title || "Unknown album"),
     h("span", { class: "a-sub" }, [al.artist, al.year].filter(Boolean).join(" · ")));
 }
@@ -110,7 +119,7 @@ async function renderAlbum(container, id, opts) {
     container.replaceChildren(
       h("a", { class: "back", href: "#/library" }, "‹ Library"),
       h("section", { class: "album-head" },
-        cover(al.coverArt || al.id, 600, "art big"),
+        caseCover(al, 600, "art big"),
         h("div", { class: "album-info" },
           h("h1", {}, al.name || "Unknown album"),
           h("a", { class: "muted", href: al.artistId ? `#/library/artist/${encodeURIComponent(al.artistId)}` : "#/library/artists" }, al.artist || ""),
