@@ -241,15 +241,12 @@ export function renderBar(opts = {}) {
   volR.addEventListener("input", () => { vol.v = +volR.value; vol.m = false; applyVolume(); paintVol(); });
   paintVol();
   const volBox = h("div", { class: "bar-vol" + (volumeSettable ? "" : " fixed") }, muteB, volR);
-  const saver = h("input", { type: "checkbox" });
-  saver.addEventListener("change", () => setSaver(saver.checked));
   const bar = h("footer", { class: "player", hidden: true },
     h("div", { class: "bar-seek" }, pos, range, dur),
     h("div", { class: "bar-row" },
       art, h("div", { class: "bar-meta" }, title, sub), heartB,
       h("div", { class: "bar-ctl" }, shuffleB, prevB, playB, nextB, repeatB),
-      volBox,
-      h("label", { class: "saver", title: "Stream Opus 128 kbps to save mobile data" }, saver, h("span", {}, "Data saver"))));
+      volBox));
 
   let lastCover = null;
   const paint = () => {
@@ -282,7 +279,6 @@ export function renderBar(opts = {}) {
     repeatB.classList.toggle("on", s.repeat !== "off");
     repeatB.dataset.mode = s.repeat;
     repeatB.title = `Repeat: ${s.repeat}`;
-    saver.checked = s.saver;
     const d = duration();
     const t = d ? Math.min(position(), d) : position();
     range.max = String(d);
