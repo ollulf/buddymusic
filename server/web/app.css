@@ -354,8 +354,8 @@ body.settings-open { overflow: hidden; }
 
 footer.player.pb { --bh: 120px; --tw: 180px; --th: 52px; --tl: calc(50% - var(--tw) / 2); --sb: env(safe-area-inset-bottom, 0px); --cream: #fff3c9; position: fixed; left: 0; right: 0; bottom: 0; z-index: 3; height: calc(var(--bh) + var(--sb)); padding: 0; background: none; border: 0; box-shadow: none; }
 footer.player.pb::before { content: ""; position: absolute; left: 50%; bottom: calc(var(--bh) + var(--sb) - 20px); width: 340px; height: 260px; transform: translateX(-50%); background: radial-gradient(closest-side, rgb(0 0 0 / .65), rgb(0 0 0 / .35) 60%, transparent); pointer-events: none; }
-.pb-bay { position: absolute; left: var(--tl); bottom: calc(var(--bh) + var(--sb) + var(--th) - 6px); width: var(--tw); height: 150px; overflow: hidden; pointer-events: none; }
-.pb-disc { --s: 172px; position: absolute; left: 50%; bottom: -36px; width: var(--s); height: var(--s); margin-left: calc(var(--s) / -2); padding: 0; border: 0; border-radius: 50%; background: none; pointer-events: auto; cursor: pointer; transition: transform .3s steps(6); image-rendering: pixelated; }
+.pb-bay { position: absolute; left: calc(50% - 110px); bottom: calc(var(--bh) + var(--sb) + var(--th) - 6px); width: 220px; height: 172px; overflow: hidden; pointer-events: none; }
+.pb-disc { --s: 200px; position: absolute; left: 50%; bottom: -42px; width: var(--s); height: var(--s); margin-left: calc(var(--s) / -2); padding: 0; border: 0; border-radius: 50%; background: none; pointer-events: auto; cursor: pointer; transition: transform .3s steps(6); image-rendering: pixelated; }
 .pb-disc:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .pb-spin { position: absolute; inset: 0; }
 .pb-spin svg { width: 100%; height: 100%; display: block; shape-rendering: crispEdges; }
@@ -407,7 +407,7 @@ button.pb-b.vol[aria-expanded="true"] { color: var(--accent); }
 .pb-vol-val { min-width: 36px; text-align: right; font-size: 14px; color: var(--fg); font-variant-numeric: tabular-nums; }
 .pb-grille { flex: 1; height: 12px; margin-left: 4px; background: repeating-linear-gradient(to right, var(--shade) 0 2px, transparent 2px 5px); opacity: .9; }
 @media (max-width: 760px) {
-  footer.player.pb.tucked .pb-disc { transform: translateY(calc(var(--s) - 52px)); }
+  footer.player.pb.tucked .pb-disc { transform: translateY(calc(var(--s) - 60px)); }
 }
 @media (min-width: 761px) {
   footer.player.pb { --bh: 100px; }
