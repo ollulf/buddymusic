@@ -360,7 +360,7 @@ footer.player.pb { --bh: 120px; --tw: 180px; --th: 52px; --tl: 12px; --sb: env(s
 .pb-disc:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .pb-spin { position: absolute; inset: 0; }
 .pb-spin svg { width: 100%; height: 100%; display: block; shape-rendering: crispEdges; }
-.pb.spinning .pb-spin { animation: pb-rot 2.4s steps(24) infinite; }
+.pb.spinning .pb-spin { animation: pb-rot 6s steps(48) infinite; }
 @keyframes pb-rot { to { transform: rotate(360deg); } }
 .pb-label { position: absolute; left: 50%; top: 50%; width: 92%; height: 92%; transform: translate(-50%, -50%); border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: repeating-linear-gradient(45deg, var(--orange) 0 6px, #b13e53 6px 12px); }
 .pb-label img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
