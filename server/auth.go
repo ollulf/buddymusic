@@ -177,7 +177,7 @@ func (a *App) handleMe(w http.ResponseWriter, r *http.Request, user string) {
 func (a *App) meInfo(user string, admin any) map[string]any {
 	v, _ := a.store.AvatarVersion(user)
 	return map[string]any{"user": user, "admin": admin, "avatar": v,
-		"newSince": a.store.NewSince(user, time.Now()), "ownAlbums": a.store.OwnAlbums(user)}
+		"newSince": a.store.NewSince(user, time.Now()), "ownAlbums": a.store.OwnAlbums(user), "version": version}
 }
 
 func (a *App) sessionUser(r *http.Request) (string, error) {

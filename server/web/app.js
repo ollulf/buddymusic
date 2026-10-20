@@ -207,7 +207,7 @@ function friendsPanel() {
 
 let headerAvatar = { version: 0, paint() {} };
 
-function profileMenu(user, admin, avatar) {
+function profileMenu(user, admin, avatar, version) {
   const btn = h("button", { class: "avatar", type: "button", "aria-haspopup": "menu", "aria-expanded": "false", "aria-label": t("profile.label"), title: user });
   headerAvatar = { version: avatar || 0, paint() { paintAvatar(btn, this.version); } };
   headerAvatar.paint();
@@ -219,7 +219,8 @@ function profileMenu(user, admin, avatar) {
     h("div", { class: "profile-name" }, user, admin ? h("span", { class: "tag" }, "admin") : null),
     friends.el, settingsItem,
     h("button", { class: "ghost", type: "button", role: "menuitem", onclick: logout }, t("profile.logout")),
-    h("p", { class: "powered" }, t("app.powered")));
+    h("p", { class: "powered" }, t("app.powered")),
+    h("p", { class: "version" }, t("app.version", { v: version || "dev" })));
   const close = (focus) => {
     menu.hidden = true;
     friends.stop();
@@ -295,7 +296,7 @@ function showApp(user, admin, avatar, me = {}) {
       h("nav", { class: "tabs", "aria-label": t("tab.sections") }, Object.values(links)),
       randomButton(),
       qualityButton(),
-      profileMenu(user, admin, avatar)),
+      profileMenu(user, admin, avatar, me.version)),
     titleRow,
     ...Object.values(views),
     settingsView,
