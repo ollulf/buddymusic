@@ -4,7 +4,10 @@ Copyright 2023 The Soft Type Project Authors (https://github.com/scfried/soft-ty
 pixelify-sans.ttf: Pixelify Sans
 Copyright 2021 The Pixelify Sans Project Authors (https://github.com/eifetx/Pixelify-Sans)
 
-Both fonts are licensed under the SIL Open Font License, Version 1.1.
+departure-mono.woff2: Departure Mono
+Copyright 2022–2024 Helena Zhang (helenazhang.com).
+
+All fonts are licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
 https://openfontlicense.org
 
