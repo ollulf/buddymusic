@@ -497,20 +497,6 @@ const svgEl = (tag, attrs = {}) => {
   for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
   return el;
 };
-const KNOB_A0 = -135, KNOB_SPAN = 270, KNOB_R = 39;
-function wedge(t1) {
-  if (t1 <= 0) return "";
-  const n = Math.max(1, Math.round(t1 * 54)), outer = [], inner = [];
-  for (let i = 0; i <= n; i++) {
-    const t = i / 54, a = (KNOB_A0 + t * KNOB_SPAN) * Math.PI / 180;
-    const w = 2 + Math.round(t * 5) * 2;
-    const sx = Math.sin(a), cy = -Math.cos(a);
-    outer.push(`${(50 + sx * (KNOB_R + w)).toFixed(1)} ${(50 + cy * (KNOB_R + w)).toFixed(1)}`);
-    inner.unshift(`${(50 + sx * KNOB_R).toFixed(1)} ${(50 + cy * KNOB_R).toFixed(1)}`);
-  }
-  return "M" + outer.join(" L") + " L" + inner.join(" L") + " Z";
-}
-
 const SETTING_TAGS = { auto: "AUTO", original: "ORIG", normal: "NORM", low: "LOW" };
 const LOSSLESS = new Set(["flac", "wav", "alac", "ape", "wv", "aif", "aiff"]);
 function streamTag(info) {
@@ -522,67 +508,48 @@ function streamTag(info) {
   return `${set} · ${name}${info.known && !LOSSLESS.has(suf) ? ` ${info.kbps}` : ""}`;
 }
 
-function volumeKnob() {
-  const fg = svgEl("path", { class: "fg" });
-  const arc = svgEl("svg", { class: "arc", viewBox: "0 0 100 100", "aria-hidden": "true" });
-  arc.append(svgEl("path", { class: "bg", d: wedge(1) }), fg);
-  const val = h("span", { class: "val" });
-  const knob = h("div", { class: "pb-knob" + (volumeSettable ? "" : " ios"), role: "slider", tabindex: "0", "aria-label": "Volume", "aria-valuemin": "0", "aria-valuemax": "100" },
-    arc, h("div", { class: "kc" }), val);
+function volumeControl() {
+  const btn = h("button", { type: "button", class: "pb-b sm vol", "aria-haspopup": "true", "aria-expanded": "false" });
+  const range = h("input", { type: "range", min: 0, max: 100, step: 1, "aria-label": "Volume" });
+  const mute = h("button", { type: "button", class: "pb-b sm vol mute" });
+  const val = h("span", { class: "pb-vol-val" });
+  const pop = h("div", { class: "pb-vol-pop", hidden: true }, mute, range, val);
+  const wrap = h("div", { class: "pb-vol" }, btn, pop);
+  const level = () => (vol.m || vol.v === 0 ? "mute" : vol.v < 50 ? "low" : "high");
   const paint = () => {
-    knob.style.setProperty("--a", `${KNOB_A0 + vol.v * KNOB_SPAN / 100}deg`);
-    fg.setAttribute("d", volumeSettable && !vol.m ? wedge(vol.v / 100) : "");
-    knob.classList.toggle("muted", vol.m);
-    val.textContent = vol.m ? "MUTE" : volumeSettable ? String(vol.v) : "HW";
-    knob.setAttribute("aria-valuenow", String(vol.v));
-    knob.setAttribute("aria-valuetext", vol.m ? "Muted" : volumeSettable ? `${vol.v}%` : "Hardware volume");
-    knob.title = vol.m ? "Unmute" : volumeSettable ? `Volume ${vol.v}%` : "Use the device buttons; tap to mute";
-  };
-  const set = (v) => {
-    if (!volumeSettable) return;
-    vol.v = Math.max(0, Math.min(100, Math.round(v)));
-    vol.m = false;
-    applyVolume(); paint();
+    btn.dataset.level = level();
+    mute.dataset.level = vol.m ? "high" : "mute";
+    const label = vol.m ? "Unmute" : volumeSettable ? `Volume ${vol.v}%` : "Mute (use the phone's volume buttons)";
+    btn.title = volumeSettable ? label : vol.m ? "Unmute (use the phone's volume buttons)" : "Mute (use the phone's volume buttons)";
+    btn.setAttribute("aria-label", volumeSettable ? `Volume ${vol.m ? "muted" : vol.v + "%"}` : btn.title);
+    if (!volumeSettable) btn.setAttribute("aria-pressed", String(vol.m)); else btn.removeAttribute("aria-pressed");
+    mute.title = vol.m ? "Unmute" : "Mute";
+    mute.setAttribute("aria-label", mute.title);
+    mute.setAttribute("aria-pressed", String(vol.m));
+    range.value = String(vol.m ? 0 : vol.v);
+    range.setAttribute("aria-valuenow", range.value);
+    range.style.setProperty("--p", String(+range.value / 100));
+    val.textContent = vol.m ? "MUTE" : String(vol.v);
   };
   const toggleMute = () => {
     if (vol.m || vol.v > 0 || !volumeSettable) vol.m = !vol.m; else { vol.v = 50; vol.m = false; }
     applyVolume(); paint();
   };
-  let drag = null, hide = 0;
-  const flash = () => {
-    knob.classList.add("drag");
-    clearTimeout(hide);
-    hide = setTimeout(() => { if (!drag) knob.classList.remove("drag"); }, 700);
+  const open = (on) => {
+    pop.hidden = !on;
+    btn.setAttribute("aria-expanded", String(on));
+    if (on) { document.addEventListener("pointerdown", outside, true); document.addEventListener("keydown", esc, true); range.focus(); }
+    else { document.removeEventListener("pointerdown", outside, true); document.removeEventListener("keydown", esc, true); }
   };
-  const angle = (e) => {
-    const r = knob.getBoundingClientRect();
-    return Math.atan2(e.clientX - r.left - r.width / 2, -(e.clientY - r.top - r.height / 2)) * 180 / Math.PI;
-  };
-  knob.addEventListener("pointerdown", (e) => {
-    try { knob.setPointerCapture(e.pointerId); } catch {}
-    drag = { moved: false, x: e.clientX, y: e.clientY };
-  });
-  knob.addEventListener("pointermove", (e) => {
-    if (!drag) return;
-    if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 4) drag.moved = true;
-    if (!drag.moved) return;
-    knob.classList.add("drag");
-    const a = angle(e);
-    if (a < -140 || a > 140) return;
-    set((Math.max(KNOB_A0, Math.min(KNOB_A0 + KNOB_SPAN, a)) - KNOB_A0) * 100 / KNOB_SPAN);
-  });
-  knob.addEventListener("pointerup", () => { if (drag && !drag.moved) toggleMute(); drag = null; flash(); });
-  knob.addEventListener("pointercancel", () => { drag = null; flash(); });
-  knob.addEventListener("wheel", (e) => { e.preventDefault(); set(vol.v + (e.deltaY < 0 ? 5 : -5)); flash(); }, { passive: false });
-  knob.addEventListener("keydown", (e) => {
-    const d = { ArrowUp: 5, ArrowRight: 5, ArrowDown: -5, ArrowLeft: -5, PageUp: 20, PageDown: -20 }[e.key];
-    if (d) { e.preventDefault(); set(vol.v + d); flash(); }
-    else if (e.key === "Home") { e.preventDefault(); set(0); flash(); }
-    else if (e.key === "End") { e.preventDefault(); set(100); flash(); }
-    else if (e.key === "m" || e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleMute(); }
-  });
+  const outside = (e) => { if (!wrap.contains(e.target)) open(false); };
+  const esc = (e) => { if (e.key === "Escape") { e.preventDefault(); open(false); btn.focus(); } };
+  btn.addEventListener("click", () => { if (!volumeSettable) toggleMute(); else open(pop.hidden); });
+  mute.addEventListener("click", toggleMute);
+  range.addEventListener("input", () => { vol.v = +range.value; vol.m = false; applyVolume(); paint(); });
+  wrap.addEventListener("wheel", (e) => { if (!volumeSettable) return; e.preventDefault(); vol.v = Math.max(0, Math.min(100, vol.v + (e.deltaY < 0 ? 5 : -5))); vol.m = false; applyVolume(); paint(); }, { passive: false });
+  if (!volumeSettable) btn.removeAttribute("aria-haspopup"), btn.removeAttribute("aria-expanded");
   paint();
-  return knob;
+  return wrap;
 }
 
 export function renderBar(opts = {}) {
@@ -624,8 +591,7 @@ export function renderBar(opts = {}) {
       h("div", { class: "bar-seek" }, pos, range, dur),
       h("div", { class: "pb-left" },
         h("div", { class: "pb-screen" }, rateB, info),
-        h("div", { class: "pb-btns" }, heartB, repeatB, shuffleB, h("i", { class: "pb-grille" }))),
-      volumeKnob()));
+        h("div", { class: "pb-btns" }, heartB, repeatB, shuffleB, volumeControl(), h("i", { class: "pb-grille" })))));
 
   const narrow = window.matchMedia ? window.matchMedia("(max-width: 760px)") : { matches: false };
   const setTucked = (on) => {
