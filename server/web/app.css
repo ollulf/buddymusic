@@ -1,3 +1,5 @@
+@keyframes dice-spin { to { transform: rotate(360deg); } }
+@keyframes dice-shake { 0%, 100% { transform: translateX(0); } 33% { transform: translateX(-3px); } 66% { transform: translateX(3px); } }
 @font-face { font-family: "Pixelify Sans"; src: url("/fonts/pixelify-sans.ttf") format("truetype"); font-weight: 400 700; font-display: swap; }
 @font-face { font-family: "Jersey 10"; src: url("/fonts/jersey10.ttf") format("truetype"); font-display: swap; }
 :root {
@@ -50,6 +52,9 @@ h1 { font-size: 1.4rem; margin: 0; line-height: 1.25; }
 .art.tiny { width: 32px; border-radius: 0; }
 .art.big { width: 220px; flex: none; }
 .album:hover .art, .album:focus-visible .art { border-color: var(--accent); }
+.album.is-new { position: relative; }
+.new-ribbon { position: absolute; z-index: 4; top: 0; right: 0; width: 62px; height: 62px; overflow: hidden; pointer-events: none; }
+.new-ribbon span { position: absolute; top: 12px; right: -24px; width: 92px; transform: rotate(45deg); background: var(--orange); color: var(--ink); border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); box-shadow: 0 2px 0 var(--shade); font-family: var(--pix); font-weight: 700; font-size: 12px; line-height: 16px; letter-spacing: 1px; text-align: center; -webkit-font-smoothing: none; }
 .back { text-decoration: none; color: var(--accent); font-size: .9rem; }
 .album-head { display: flex; gap: 18px; align-items: flex-end; }
 .album-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -243,6 +248,12 @@ header.top .tab { text-transform: uppercase; letter-spacing: .06em; font-size: 1
 header.top .tab:hover { color: var(--fg); }
 header.top .tab.on { color: var(--accent-fg); background: var(--accent); border-color: var(--ink); }
 .profile-name { font-size: 14px; }
+header.top .dice { margin-left: auto; display: grid; place-items: center; width: 34px; height: 34px; padding: 0; background: transparent; color: var(--muted); border: 2px solid var(--line); box-shadow: none; cursor: pointer; }
+header.top .dice:hover { color: var(--fg); }
+header.top .dice + .saver-toggle { margin-left: 8px; }
+header.top .dice.busy { opacity: .5; cursor: progress; }
+header.top .dice.busy svg { animation: dice-spin .6s steps(4) infinite; }
+header.top .dice.fail { color: var(--bad); animation: dice-shake .3s steps(3); }
 .card, .artist-list, dialog.sheet { background: var(--card); border: 2px solid var(--ink); box-shadow: var(--bevel), 4px 4px 0 var(--ink); }
 dialog.sheet { background: var(--card); }
 button { border: 2px solid var(--ink); background: var(--card); color: var(--fg); box-shadow: var(--bevel); }
@@ -361,11 +372,13 @@ button.heart[aria-pressed="true"]::before { content: ""; --i: var(--i-heartfull)
 header.top .hsearch { margin-left: auto; flex: 0 1 240px; min-width: 0; }
 header.top .hsearch + .profile { margin-left: 0; }
 header.top .hsearch + .saver-toggle { margin-left: 8px; }
+header.top .hsearch + .dice { margin-left: 8px; }
 header.top .hsearch .search-box { height: 34px; padding: 4px 10px; font-size: 15px; }
 @media (max-width: 520px) {
   header.top .hsearch { order: 4; flex: 1 1 100%; margin-left: 0; }
   header.top .hsearch + .profile { margin-left: auto; }
   header.top .hsearch + .saver-toggle { margin-left: auto; }
+  header.top .hsearch + .dice { margin-left: auto; }
 }
 .profile-menu { width: 280px; }
 .friends-panel { display: grid; gap: 8px; border-top: 2px solid var(--ink); padding-top: 10px; }

@@ -1,4 +1,4 @@
-import { settings, setQuality, setFormat, onChange, QUALITIES, FORMATS, qualityHint, opusSupported } from "./player.js";
+import { settings, setQuality, setFormat, setPreload, PRELOADS, onChange, QUALITIES, FORMATS, qualityHint, opusSupported } from "./player.js";
 
 const h = (tag, attrs = {}, ...kids) => {
   const el = document.createElement(tag);
@@ -54,6 +54,18 @@ function formatRow() {
   return h("div", {},
     h("p", { class: "muted" }, "What Original streams."),
     radios("origformat", FORMATS, (k) => FORMAT_NAMES[k], () => settings().format, setFormat));
+}
+
+const PRELOAD_NAMES = { on: "On", off: "Off" };
+const PRELOAD_HINTS = {
+  on: "Next song starts instantly, uses a bit more data",
+  off: "Saves data, short pause between songs",
+};
+
+function preloadRow() {
+  return h("div", {},
+    h("p", { class: "muted" }, "Saved on this device. Loads the next song before the current one ends."),
+    radios("preload", PRELOADS, (k) => [PRELOAD_NAMES[k], " ", h("span", { class: "muted" }, PRELOAD_HINTS[k])], () => settings().preload, setPreload));
 }
 
 export async function saveAvatar(file) {
@@ -124,6 +136,7 @@ function profileHeader({ user, avatar, onAvatar, onLogin }) {
 const ITEMS = [
   { id: "quality", label: "Streaming quality", render: qualityRow },
   { id: "format", label: "Original format", render: formatRow },
+  { id: "preload", label: "Preload next song", render: preloadRow },
 ];
 
 export function renderSettings(el, { onClose, ...profile }) {

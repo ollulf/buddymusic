@@ -48,7 +48,8 @@ CREATE INDEX IF NOT EXISTS play_events_started ON play_events(started_at);
 CREATE TABLE IF NOT EXISTS user_seen (
 	user TEXT PRIMARY KEY,
 	last_seen INTEGER NOT NULL,
-	device TEXT NOT NULL DEFAULT ''
+	device TEXT NOT NULL DEFAULT '',
+	prev_seen INTEGER NOT NULL DEFAULT 0
 );`
 
 func (s *Store) RecordLogin(user string, at time.Time, ok bool, device string, remember bool) error {
@@ -57,10 +58,56 @@ func (s *Store) RecordLogin(user string, at time.Time, ok bool, device string, r
 	return err
 }
 
-func (s *Store) TouchSeen(user string, at time.Time, device string) error {
-	_, err := s.db.Exec(`INSERT INTO user_seen (user, last_seen, device) VALUES (?, ?, ?)
-ON CONFLICT(user) DO UPDATE SET last_seen=excluded.last_seen, device=excluded.device`, user, at.Unix(), device)
+const newVisitGap = 30 * time.Minute
+
+func migrateUserSeen(db *sql.DB) error {
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('user_seen') WHERE name = 'prev_seen'`).Scan(&n); err != nil {
+		return err
+	}
+	if n > 0 {
+		return nil
+	}
+	if _, err := db.Exec(`ALTER TABLE user_seen ADD COLUMN prev_seen INTEGER NOT NULL DEFAULT 0`); err != nil {
+		return err
+	}
+	_, err := db.Exec(`UPDATE user_seen SET prev_seen = last_seen`)
 	return err
+}
+
+func (s *Store) TouchSeen(user string, at time.Time, device string) error {
+	_, err := s.db.Exec(`INSERT INTO user_seen (user, last_seen, device, prev_seen) VALUES (?, ?, ?, ?)
+ON CONFLICT(user) DO UPDATE SET
+prev_seen = CASE WHEN excluded.last_seen - user_seen.last_seen > ? THEN user_seen.last_seen ELSE user_seen.prev_seen END,
+last_seen = MAX(user_seen.last_seen, excluded.last_seen), device = excluded.device`,
+		user, at.Unix(), device, at.Unix(), int64(newVisitGap.Seconds()))
+	return err
+}
+
+func (s *Store) NewSince(user string, now time.Time) int64 {
+	var prev int64
+	err := s.db.QueryRow(`SELECT prev_seen FROM user_seen WHERE user = ?`, user).Scan(&prev)
+	if err != nil || prev <= 0 {
+		return now.Unix()
+	}
+	return prev
+}
+
+func (s *Store) OwnAlbums(user string) []string {
+	out := []string{}
+	rows, err := s.db.Query(`SELECT DISTINCT lower(trim(artist)) || '|' || lower(trim(album)) FROM uploads
+WHERE user = ? AND album != '' AND status = 'in-library'`, user)
+	if err != nil {
+		return out
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var k string
+		if rows.Scan(&k) == nil {
+			out = append(out, k)
+		}
+	}
+	return out
 }
 
 func (s *Store) AddStreamBytes(user, track, device string, at time.Time, n int64, saver bool) error {

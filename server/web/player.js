@@ -4,6 +4,8 @@ import { heartButton, retarget } from "./favs.js";
 const SAVER_KEY = "bm.dataSaver";
 const QUALITY_KEY = "bm.quality";
 const FORMAT_KEY = "bm.originalFormat";
+const PRELOAD_KEY = "bm.preload";
+export const PRELOADS = ["on", "off"];
 export const QUALITIES = ["auto", "original", "normal", "low"];
 export const FORMATS = ["flac", "mp3"];
 const TIERS = ["original", "normal", "low"];
@@ -30,6 +32,7 @@ const state = {
     return store.get(SAVER_KEY) === "1" ? "normal" : "auto";
   })(),
   format: FORMATS.includes(store.get(FORMAT_KEY)) ? store.get(FORMAT_KEY) : "flac",
+  preload: store.get(PRELOAD_KEY) === "off" ? "off" : "on",
   scrobbled: false,
   order: [],
 };
@@ -281,7 +284,7 @@ export function seek(t) {
 }
 export function toggleShuffle() { state.shuffle = !state.shuffle; rebuildOrder(); emit(); }
 export function cycleRepeat() { state.repeat = { off: "all", all: "one", one: "off" }[state.repeat]; emit(); }
-export const settings = () => ({ shuffle: state.shuffle, repeat: state.repeat, quality: state.quality, format: state.format });
+export const settings = () => ({ shuffle: state.shuffle, repeat: state.repeat, quality: state.quality, format: state.format, preload: state.preload });
 export const streamInfo = () => (meter.playing && current() ? { ...meter.playing, auto: state.quality === "auto" } : null);
 export function setFormat(f) {
   if (!FORMATS.includes(f)) return;
@@ -289,6 +292,19 @@ export function setFormat(f) {
   store.set(FORMAT_KEY, f);
   if (meter.playing && meter.playing.tier === "original") restream("original");
   emit();
+}
+export function setPreload(m) {
+  if (!PRELOADS.includes(m)) return;
+  state.preload = m;
+  store.set(PRELOAD_KEY, m);
+  if (m === "off") dropPreload();
+  emit();
+}
+function dropPreload() {
+  if (pre.ctrl) pre.ctrl.abort();
+  if (pre.blob) URL.revokeObjectURL(pre.blob);
+  Object.assign(pre, { url: "", blob: "", ctrl: null });
+  if (preloader.src) { preloader.removeAttribute("src"); preloader.load(); }
 }
 export function setQuality(q) {
   if (!QUALITIES.includes(q)) return;
@@ -312,8 +328,7 @@ function restream(tier) {
 function preloadNext() {
   const i = state.repeat === "one" ? -1 : step(1);
   const song = state.queue[i];
-  if (!song) return;
-  if (state.quality === "auto" && (meter.playing ? !meter.done && auto.speed < 4 : false)) return;
+  if (!song || state.preload === "off") return;
   const spec = streamSpec(song, pickTier(song, false));
   const url = streamURL(song, spec);
   if (!spec.format) {
