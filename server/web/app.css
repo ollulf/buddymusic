@@ -430,7 +430,7 @@ header.top .tab.on, header.top .tab.on:hover { color: var(--accent-fg); backgrou
 header.top .tab-label { display: none; }
 header.top .saver-toggle + .profile { margin-left: 4px; }
 .title-row { display: flex; align-items: center; gap: 10px; max-width: 820px; margin: 0 auto; padding: 12px 16px 0; }
-.page-title { font: 400 32px/1 var(--mys); letter-spacing: .04em; color: var(--accent); text-transform: uppercase; flex: none; }
+.page-title { font: 400 32px/1 var(--mys); letter-spacing: .02em; color: var(--accent); flex: none; }
 .title-row .hsearch { flex: 1 1 auto; min-width: 0; max-width: 420px; margin-left: auto; }
 .title-row .search-box { height: 40px; padding: 4px 10px; font-size: 15px; }
 .title-row.no-search .hsearch, .title-row.no-search > .search-box { visibility: hidden; }
