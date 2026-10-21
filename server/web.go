@@ -36,6 +36,7 @@ const shellTail = `</head>
 
 func init() {
 	mime.AddExtensionType(".ttf", "font/ttf")
+	mime.AddExtensionType(".woff2", "font/woff2")
 }
 
 type staticFile struct {

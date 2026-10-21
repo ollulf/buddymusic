@@ -2,6 +2,7 @@
 @keyframes dice-shake { 0%, 100% { transform: translateX(0); } 33% { transform: translateX(-3px); } 66% { transform: translateX(3px); } }
 @font-face { font-family: "Pixelify Sans"; src: url("/fonts/pixelify-sans.ttf") format("truetype"); font-weight: 400 700; font-display: swap; }
 @font-face { font-family: "Jersey 10"; src: url("/fonts/jersey10.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Departure Mono"; src: url("/fonts/departure-mono.woff2") format("woff2"); font-display: swap; }
 :root {
   --bg: #1a1c2c;
   --card: #29366f;
@@ -25,6 +26,7 @@
   --steel: #333c57;
   --bevel: inset 2px 2px 0 var(--hi), inset -2px -2px 0 var(--shade);
   --pix: "Pixelify Sans", ui-monospace, monospace;
+  --num: "Departure Mono", var(--pix);
   --mys: "Jersey 10", "Pixelify Sans", ui-monospace, monospace;
   color-scheme: dark;
 }
@@ -293,6 +295,7 @@ button.heart[aria-pressed="true"]::before { content: ""; --i: var(--i-heartfull)
 .admin-list li:last-child { border-bottom: 0; }
 .admin-list li > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .admin-list li.failed strong { color: var(--bad); }
+.admin-sub { font-size: .75rem; font-weight: 400; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 16px 0 4px; }
 @media (max-width: 560px) {
   .stats { grid-template-columns: repeat(2, 1fr); }
   .admin-chart .cols { height: 150px; gap: 4px; }
@@ -463,3 +466,4 @@ header.top .saver-toggle + .profile { margin-left: 4px; }
   header.top .dice + .saver-toggle, header.top .saver-toggle + .profile { margin-left: 2px; }
   .page-title { font-size: 28px; }
 }
+.s-no, .s-dur, .bar-time, .pb-vol-val, .stat strong, .admin-table .num, .profile-menu .version { font-family: var(--num); font-variant-numeric: tabular-nums; }

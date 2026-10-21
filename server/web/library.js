@@ -10,8 +10,10 @@ const liveAlbums = (list) => (list || []).filter((al) => !deletedAlbums.has(al.i
 
 const LISTS = [["newest", t("library.new")], ["recent", t("library.recent")], ["random", t("library.random")], ["artists", t("library.artists")]];
 
-function caseCover(al, size, cls) {
-  const box = cover(al.coverArt || al.id, size, `${cls} jc`);
+const EAGER_COVERS = 12;
+
+function caseCover(al, size, cls, eager = false) {
+  const box = cover(al.coverArt || al.id, size, `${cls} jc`, eager);
   if (al.id) {
     box.dataset.album = al.id;
     if (player.nowAlbum() === al.id) box.classList.add("now");
@@ -21,22 +23,35 @@ function caseCover(al, size, cls) {
 
 let newSince = Infinity;
 let ownAlbums = new Set();
+let openedAlbums = new Set();
 const albumKey = (artist, name) => `${(artist || "").trim().toLowerCase()}|${(name || "").trim().toLowerCase()}`;
 
-export function setNewAlbums(since, own) {
+export function setNewAlbums(since, own, opened) {
   newSince = Number(since) > 0 ? Number(since) * 1000 : Infinity;
   ownAlbums = new Set(own || []);
+  openedAlbums = new Set(opened || []);
+}
+
+function markAlbumOpened(al) {
+  if (!al.id || !isNewAlbum(al)) return;
+  openedAlbums.add(al.id);
+  for (const card of document.querySelectorAll("a.album.is-new")) {
+    if (card.getAttribute("href") !== `#/library/album/${encodeURIComponent(al.id)}`) continue;
+    card.classList.remove("is-new");
+    card.querySelector(".new-ribbon")?.remove();
+  }
+  fetch(`/api/music/album/${encodeURIComponent(al.id)}/opened`, { method: "POST" }).catch(() => {});
 }
 
 function isNewAlbum(al) {
   const created = Date.parse(al.created || "");
-  return created > newSince && !ownAlbums.has(albumKey(al.artist, al.name || al.title));
+  return created > newSince && !openedAlbums.has(al.id) && !ownAlbums.has(albumKey(al.artist, al.name || al.title));
 }
 
-export function albumCard(al) {
+export function albumCard(al, i = EAGER_COVERS) {
   const fresh = isNewAlbum(al);
   return h("a", { class: fresh ? "album is-new" : "album", href: `#/library/album/${encodeURIComponent(al.id)}` },
-    caseCover(al, 300, "art"),
+    caseCover(al, 300, "art", i < EAGER_COVERS),
     fresh ? h("span", { class: "new-ribbon", "aria-label": t("library.newSince") }, h("span", {}, t("library.newBadge"))) : null,
     h("span", { class: "a-name" }, al.name || al.title || t("library.unknownAlbum")),
     h("span", { class: "a-sub" }, [al.artist, al.year].filter(Boolean).join(" · ")));
@@ -71,6 +86,28 @@ function failBox(e, opts) {
   return h("div", { class: "card muted" }, e.message === "navidrome-unreachable" ? t("common.navidrome") : t("library.loadFailed"));
 }
 
+let prefetched = null;
+
+const albumsPath = (kind) => `/api/music/albums?type=${kind}&size=60`;
+
+export function prefetchLibrary(parts) {
+  const kind = parts[0] || "newest";
+  if (kind === "artists" || !LISTS.some(([k]) => k === kind)) return;
+  const promise = api(albumsPath(kind));
+  promise.catch(() => {});
+  prefetched = { kind, promise };
+}
+
+export function dropLibraryPrefetch() {
+  prefetched = null;
+}
+
+function albumsFor(kind) {
+  const p = prefetched;
+  prefetched = null;
+  return p && p.kind === kind ? p.promise : api(albumsPath(kind));
+}
+
 async function renderLists(container, kind, opts) {
   const chips = h("nav", { class: "chips-nav" },
     LISTS.map(([k, label]) => h("a", { class: `pill${k === kind ? " on" : ""}`, href: `#/library/${k}` }, label)));
@@ -84,7 +121,7 @@ async function renderLists(container, kind, opts) {
       body.replaceWith(groups.length ? h("div", { class: "artists" }, sections) : h("div", { class: "card muted" }, t("library.noArtists")));
       return;
     }
-    const data = await api(`/api/music/albums?type=${kind}&size=60`);
+    const data = await albumsFor(kind);
     const albums = liveAlbums(data.album);
     body.replaceWith(albums.length ? h("div", { class: "grid" }, albums.map(albumCard))
       : h("div", { class: "card muted" }, t("library.noAlbums")));
@@ -115,6 +152,7 @@ async function renderAlbum(container, id, opts) {
   container.replaceChildren(h("div", { class: "muted" }, t("common.loading")));
   try {
     const al = await api(`/api/music/album/${encodeURIComponent(id)}`);
+    markAlbumOpened(al);
     const songs = (al.song || []).filter((s) => !deletedSongs.has(s.id)).map((s) => ({ ...s, coverArt: s.coverArt || al.coverArt }));
     const deleteTrack = opts.admin ? async (s) => {
       if (!confirm(s.title ? t("delete.confirmTrack", { title: s.title }) : t("delete.confirmTrackUntitled"))) return;

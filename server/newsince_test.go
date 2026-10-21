@@ -90,3 +90,65 @@ func TestMeNewSinceAndOwnAlbums(t *testing.T) {
 		t.Fatalf("ownAlbums: %v", me.OwnAlbums)
 	}
 }
+
+func TestNewAlbumsFromStaysFixed(t *testing.T) {
+	s := newTestApp(t).store
+	start := time.Unix(1_800_000_000, 0)
+	s.TouchSeen("max", start, "")
+	first := s.NewAlbumsFrom("max", start)
+	if first != start.Unix() {
+		t.Fatalf("first cut-off: got %d want %d", first, start.Unix())
+	}
+	later := start.Add(5 * time.Hour)
+	s.TouchSeen("max", later, "")
+	s.TouchSeen("max", later.Add(3*time.Hour), "")
+	if got := s.NewAlbumsFrom("max", later.Add(3*time.Hour)); got != first {
+		t.Fatalf("cut-off moved with visits: got %d want %d", got, first)
+	}
+}
+
+func TestNewAlbumsFromStartsAtPreviousVisit(t *testing.T) {
+	s := newTestApp(t).store
+	start := time.Unix(1_800_000_000, 0)
+	s.TouchSeen("max", start, "")
+	later := start.Add(2 * time.Hour)
+	s.TouchSeen("max", later, "")
+	if got := s.NewAlbumsFrom("max", later); got != start.Unix() {
+		t.Fatalf("existing user cut-off: got %d want previous visit %d", got, start.Unix())
+	}
+}
+
+type meOpened struct {
+	OpenedAlbums []string `json:"openedAlbums"`
+}
+
+func TestAlbumOpenedEndpoint(t *testing.T) {
+	a := newTestApp(t)
+	rec := authed(t, a, httptest.NewRequest("GET", "/api/me", nil))
+	var me meOpened
+	if err := json.Unmarshal(rec.Body.Bytes(), &me); err != nil {
+		t.Fatal(err)
+	}
+	if me.OpenedAlbums == nil || len(me.OpenedAlbums) != 0 {
+		t.Fatalf("openedAlbums should be an empty list: %v", me.OpenedAlbums)
+	}
+	for i := 0; i < 2; i++ {
+		rec = authed(t, a, httptest.NewRequest("POST", "/api/music/album/al-1/opened", nil))
+		if rec.Code != 204 {
+			t.Fatalf("mark opened: %d %s", rec.Code, rec.Body)
+		}
+	}
+	req := httptest.NewRequest("POST", "/api/music/album/al-2/opened", nil)
+	req.Header.Set("Origin", "https://evil.example")
+	if rec = authed(t, a, req); rec.Code != 403 {
+		t.Fatalf("cross-origin: %d", rec.Code)
+	}
+	rec = authed(t, a, httptest.NewRequest("GET", "/api/me", nil))
+	json.Unmarshal(rec.Body.Bytes(), &me)
+	if len(me.OpenedAlbums) != 1 || me.OpenedAlbums[0] != "al-1" {
+		t.Fatalf("openedAlbums: %v", me.OpenedAlbums)
+	}
+	if got := a.store.OpenedAlbums("someone-else"); len(got) != 0 {
+		t.Fatalf("opened leaked to other user: %v", got)
+	}
+}

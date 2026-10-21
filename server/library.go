@@ -83,7 +83,8 @@ func writeNew(path string, data []byte) error {
 	return f.Close()
 }
 
-func replaceCover(dir string, data []byte) error {
+func replaceCover(ctx context.Context, dir string, data []byte) error {
+	data = shrinkCover(ctx, dir, data)
 	ext := sniffImage(data)
 	if ext == "" {
 		return errors.New("unsupported cover type")

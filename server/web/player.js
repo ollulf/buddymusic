@@ -113,6 +113,9 @@ const meter = { t0: 0, b0: 0, done: false, playing: null, started: false };
 const play = { offset: 0, tries: 0, blob: "", heard: 0, heardAt: 0, gen: 0 };
 const watch = { t: -1, at: 0, stalled: false, sent: 0 };
 const pre = { url: "", blob: "", ctrl: null, speed: 0 };
+const startT = { at: 0, gen: 0, waits: 0, preload: false, auto: false, live: false };
+let autoAdvance = false;
+const adv = { gen: 0, stuck: false, retried: false, logged: false, fails: 0 };
 
 function bufferedEnd() {
   const b = audio.buffered;
@@ -190,7 +193,7 @@ function startStream(song, tier, from = 0) {
     blob = pre.blob;
     Object.assign(pre, { url: "", blob: "" });
   }
-  if (play.blob && play.blob !== blob) URL.revokeObjectURL(play.blob);
+  const stale = play.blob && play.blob !== blob ? play.blob : "";
   play.blob = blob;
   play.offset = off;
   play.heard = Math.max(0, from - off);
@@ -202,6 +205,7 @@ function startStream(song, tier, from = 0) {
   Object.assign(meter, { t0: performance.now(), b0: Math.max(0, seekTo), done: !!blob, started: false, playing: { ...spec, tier } });
   if (blob && pre.speed) { auto.speed = pre.speed; auto.measuredKbps = spec.kbps; }
   audio.src = blob || (off ? `${base}&timeOffset=${off}` : base);
+  if (stale) URL.revokeObjectURL(stale);
   const gen = play.gen;
   if (seekTo > 0.5) audio.addEventListener("loadedmetadata", () => { if (play.gen === gen) audio.currentTime = seekTo; }, { once: true });
 }
@@ -215,7 +219,22 @@ function load(i, autoplay = true) {
   const song = current();
   if (!song) { audio.removeAttribute("src"); audio.load(); emit(); return; }
   startStream(song, pickTier(song, true));
-  if (autoplay) audio.play().catch(() => {});
+  const preloaded = !!play.blob || (!!preloader.src && preloader.src === audio.src);
+  dropPreload(audio.src);
+  startT.live = false;
+  if (autoplay) {
+    Object.assign(startT, { at: performance.now(), gen: play.gen, waits: 0, preload: preloaded, auto: autoAdvance, live: true });
+    adv.stuck = false;
+    adv.retried = false;
+    adv.gen = autoAdvance ? play.gen : 0;
+    const hidden = document.visibilityState === "hidden";
+    audio.play().catch((e) => {
+      startT.live = false;
+      if (adv.gen !== play.gen || !adv.gen) return;
+      adv.stuck = true;
+      if (hidden) logEvent("advance-refused", e && e.name);
+    });
+  }
   fetch(`/api/music/scrobble/${encodeURIComponent(song.id)}?submission=false`, { method: "POST" }).catch(() => {});
   updateSession();
   syncSession();
@@ -263,7 +282,7 @@ export function removeSongs(ids) {
 }
 
 export function jump(i) { if (state.queue[i]) load(i); }
-export function toggle() { if (!current()) return; audio.paused ? audio.play().catch(() => {}) : audio.pause(); }
+export function toggle() { if (!current()) return; if (audio.paused) audio.play().catch(() => {}); else { startT.live = false; audio.pause(); } }
 export function next() { const i = step(1); if (i >= 0) load(i); else { audio.pause(); emit(); } }
 export function prev() {
   if (position() > 3) { seek(0); return; }
@@ -301,11 +320,11 @@ export function setPreload(m) {
   if (m === "off") dropPreload();
   emit();
 }
-function dropPreload() {
+function dropPreload(keep = "") {
   if (pre.ctrl) pre.ctrl.abort();
   if (pre.blob) URL.revokeObjectURL(pre.blob);
   Object.assign(pre, { url: "", blob: "", ctrl: null });
-  if (preloader.src) { preloader.removeAttribute("src"); preloader.load(); }
+  if (preloader.src && preloader.src !== keep) { preloader.removeAttribute("src"); preloader.load(); }
 }
 export function setQuality(q) {
   if (!QUALITIES.includes(q)) return;
@@ -366,26 +385,50 @@ if ("mediaSession" in navigator) {
   const ms = navigator.mediaSession;
   const set = (a, fn) => { try { ms.setActionHandler(a, fn); } catch {} };
   set("play", () => audio.play().catch(() => {}));
-  set("pause", () => audio.pause());
+  set("pause", () => { startT.live = false; audio.pause(); });
   set("previoustrack", prev);
   set("nexttrack", next);
   set("seekto", (d) => seek(d.seekTime));
 }
 
-audio.addEventListener("ended", () => {
+function streamOver(failed) {
   const song = current();
-  const known = song && +song.duration > 0 ? +song.duration : 0;
+  if (!song) return;
+  const known = +song.duration > 0 ? +song.duration : 0;
   const t = audio.currentTime || 0;
   const at = play.offset + (heardOK(t) ? t : play.heard);
-  if (song && meter.playing && known - at > 3 && play.tries < 2) {
+  const missing = known ? known - at > 3 : failed;
+  if (failed && document.visibilityState === "hidden") logEvent("error", audio.error ? `code ${audio.error.code}` : "");
+  if (meter.playing && missing && play.tries < 2) {
     play.tries += 1;
     startStream(song, meter.playing.tier, Math.max(0, at - 0.5));
     audio.play().catch(() => {});
     emit();
     return;
   }
-  if (state.repeat === "one") { seek(0); audio.play().catch(() => {}); return; }
-  next();
+  if (!failed && state.repeat === "one") { seek(0); audio.play().catch(() => {}); return; }
+  if (failed && ++adv.fails > 3) { adv.fails = 0; audio.pause(); emit(); return; }
+  autoAdvance = true;
+  try { next(); } finally { autoAdvance = false; }
+}
+audio.addEventListener("ended", () => streamOver(false));
+audio.addEventListener("error", () => { if (audio.getAttribute("src")) streamOver(true); });
+audio.addEventListener("canplay", () => {
+  if (!adv.stuck || adv.retried || adv.gen !== play.gen || !audio.paused) return;
+  adv.retried = true;
+  audio.play().then(() => { adv.stuck = false; }).catch(() => {});
+});
+audio.addEventListener("playing", () => {
+  adv.fails = 0;
+  if (!adv.gen || adv.gen !== play.gen) return;
+  adv.gen = 0;
+  adv.stuck = false;
+  if (!adv.logged && document.visibilityState === "hidden") { adv.logged = true; logEvent("advance-ok", ""); }
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible" || !adv.stuck || adv.gen !== play.gen || !audio.paused) return;
+  adv.stuck = false;
+  audio.play().catch(() => {});
 });
 function heardOK(t) {
   return t >= play.heard && t - play.heard < 2 + Math.max(0, Date.now() - play.heardAt) / 1000 * (audio.playbackRate || 1);
@@ -399,7 +442,12 @@ function agentFamily() {
   return `${os}-${br}${standalone ? "-app" : ""}`;
 }
 
-function reportJump(from, to, expected) {
+function logEvent(event, detail) {
+  const t = audio.currentTime || 0;
+  reportJump(t, t, t, event, detail || "");
+}
+
+function reportJump(from, to, expected, event = "", detail = "") {
   if (watch.sent >= 20) return;
   watch.sent += 1;
   const song = current();
@@ -408,10 +456,26 @@ function reportJump(from, to, expected) {
     track: song ? song.id : "", format: spec.format || "original", kbps: spec.kbps || 0, quality: state.quality,
     from: play.offset + from, to: play.offset + to, expected: play.offset + expected, gap: to - expected,
     visibility: document.visibilityState, stalled: watch.stalled, buffered: play.offset + bufferedEnd(),
-    ready: audio.readyState, blob: !!play.blob, offset: play.offset, agent: agentFamily(),
+    ready: audio.readyState, blob: !!play.blob, offset: play.offset, agent: agentFamily(), event, detail,
   });
   fetch("/api/music/jumplog", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
 }
+
+function reportStart(ms) {
+  const spec = meter.playing || {};
+  const body = JSON.stringify({
+    ms: Math.round(ms), waits: startT.waits, tier: spec.tier || "", format: spec.format || spec.suffix || "",
+    kbps: spec.kbps || 0, quality: state.quality, preload: startT.preload, auto: startT.auto,
+  });
+  fetch("/api/music/startlog", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+}
+
+audio.addEventListener("waiting", () => { if (startT.live) startT.waits += 1; });
+audio.addEventListener("playing", () => {
+  if (!startT.live) return;
+  startT.live = false;
+  if (startT.gen === play.gen) reportStart(performance.now() - startT.at);
+});
 
 function checkJump() {
   const t = audio.currentTime || 0;
@@ -441,7 +505,6 @@ for (const ev of ["play", "pause", "seeking", "seeked", "emptied", "loadstart", 
 audio.addEventListener("playing", () => { watch.t = audio.currentTime || 0; watch.at = Date.now(); });
 for (const ev of ["play", "pause", "playing", "waiting", "seeked", "ratechange", "loadedmetadata", "durationchange"]) audio.addEventListener(ev, syncSession);
 
-audio.addEventListener("error", () => { if (play.tries > 0 && current()) next(); });
 audio.addEventListener("pause", () => { listen.last = -1; report(false); });
 audio.addEventListener("play", () => { listen.last = audio.currentTime; report(true); });
 audio.addEventListener("seeking", () => { listen.last = -1; });
