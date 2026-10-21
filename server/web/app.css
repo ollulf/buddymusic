@@ -526,13 +526,17 @@ footer.player.pb::before { content: ""; position: absolute; left: 0; right: 0; b
 .pb-label { position: absolute; left: 50%; top: 50%; width: 92%; height: 92%; transform: translate(-50%, -50%); border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: repeating-linear-gradient(45deg, var(--orange) 0 6px, var(--stripe) 6px 12px); }
 .pb-label img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .pb-label .hole { position: relative; width: 12%; height: 12%; border-radius: 50%; background: var(--bg); box-shadow: 0 0 0 2px var(--ink), 0 0 0 7px rgb(255 243 201 / .75), 0 0 0 9px var(--ink); }
-.pb-tab { position: absolute; left: var(--tl); bottom: calc(var(--bh) + var(--sb) - 4px); width: var(--tw); height: calc(var(--th) + 2px); background: var(--card); border: 2px solid var(--ink); border-bottom: 0; box-shadow: inset 2px 2px 0 var(--hi), inset -2px 0 0 var(--shade); display: flex; align-items: flex-end; justify-content: center; gap: 8px; padding: 0 8px 8px; z-index: 2; }
 .vz-house { --vz-bg: color-mix(in srgb, var(--accent) 9%, #040506); --vz-ghost: color-mix(in srgb, var(--accent) 12%, transparent); position: absolute; z-index: 1; left: 0; bottom: calc(var(--bh) + var(--sb) - 4px); width: calc(var(--tl) + 2px); height: calc(var(--th) + 2px); box-sizing: border-box; display: flex; align-items: flex-end; justify-content: center; padding: 0 6px 8px; background: var(--card); border: 2px solid var(--ink); border-right: 0; border-bottom: 0; border-left: 0; box-shadow: inset 0 2px 0 var(--hi), inset -2px 0 0 var(--shade); pointer-events: none; }
+.pb-tab { position: absolute; left: var(--tl); bottom: calc(var(--bh) + var(--sb) - 4px); width: var(--tw); height: calc(var(--th) + 2px); background: var(--card); border: 2px solid var(--ink); border-bottom: 0; box-shadow: inset 2px 2px 0 var(--hi), inset -2px 0 0 var(--shade); display: flex; align-items: flex-end; justify-content: center; gap: 6px; padding: 0 4px 4px; z-index: 2; }
 .vz-house[hidden] { display: none; }
 .vz-lcd { display: block; padding: 3px; background: var(--vz-bg); border: 2px solid var(--ink); box-shadow: inset 0 0 0 1px var(--screen-rim); image-rendering: pixelated; }
 @media (max-width: 420px) { .vz-house { padding: 0 4px 8px; } .vz-lcd { padding: 2px; } }
 footer.player.pb:has(.vz-house[hidden]) .pb-bay, footer.player.pb:not(:has(.vz-house)) .pb-bay { left: calc(50% - 110px); }
 .pb-tab::before { content: ""; position: absolute; left: 4px; right: 4px; top: 4px; height: 4px; background: var(--ink); box-shadow: 0 2px 0 var(--shade), 0 -1px 0 var(--rail); }
+.pb-tab button.pb-b { width: 52px; height: 40px; }
+.pb-tab button.pb-b.play { width: 56px; height: 44px; }
+.pb-tab button.pb-b::before { width: 20px; height: 20px; -webkit-mask-size: 20px 20px; mask-size: 20px 20px; }
+.pb-tab button.pb-b.play::before { width: 24px; height: 24px; -webkit-mask-size: 24px 24px; mask-size: 24px 24px; }
 button.pb-b { width: 44px; height: 32px; padding: 0; border: 2px solid var(--ink); border-radius: 0; background: var(--card); color: var(--fg); box-shadow: var(--bevel); display: inline-grid; place-items: center; cursor: pointer; font-size: 0; line-height: 0; }
 button.pb-b:active { transform: translate(1px, 1px); }
 button.pb-b.big { width: 40px; height: 40px; background: var(--accent); color: var(--accent-fg); box-shadow: inset 2px 2px 0 var(--accent-hi), inset -2px -2px 0 var(--accent-lo); }
