@@ -347,6 +347,7 @@ export function stopAll() {
   Object.assign(adv, { gen: 0, stuck: false, retried: false, logged: false, fails: 0 });
   Object.assign(startT, { gen: 0, live: false });
   meter.playing = null;
+  stall.at = 0;
   audio.pause();
   audio.removeAttribute("src");
   audio.load();
