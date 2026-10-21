@@ -673,8 +673,13 @@ audio.addEventListener("timeupdate", () => {
 });
 for (const ev of ["play", "pause", "loadedmetadata", "durationchange", "seeking", "seeked", "emptied"]) audio.addEventListener(ev, emit);
 
+const mobileVolume = (() => {
+  if (/iPhone|iPad|iPod|Android/.test(navigator.userAgent || "") || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) return true;
+  try { return matchMedia("(pointer: coarse)").matches && matchMedia("(hover: none)").matches; } catch { return false; }
+})();
 const vol = (() => {
   let v = 80, m = false;
+  if (mobileVolume) return { v: 100, m: false };
   try { const n = parseInt(localStorage.getItem("bm.volume"), 10); if (n >= 0 && n <= 100) v = n; m = localStorage.getItem("bm.muted") === "1"; } catch {}
   return { v, m };
 })();
@@ -815,7 +820,7 @@ export function renderBar(opts = {}) {
       h("div", { class: "bar-seek" }, pos, range, dur),
       h("div", { class: "pb-left" },
         h("div", { class: "pb-screen" }, h("div", { class: "pb-chips" }, netChip(net), rateB), info),
-        h("div", { class: "pb-btns" }, h("i", { class: "pb-grille" }), heartB, repeatB, shuffleB, volumeControl()))));
+        h("div", { class: "pb-btns" }, h("i", { class: "pb-grille" }), heartB, repeatB, shuffleB, mobileVolume ? null : volumeControl()))));
 
   bar.append(renderViz(audio, bar));
 
