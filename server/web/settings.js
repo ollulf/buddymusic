@@ -1,4 +1,4 @@
-import { settings, setQuality, setFormat, setPreload, PRELOADS, onChange, QUALITIES, FORMATS, qualityHint, opusSupported } from "./player.js";
+import { settings, setQuality, setFormat, setPreload, PRELOADS, onChange, QUALITIES, FORMATS, opusSupported } from "./player.js";
 import { t, lang, LANGS, setLang } from "./i18n.js";
 import { apiJSON, Unauthorized } from "./dom.js";
 import { vizEnabled, setVizEnabled, vizRisky, vizRouted } from "./viz.js";
@@ -46,22 +46,19 @@ function radios(name, keys, label, get, set) {
 
 function qualityRow() {
   return h("div", {},
-    h("p", { class: "muted" }, t("settings.qualityHint")),
-    radios("quality", QUALITIES, (k) => [t(`quality.${k}`), " ", h("span", { class: "muted" }, qualityHint(k))], () => settings().quality, setQuality),
+    radios("quality", QUALITIES, (k) => t(`quality.${k}`), () => settings().quality, setQuality),
     opusSupported ? null : h("p", { class: "muted" }, t("settings.noOpus")));
 }
 
 function formatRow() {
   return h("div", {},
-    h("p", { class: "muted" }, t("settings.formatHint")),
     radios("origformat", FORMATS, (k) => t(`format.${k}`), () => settings().format, setFormat));
 }
 
 
 function preloadRow() {
   return h("div", {},
-    h("p", { class: "muted" }, t("settings.preloadHint")),
-    radios("preload", PRELOADS, (k) => [t(`preload.${k}`), " ", h("span", { class: "muted" }, t(`preload.${k}Hint`))], () => settings().preload, setPreload));
+    radios("preload", PRELOADS, (k) => t(`preload.${k}`), () => settings().preload, setPreload));
 }
 
 export async function saveAvatar(file) {
@@ -184,7 +181,6 @@ function themeRow() {
   const bases = swatches("base", BASES, (k) => t(`base.${k}`), (b, [bg, card]) => { b.style.setProperty("--sw-a", bg); b.style.setProperty("--sw-b", card); }, baseGet, colourSetter("data-base", BASES, "classic", "bm.base"));
   const keys = swatches("key", KEYS, (k) => t(`key.${k}`), (b, [key, second]) => { b.style.setProperty("--sw-a", key); b.style.setProperty("--sw-b", second); }, keyGet, colourSetter("data-key", KEYS, "yellow", "bm.key"));
   return h("div", {},
-    h("p", { class: "muted" }, t("settings.themeHint")),
     h("div", { class: "swatch-label", id: "swatch-base-label" }, t("settings.base")),
     h("div", { class: "swatch-row", role: "radiogroup", "aria-labelledby": "swatch-base-label" }, bases),
     h("div", { class: "swatch-label", id: "swatch-key-label" }, t("settings.key")),
@@ -196,7 +192,6 @@ function vizRow() {
   box.checked = vizEnabled();
   const note = h("p", { class: "muted", hidden: box.checked || !vizRouted() }, t("settings.vizOffNote"));
   return h("div", {},
-    h("p", { class: "muted" }, t("settings.vizHint")),
     vizRisky ? h("p", { class: "muted" }, t("settings.vizIos")) : null,
     h("div", { class: "settings-radios" }, h("label", {}, box, " ", t("settings.vizOn"))),
     note);
@@ -204,7 +199,6 @@ function vizRow() {
 
 function languageRow() {
   return h("div", {},
-    h("p", { class: "muted" }, t("settings.languageHint")),
     radios("language", Object.keys(LANGS), (k) => LANGS[k], () => lang, setLang));
 }
 
@@ -224,7 +218,6 @@ function feedbackRow() {
   const sync = () => { send.disabled = !text.value.trim(); };
   text.addEventListener("input", () => { sync(); if (status.dataset.ok) { status.textContent = ""; delete status.dataset.ok; } });
   const form = h("form", { class: "feedback-form" },
-    h("p", { class: "muted" }, t("feedback.hint")),
     radios("feedbackkind", FEEDBACK_KINDS, (k) => t(`feedback.kind.${k}`), () => kind, (k) => { kind = k; }),
     text,
     h("div", { class: "feedback-actions" }, send, status));

@@ -65,9 +65,9 @@ export function renderQueue() {
   const opB = (label, glyph, fn, off = false) => h("button", { type: "button", class: "qp-op", disabled: off, "aria-label": label, title: label, onclick: (e) => { e.stopPropagation(); fn(); } }, glyph);
 
   const row = (q, i, s, n, ops) => {
-    const li = h("li", { class: n === i ? "cur" : n < i ? "done" : "", style: `--c:${spine(s)}` },
+    const li = h("li", { class: n === i ? "cur" : "", style: `--c:${spine(s)}` },
       h("span", { class: "sp" }),
-      h("span", { class: "n" }, n === i ? "▶" : String(n + 1)),
+      h("span", { class: "n" }, n === i ? "▶" : String(n - i)),
       h("span", { class: "t" }, s.title || t("player.unknownTitle"), h("i", {}, [s.artist, s.duration ? fmtTime(+s.duration) : ""].filter(Boolean).join(" · "))),
       h("span", { class: "ops" }, ops));
     li.tabIndex = 0;
@@ -86,6 +86,7 @@ export function renderQueue() {
     const kids = [];
     const rm = (n) => opB(t("queue.remove"), "✕", () => removeAt([n]));
     q.forEach((s, n) => {
+      if (n < i) return;
       if (n === first && up.length) kids.push(divider(t("queue.upNext")));
       if (n === last + 1 && n > i) kids.push(divider(t("queue.nextFrom")));
       let ops = [];
@@ -98,6 +99,12 @@ export function renderQueue() {
       kids.push(row(q, i, s, n, ops));
     });
     list.replaceChildren(...kids);
+  };
+
+  const tilt = (k) => {
+    let x = 0;
+    for (const ch of k) x = (x * 31 + ch.charCodeAt(0)) >>> 0;
+    return ["", " alt", " alt2"][x % 3];
   };
 
   const paint = () => {
@@ -117,7 +124,7 @@ export function renderQueue() {
     if (!shown) kids.push(h("span", { class: "case empty" }));
     for (let n = 0; n < shown; n++) {
       const r = runs[shown - 1 - n];
-      const c = h("span", { class: "case" + (r.size > 1 ? " album" : " single") + (n % 3 === 1 ? " alt" : n % 3 === 2 ? " alt2" : "") + (n === shown - 1 ? " top" : "") });
+      const c = h("span", { class: "case" + (r.size > 1 ? " album" : " single") + tilt(r.key) + (n === shown - 1 ? " top" : "") });
       c.style.setProperty("--c", spine(r.song));
       c.dataset.key = r.key;
       kids.push(c);
