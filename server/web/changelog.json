@@ -1,5 +1,25 @@
 [
   {
+    "version": "1.0.2210",
+    "date": "2026-10-22",
+    "en": [
+      "On iPhone, music keeps playing when the screen is locked or you switch tabs",
+      "Every CD you add to the queue gets its own colour",
+      "Bigger artist and album text, and the song title scrolls around the screen in a loop",
+      "Bigger play and skip buttons",
+      "The visualizer reaches the left edge, and the spinning CD is a bit smaller",
+      "No volume button on phones: use your phone's buttons"
+    ],
+    "de": [
+      "Auf dem iPhone läuft die Musik weiter, wenn der Bildschirm gesperrt ist oder du den Tab wechselst",
+      "Jede CD in der Warteschlange bekommt ihre eigene Farbe",
+      "Größerer Text für Künstler und Album, und der Songtitel läuft in einer Schleife über das Display",
+      "Größere Play- und Skip-Tasten",
+      "Der Visualizer reicht bis zum linken Rand, und die drehende CD ist etwas kleiner",
+      "Kein Lautstärke-Knopf auf dem Handy: nutze die Tasten deines Handys"
+    ]
+  },
+  {
     "version": "1.0.2110.14",
     "date": "2026-10-21",
     "en": [
