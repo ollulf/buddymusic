@@ -161,16 +161,27 @@ export const duration = () => {
 };
 export const position = () => play.offset + (audio.currentTime || 0);
 
+const tags = new WeakMap();
+let batches = 0;
+export const entryInfo = (song) => tags.get(song) || { manual: false, batch: 0, size: 0 };
+const isManual = (i) => !!(state.queue[i] && tags.has(state.queue[i]));
+const tagged = (songs) => {
+  const batch = ++batches;
+  return songs.map((s) => { const e = { ...s }; tags.set(e, { manual: true, batch, size: songs.length }); return e; });
+};
+
 function rebuildOrder() {
   const n = state.queue.length;
   state.order = [...Array(n).keys()];
   if (!state.shuffle) return;
-  const rest = state.order.filter((i) => i !== state.index);
+  const head = [];
+  for (let i = state.index + 1; isManual(i); i++) head.push(i);
+  const rest = state.order.filter((i) => i !== state.index && !head.includes(i));
   for (let i = rest.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [rest[i], rest[j]] = [rest[j], rest[i]];
   }
-  state.order = state.index >= 0 ? [state.index, ...rest] : rest;
+  state.order = state.index >= 0 ? [state.index, ...head, ...rest] : rest;
 }
 
 function step(dir) {
@@ -263,32 +274,37 @@ export function playList(songs, start = 0) {
   load(start);
 }
 
-export function playNext(songs) {
-  const at = state.index + 1;
-  state.queue.splice(at, 0, ...songs);
-  if (state.index < 0) { playList(state.queue, 0); return queued(songs); }
+function enqueue(songs, atEnd) {
+  if (!songs || !songs.length) return;
+  const items = tagged(songs);
+  if (state.index < 0) {
+    state.queue = items;
+    state.index = 0;
+    rebuildOrder();
+    load(0);
+    return queued(songs);
+  }
+  let at = state.index + 1;
+  if (atEnd) while (isManual(at)) at++;
+  state.queue.splice(at, 0, ...items);
   rebuildOrder();
   emit();
   queued(songs);
 }
+
+export function playNext(songs) { enqueue(songs, false); }
+export function addToQueue(songs) { enqueue(songs, true); }
 
 const queued = (songs) => document.dispatchEvent(new CustomEvent("queueadd", { detail: { songs } }));
 
-export function addToQueue(songs) {
-  if (state.index < 0) { playList(songs, 0); return queued(songs); }
-  state.queue.push(...songs);
-  rebuildOrder();
-  emit();
-  queued(songs);
-}
-
-export function removeSongs(ids) {
-  const gone = new Set(ids);
-  if (!state.queue.some((s) => gone.has(s.id))) return;
+function removeWhere(drop) {
+  const gone = state.queue.map((s, i) => drop(s, i));
+  if (!gone.some(Boolean)) return;
   const cur = current();
-  const kept = state.queue.slice(0, Math.max(state.index, 0)).filter((s) => !gone.has(s.id)).length;
-  state.queue = state.queue.filter((s) => !gone.has(s.id));
-  if (cur && gone.has(cur.id)) {
+  const curGone = state.index >= 0 && gone[state.index];
+  const kept = gone.slice(0, Math.max(state.index, 0)).filter((g) => !g).length;
+  state.queue = state.queue.filter((s, i) => !gone[i]);
+  if (curGone) {
     const playing = !audio.paused;
     state.index = kept < state.queue.length ? kept : -1;
     rebuildOrder();
@@ -298,6 +314,18 @@ export function removeSongs(ids) {
   state.index = state.queue.indexOf(cur);
   rebuildOrder();
   emit();
+}
+
+export function removeSongs(ids) {
+  const gone = new Set(ids);
+  removeWhere((s) => gone.has(s.id));
+}
+export function removeAt(indices) {
+  const gone = new Set(indices);
+  removeWhere((s, i) => gone.has(i));
+}
+export function clearManual() {
+  removeWhere((s, i) => i > state.index && tags.has(s));
 }
 
 export function jump(i) { if (state.queue[i]) load(i); }

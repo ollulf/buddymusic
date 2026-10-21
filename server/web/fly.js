@@ -9,6 +9,13 @@ let tapEl = null;
 let tapAt = 0;
 let rowEl = null;
 let rowAt = 0;
+let aimEl = null;
+let aimAt = 0;
+
+export function flyFrom(el) {
+  aimEl = el;
+  aimAt = performance.now();
+}
 
 const calm = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
@@ -21,13 +28,15 @@ const shown = (el) => {
 
 const center = (r) => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
 
-const sourcePoint = () => {
+const sourcePoint = (from) => {
+  if (from && shown(from)) return center(from.getBoundingClientRect());
+  if (aimEl && performance.now() - aimAt < RECENT && shown(aimEl)) return center(aimEl.getBoundingClientRect());
   if (tapEl && performance.now() - tapAt < RECENT && shown(tapEl)) return center(tapEl.getBoundingClientRect());
   if (rowEl && performance.now() - rowAt < RECENT * 5 && shown(rowEl)) return center(rowEl.getBoundingClientRect());
   return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 };
 
-const isAlbum = (songs) => songs.length > 1 && !!songs[0].albumId && songs.every((s) => s.albumId === songs[0].albumId);
+const isAlbum = (songs) => songs.length > 1;
 
 const once = (el, cls, ms) => {
   el.classList.remove(cls);
@@ -48,7 +57,7 @@ const toast = (songs, album) => {
   setTimeout(() => pop.remove(), 900);
 };
 
-const fly = (songs) => {
+const fly = (songs, src) => {
   if (!songs || !songs.length) return;
   const album = isAlbum(songs);
   const stack = document.querySelector(".cdq");
@@ -60,7 +69,8 @@ const fly = (songs) => {
   const target = fresh || stack.querySelector(".case.top") || cases;
   if (fresh) { fresh.classList.remove("drop"); fresh.classList.add("wait"); }
 
-  const from = sourcePoint();
+  const from = sourcePoint(src);
+  aimEl = null;
   const tr = target.getBoundingClientRect();
   const to = fresh ? center(tr) : { x: tr.left + tr.width / 2, y: tr.top - (album ? 10 : 4) };
   const peak = Math.min(from.y, to.y) - Math.max(60, Math.abs(to.x - from.x) * 0.25);
@@ -104,4 +114,4 @@ document.addEventListener("pointerdown", (e) => {
   if (li) { rowEl = li; rowAt = performance.now(); }
 }, true);
 
-document.addEventListener("queueadd", (e) => fly(e.detail && e.detail.songs));
+document.addEventListener("queueadd", (e) => fly(e.detail && e.detail.songs, e.detail && e.detail.from));
