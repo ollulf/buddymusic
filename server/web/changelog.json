@@ -1,11 +1,11 @@
 [
   {
-    "version": "1.0.2110.8",
+    "version": "1.0.2110.9",
     "date": "2026-10-21",
     "en": [
-      "Your queue as a stack of CDs next to the player: albums thick, songs slim, one tap opens it, and new songs fly onto the stack",
-      "Swipe a song right to queue it, left to favourite it; everything else is in the ⋯ menu",
-      "Song titles on a retro LCD screen, and a pixel spectrum next to play/pause (switch it off in Settings)",
+      "Your queue as a stack of CDs next to the player: only songs you add yourself show up, a whole album added at once is one thick CD, and they play before the rest of the album",
+      "Swipe a song right to queue it and watch it fly onto the stack, left to favourite it; everything else is in the ⋯ menu",
+      "Song titles on a retro LCD screen, and a wide pixel spectrum next to play/pause, now on for everyone (switch it off in Settings)",
       "Pick your own look in Settings: a base colour and a key colour",
       "Playback is more reliable: it recovers from network drops and keeps playing on iPhone in the background",
       "A small Wi-Fi sign shows when your connection is slow",
@@ -14,9 +14,9 @@
       "Fresh pixel look: new icons, CD frames, clearer numbers, tidier pages, and nothing hides behind the CD anymore"
     ],
     "de": [
-      "Deine Warteschlange als CD-Stapel neben dem Player: Alben dick, Songs dünn, ein Tipp öffnet sie, neue Songs fliegen auf den Stapel",
-      "Song nach rechts wischen zum Einreihen, nach links für Favoriten; alles andere im ⋯-Menü",
-      "Songtitel auf einem Retro-LCD und ein Pixel-Spektrum neben Play/Pause (in den Einstellungen abschaltbar)",
+      "Deine Warteschlange als CD-Stapel neben dem Player: nur Songs, die du selbst hinzufügst, ein ganzes Album auf einmal ist eine dicke CD, und sie laufen vor dem Rest des Albums",
+      "Song nach rechts wischen zum Einreihen und zusehen, wie er auf den Stapel fliegt, nach links für Favoriten; alles andere im ⋯-Menü",
+      "Songtitel auf einem Retro-LCD und ein breites Pixel-Spektrum neben Play/Pause, jetzt für alle an (in den Einstellungen abschaltbar)",
       "Eigener Look in den Einstellungen: Basis- und Akzentfarbe wählen",
       "Zuverlässigere Wiedergabe: fängt sich nach Netzaussetzern und spielt auf dem iPhone im Hintergrund weiter",
       "Ein kleines WLAN-Zeichen zeigt, wenn die Verbindung langsam ist",
