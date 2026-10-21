@@ -481,6 +481,10 @@ body.settings-open { overflow: hidden; }
 .settings-section, .settings-head { box-sizing: border-box; width: 100%; min-width: 0; }
 .settings-section h3 { margin: 12px 0 4px; font-size: 1rem; }
 .settings-radios { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+.feedback-form { width: 100%; }
+.feedback-text { box-sizing: border-box; width: 100%; min-height: 96px; resize: vertical; font: inherit; font-size: .92rem; padding: 6px 8px; color: var(--fg); background: var(--bg); border: 2px solid var(--ink); box-shadow: inset 2px 2px 0 var(--shade); border-radius: 0; }
+.feedback-list li > .feedback-msg { grid-column: 1 / -1; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.feedback-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; }
 .settings-radios label { display: flex; align-items: baseline; gap: 4px; cursor: pointer; }
 .swatch-label { font-size: .88rem; color: var(--muted); margin: 10px 0 4px; }
 .swatch-row { display: flex; flex-wrap: wrap; gap: 6px; }

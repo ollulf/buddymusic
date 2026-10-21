@@ -6,23 +6,26 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"time"
 )
 
 type App struct {
-	cfg     *Config
-	store   *Store
-	nav     *Navidrome
-	limiter loginLimiter
-	scanner *Scanner
-	admins  adminCache
-	seen    seenThrottle
-	jumps   jumpLimiter
-	starts  jumpLimiter
+	cfg      *Config
+	store    *Store
+	nav      *Navidrome
+	limiter  loginLimiter
+	scanner  *Scanner
+	admins   adminCache
+	seen     seenThrottle
+	jumps    jumpLimiter
+	starts   jumpLimiter
+	feedback jumpLimiter
 }
 
 func NewApp(cfg *Config, store *Store) *App {
 	nav := NewNavidrome(cfg.NavidromeURL)
-	return &App{cfg: cfg, store: store, nav: nav, scanner: NewScanner(nav, cfg.ScanUser, cfg.ScanPassword, cfg.ScanDelay)}
+	return &App{cfg: cfg, store: store, nav: nav, scanner: NewScanner(nav, cfg.ScanUser, cfg.ScanPassword, cfg.ScanDelay),
+		feedback: jumpLimiter{window: 10 * time.Minute, max: 5}}
 }
 
 func (a *App) Routes() http.Handler {
@@ -63,7 +66,9 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("POST /api/music/progress/{id}", a.requireUser(a.handleProgress))
 	mux.Handle("POST /api/music/jumplog", a.requireUser(a.handleJumpLog))
 	mux.Handle("POST /api/music/startlog", a.requireUser(a.handleStartLog))
+	mux.Handle("POST /api/feedback", a.requireUser(a.handleFeedback))
 	mux.Handle("GET /api/admin/stats", a.requireUser(a.handleAdminStats))
+	mux.Handle("GET /api/admin/feedback", a.requireUser(a.handleAdminFeedback))
 	mux.Handle("DELETE /api/music/track/{id}", a.requireUser(a.adminDelete(a.loadTrack)))
 	mux.Handle("DELETE /api/music/album/{id}", a.requireUser(a.adminDelete(a.loadAlbum)))
 	mux.Handle("GET /", a.webHandler())
