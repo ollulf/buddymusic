@@ -1,28 +1,28 @@
 [
   {
-    "version": "1.0.2110.7",
+    "version": "1.0.2110.8",
     "date": "2026-10-21",
     "en": [
-      "Your queue as a stack of CDs next to the player (albums thick, songs slim): tap it to see, reorder or remove songs",
-      "Song titles on a retro LCD screen; long titles scroll",
+      "Your queue as a stack of CDs next to the player: albums thick, songs slim, one tap opens it, and new songs fly onto the stack",
+      "Swipe a song right to queue it, left to favourite it; everything else is in the ⋯ menu",
+      "Song titles on a retro LCD screen, and a pixel spectrum next to play/pause (switch it off in Settings)",
       "Pick your own look in Settings: a base colour and a key colour",
       "Playback is more reliable: it recovers from network drops and keeps playing on iPhone in the background",
       "A small Wi-Fi sign shows when your connection is slow",
       "NEW stays on an album until you open it",
-      "Send feedback straight from Settings",
-      "\"What's new\" and the app version in the profile menu",
-      "Fresh pixel look: new tab icons, CD frames, clearer numbers, tidier pages, and nothing hides behind the CD anymore"
+      "Send feedback straight from Settings; \"What's new\" and the app version are in the profile menu",
+      "Fresh pixel look: new icons, CD frames, clearer numbers, tidier pages, and nothing hides behind the CD anymore"
     ],
     "de": [
-      "Deine Warteschlange als CD-Stapel neben dem Player (Alben dick, Songs dünn): antippen zum Ansehen, Umsortieren oder Entfernen",
-      "Songtitel auf einem Retro-LCD; lange Titel laufen durch",
+      "Deine Warteschlange als CD-Stapel neben dem Player: Alben dick, Songs dünn, ein Tipp öffnet sie, neue Songs fliegen auf den Stapel",
+      "Song nach rechts wischen zum Einreihen, nach links für Favoriten; alles andere im ⋯-Menü",
+      "Songtitel auf einem Retro-LCD und ein Pixel-Spektrum neben Play/Pause (in den Einstellungen abschaltbar)",
       "Eigener Look in den Einstellungen: Basis- und Akzentfarbe wählen",
       "Zuverlässigere Wiedergabe: fängt sich nach Netzaussetzern und spielt auf dem iPhone im Hintergrund weiter",
       "Ein kleines WLAN-Zeichen zeigt, wenn die Verbindung langsam ist",
       "NEU bleibt an einem Album, bis du es öffnest",
-      "Feedback direkt aus den Einstellungen senden",
-      "„Neuigkeiten“ und die App-Version im Profilmenü",
-      "Frischer Pixel-Look: neue Tab-Symbole, CD-Rahmen, klarere Zahlen, aufgeräumte Seiten, und nichts verschwindet mehr hinter der CD"
+      "Feedback direkt aus den Einstellungen senden; „Neuigkeiten“ und die App-Version im Profilmenü",
+      "Frischer Pixel-Look: neue Symbole, CD-Rahmen, klarere Zahlen, aufgeräumte Seiten, und nichts verschwindet mehr hinter der CD"
     ]
   }
 ]
