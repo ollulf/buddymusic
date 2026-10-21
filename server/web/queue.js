@@ -48,13 +48,26 @@ export function renderQueue() {
     root.classList.remove("open");
     setLift(false);
     stack.setAttribute("aria-expanded", "false");
+    fit();
+  };
+  const topEdge = () => {
+    const top = document.querySelector("header.top");
+    return top ? Math.max(0, top.getBoundingClientRect().bottom) : 0;
+  };
+  const fit = () => {
+    if (!stack.isConnected) return;
+    const room = Math.max(60, Math.floor(stack.getBoundingClientRect().bottom - topEdge() - 6));
+    const avail = isOpen() ? Math.min(room, 132) : room;
+    stack.style.setProperty("--cdq-max", `${avail}px`);
+    stack.classList.toggle("deep", cases.offsetHeight + 2 > avail);
+    panel.style.setProperty("--cdq-h", `${Math.min(cases.offsetHeight, avail)}px`);
   };
   const open = () => {
-    const top = document.querySelector("header.top");
-    panel.style.setProperty("--qp-top", `${top ? Math.max(0, top.getBoundingClientRect().bottom + 2) : 0}px`);
+    panel.style.setProperty("--qp-top", `${topEdge() + 2}px`);
     panel.hidden = false;
     root.classList.add("open");
     stack.setAttribute("aria-expanded", "true");
+    fit();
     paintList();
     list.scrollTop = 0;
     closeB.focus({ preventScroll: true });
@@ -115,7 +128,6 @@ export function renderQueue() {
     }
     const room = Math.max(6, Math.ceil(window.innerHeight / 7) + 4);
     const shown = Math.min(runs.length, room);
-    stack.classList.toggle("deep", runs.length > 5);
     const kids = [];
     if (!shown) kids.push(h("span", { class: "case empty" }));
     for (let n = 0; n < shown; n++) {
@@ -126,6 +138,7 @@ export function renderQueue() {
       kids.push(c);
     }
     cases.replaceChildren(...kids);
+    fit();
     const label = up.length ? t("queue.open", { n: up.length }) : `${t("queue.title")}: ${t("queue.empty")}`;
     stack.setAttribute("aria-label", label);
     stack.title = label;
@@ -156,5 +169,7 @@ export function renderQueue() {
 
   onChange(paint);
   paint();
+  window.addEventListener("resize", fit);
+  requestAnimationFrame(fit);
   return root;
 }

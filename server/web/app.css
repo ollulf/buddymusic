@@ -626,7 +626,7 @@ button.pb-b.vol[aria-expanded="true"] { color: var(--accent); }
 }
 .cdq-wrap { display: contents; }
 .cdq { position: absolute; z-index: 3; left: calc(var(--tl) + var(--tw) + 12px); bottom: calc(var(--bh) + var(--sb) - 4px); width: 108px; min-height: 44px; padding: 0 0 2px; margin: 0; border: 0; background: none; box-shadow: none; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; cursor: pointer; color: inherit; font: inherit; }
-.cdq.deep { max-height: calc(100vh - var(--bh) - var(--sb) - 20px); max-height: calc(100dvh - var(--bh) - var(--sb) - 20px); overflow: clip; overflow-clip-margin: 0 40px; padding-top: 16px; -webkit-mask-image: linear-gradient(to bottom, transparent 0 24px, rgb(0 0 0 / .25) 24px 48px, rgb(0 0 0 / .5) 48px 72px, rgb(0 0 0 / .75) 72px 96px, #000 96px); mask-image: linear-gradient(to bottom, transparent 0 24px, rgb(0 0 0 / .25) 24px 48px, rgb(0 0 0 / .5) 48px 72px, rgb(0 0 0 / .75) 72px 96px, #000 96px); }
+.cdq.deep { max-height: var(--cdq-max, 60vh); overflow: clip; overflow-clip-margin: 0 40px; -webkit-mask-image: linear-gradient(to bottom, transparent 0 8px, rgb(0 0 0 / .25) 8px 24px, rgb(0 0 0 / .5) 24px 40px, rgb(0 0 0 / .75) 40px 56px, #000 56px); mask-image: linear-gradient(to bottom, transparent 0 8px, rgb(0 0 0 / .25) 8px 24px, rgb(0 0 0 / .5) 24px 40px, rgb(0 0 0 / .75) 40px 56px, #000 56px); }
 .cdq:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .cdq-cases { display: flex; flex-direction: column; align-items: center; }
 .cdq .case { display: block; width: 100px; height: 10px; margin-top: -1px; border: 2px solid var(--ink); background: var(--c); box-shadow: inset 0 2px 0 rgb(255 255 255 / .35), inset 6px 0 0 rgb(0 0 0 / .35); position: relative; box-sizing: border-box; }
@@ -636,6 +636,7 @@ button.pb-b.vol[aria-expanded="true"] { color: var(--accent); }
 .cdq .case.top { transition: transform .24s steps(4); }
 .cdq-wrap.lift .case.top { transform: translateY(-14px) rotate(-6deg); }
 .cdq-wrap.open .case.top { visibility: hidden; }
+.cdq-wrap.open .cdq { z-index: 6; }
 @media (hover: hover) { .cdq:hover .case.top { transform: translateY(-14px) rotate(-6deg); } }
 .cdq .case.empty { background: transparent; border-style: dashed; border-color: var(--muted); box-shadow: none; }
 .cdq .case.empty::after { display: none; }
@@ -652,7 +653,7 @@ button.pb-b.vol[aria-expanded="true"] { color: var(--accent); }
 .qp-head small { flex: 1; font: 11px var(--num); color: var(--muted); }
 .qp-x, .qp-op, .qp-clear { border: 2px solid var(--ink); background: var(--card); color: var(--fg); box-shadow: var(--bevel); font: 12px var(--pix); cursor: pointer; padding: 0; }
 .qp-x { width: 28px; height: 26px; }
-.qp-list { list-style: none; margin: 0; padding: var(--sp-1) var(--sp-2) calc(var(--th) + 8px); flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; font-size: var(--fs-md); }
+.qp-list { list-style: none; margin: 0; padding: var(--sp-1) var(--sp-2) max(calc(var(--th) + 8px), calc(var(--cdq-h, 0px) + 12px)); flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; font-size: var(--fs-md); }
 .qp-list li { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2); background: var(--card); border-bottom: 2px dashed var(--shade); cursor: pointer; }
 .qp-list li:last-child { border-bottom: 0; }
 .qp-list li:hover, .qp-list li:focus-visible { background: var(--shade); outline: none; }
@@ -685,6 +686,7 @@ button.pb-b.vol[aria-expanded="true"] { color: var(--accent); }
   .cdq .case.top { transition: none; animation: none; }
   .cdq .case.land, .cdq-cases.thud { animation: none; }
 }
+header.top:has(.profile-menu:not([hidden])) { z-index: calc(var(--z-player) + 1); }
 header.top .tabs { display: flex; gap: var(--sp-1); min-width: 0; }
 header.top .tab, header.top .dice, header.top .saver-btn, header.top .avatar { box-sizing: border-box; height: 40px; border: 2px solid var(--ink); border-radius: 0; background: var(--card); box-shadow: var(--bevel); }
 header.top .dice, header.top .saver-btn, header.top .avatar { width: 40px; }
