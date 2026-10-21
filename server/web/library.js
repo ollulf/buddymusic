@@ -4,6 +4,7 @@ import * as player from "./player.js";
 import { heartButton, isStarred, toggleStar } from "./favs.js";
 import { addToPlaylistButton, openAddSheet, toast } from "./playlists.js";
 import { rowMenuButton, swipeRow } from "./rowactions.js";
+import { flyFrom } from "./fly.js";
 
 const deletedSongs = new Set();
 const deletedAlbums = new Set();
@@ -67,12 +68,16 @@ export function songRow(songs, i, opts = {}) {
     toast(t(on ? "song.faved" : "song.unfaved", { title: s.title || t("player.unknownTitle") }));
   };
   const queue = () => {
+    flyFrom(li);
     player.addToQueue([s]);
-    toast(t("song.queued", { title: s.title || t("player.unknownTitle") }));
+  };
+  const next = () => {
+    flyFrom(li);
+    player.playNext([s]);
   };
   const menu = rowMenuButton(() => [
     { icon: fav() ? "♥" : "♡", label: t(fav() ? "song.unfav" : "song.fav"), run: toggleFav },
-    { icon: "⤵", label: t("song.playNext"), run: () => player.playNext([s]) },
+    { icon: "⤵", label: t("song.playNext"), run: next },
     { icon: "+", label: t("song.addToQueue"), run: queue },
     { icon: "☰", label: `${t("playlists.addTo")}…`, run: () => openAddSheet([s], opts) },
     ...(opts.menu || []),
