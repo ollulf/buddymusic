@@ -24,6 +24,7 @@ const shellHead = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
 <title>buddymusic</title>
+<script src="/theme.js"></script>
 <link rel="stylesheet" href="/app.css">
 <script src="/vendor/jsmediatags.min.js" defer></script>
 <script type="module" src="/app.js"></script>
@@ -97,7 +98,7 @@ func loadStatic() map[string]*staticFile {
 			cache = "public, max-age=604800"
 		}
 		files["/"+p] = newStaticFile(body, ctype, cache)
-		if strings.HasSuffix(p, ".js") && !strings.HasPrefix(p, "vendor/") && p != "app.js" {
+		if strings.HasSuffix(p, ".js") && !strings.HasPrefix(p, "vendor/") && p != "app.js" && p != "theme.js" {
 			modules = append(modules, p)
 		}
 		return nil

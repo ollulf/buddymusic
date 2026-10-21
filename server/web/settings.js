@@ -127,6 +127,68 @@ function profileHeader({ user, avatar, onAvatar, onLogin }) {
   return h("div", { class: "settings-profile" }, pic, picker, h("div", { class: "settings-user" }, user), reset, status);
 }
 
+const BASES = { classic: ["#1a1c2c", "#29366f"], slate: ["#171b22", "#262c37"], graphite: ["#1c1b19", "#2b2926"], dusk: ["#1b1824", "#2a2538"], moss: ["#151c16", "#223024"], night: ["#0e0f12", "#1a1c21"] };
+const KEYS = { yellow: ["#ffcd75", "#ef7d57"], coral: ["#ff8a6b", "#ffcd75"], pink: ["#ff6fc8", "#4fe0f0"], purple: ["#b98cff", "#ff8ad8"], blue: ["#6fa8ff", "#ff9e6b"], cyan: ["#4fe0f0", "#ff6fc8"], green: ["#5ee08a", "#c39bff"], lime: ["#c8f54a", "#6fa8ff"] };
+
+function colourGetter(attr, all, def) {
+  return () => {
+    const v = document.documentElement.getAttribute(attr);
+    return v in all ? v : def;
+  };
+}
+
+function colourSetter(attr, all, def, store) {
+  return (k) => {
+    if (!(k in all)) return;
+    if (k === def) document.documentElement.removeAttribute(attr);
+    else document.documentElement.setAttribute(attr, k);
+    try { localStorage.setItem(store, k); } catch {}
+  };
+}
+
+function swatches(name, all, label, paint, get, set) {
+  const btns = Object.keys(all).map((k) => {
+    const b = h("button", { type: "button", role: "radio", class: `swatch swatch-${name}`, title: label(k), "aria-label": label(k), "data-value": k });
+    paint(b, all[k]);
+    return b;
+  });
+  const sync = () => btns.forEach((b) => {
+    const on = b.dataset.value === get();
+    b.setAttribute("aria-checked", on ? "true" : "false");
+    b.tabIndex = on ? 0 : -1;
+  });
+  const pick = (i) => {
+    set(btns[i].dataset.value);
+    sync();
+    btns[i].focus();
+  };
+  btns.forEach((b, i) => {
+    b.addEventListener("click", () => pick(i));
+    b.addEventListener("keydown", (e) => {
+      const n = btns.length;
+      const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+      if (step) { e.preventDefault(); pick((i + step + n) % n); }
+      else if (e.key === "Home") { e.preventDefault(); pick(0); }
+      else if (e.key === "End") { e.preventDefault(); pick(n - 1); }
+    });
+  });
+  sync();
+  return btns;
+}
+
+function themeRow() {
+  const baseGet = colourGetter("data-base", BASES, "classic");
+  const keyGet = colourGetter("data-key", KEYS, "yellow");
+  const bases = swatches("base", BASES, (k) => t(`base.${k}`), (b, [bg, card]) => { b.style.setProperty("--sw-a", bg); b.style.setProperty("--sw-b", card); }, baseGet, colourSetter("data-base", BASES, "classic", "bm.base"));
+  const keys = swatches("key", KEYS, (k) => t(`key.${k}`), (b, [key, second]) => { b.style.setProperty("--sw-a", key); b.style.setProperty("--sw-b", second); }, keyGet, colourSetter("data-key", KEYS, "yellow", "bm.key"));
+  return h("div", {},
+    h("p", { class: "muted" }, t("settings.themeHint")),
+    h("div", { class: "swatch-label", id: "swatch-base-label" }, t("settings.base")),
+    h("div", { class: "swatch-row", role: "radiogroup", "aria-labelledby": "swatch-base-label" }, bases),
+    h("div", { class: "swatch-label", id: "swatch-key-label" }, t("settings.key")),
+    h("div", { class: "swatch-row", role: "radiogroup", "aria-labelledby": "swatch-key-label" }, keys));
+}
+
 function languageRow() {
   return h("div", {},
     h("p", { class: "muted" }, t("settings.languageHint")),
@@ -135,6 +197,7 @@ function languageRow() {
 
 const ITEMS = [
   { id: "language", label: () => t("settings.language"), render: languageRow },
+  { id: "theme", label: () => t("settings.theme"), render: themeRow },
   { id: "quality", label: () => t("settings.quality"), render: qualityRow },
   { id: "format", label: () => t("settings.format"), render: formatRow },
   { id: "preload", label: () => t("settings.preload"), render: preloadRow },

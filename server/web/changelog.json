@@ -1,0 +1,76 @@
+[
+  {
+    "version": "1.0.2110.4",
+    "date": "2026-10-21",
+    "en": [
+      "New colours: pick a base and a key colour separately in Settings (6 bases, 8 key colours)",
+      "The old named colour schemes are replaced; your choice moves to the closest base and key colour",
+      "\"What's new\" in the profile menu shows what changed in each version"
+    ],
+    "de": [
+      "Neue Farben: Basis und Akzentfarbe getrennt in den Einstellungen wählen (6 Basen, 8 Akzentfarben)",
+      "Die alten Farbschemata sind ersetzt; deine Wahl wechselt zur passenden Basis und Akzentfarbe",
+      "„Neuigkeiten“ im Profilmenü zeigt, was sich in jeder Version geändert hat"
+    ]
+  },
+  {
+    "version": "1.0.2110.3",
+    "date": "2026-10-21",
+    "en": [
+      "Numbers (times, track numbers, volume, stats) use the clearer Departure Mono font",
+      "The library loads a little faster",
+      "The admin page shows how long songs take to start",
+      "Picking another song stops the unused preload",
+      "NEW stays on an album until you open it",
+      "Big album covers are shrunk on upload",
+      "iPhone: after a stream error, playback moves on to the next song instead of going silent"
+    ],
+    "de": [
+      "Zahlen (Zeiten, Titelnummern, Lautstärke, Statistiken) nutzen die klarere Schrift Departure Mono",
+      "Die Bibliothek lädt etwas schneller",
+      "Die Admin-Seite zeigt, wie lange Songs zum Starten brauchen",
+      "Wählst du einen anderen Song, wird das ungenutzte Vorladen gestoppt",
+      "NEU bleibt an einem Album, bis du es öffnest",
+      "Große Albumcover werden beim Hochladen verkleinert",
+      "iPhone: Nach einem Stream-Fehler geht es mit dem nächsten Song weiter, statt still zu bleiben"
+    ]
+  },
+  {
+    "version": "1.0.2110.2",
+    "date": "2026-10-21",
+    "en": [
+      "Header buttons have a bevel again",
+      "Softer dark fade at the edge of the play window",
+      "Bigger CD",
+      "Square play/pause button",
+      "Removed \"Saved on this device\" from the settings",
+      "The CD's glow moves with it when it tucks away",
+      "White CD rim and brighter text",
+      "New pixel CD frame (round 2)"
+    ],
+    "de": [
+      "Die Buttons oben haben wieder eine Kante",
+      "Weicherer dunkler Verlauf am Rand des Wiedergabefensters",
+      "Größere CD",
+      "Eckiger Play/Pause-Button",
+      "„Auf diesem Gerät gespeichert“ aus den Einstellungen entfernt",
+      "Das Leuchten der CD wandert mit, wenn sie sich wegklappt",
+      "Weißer CD-Rand und hellere Schrift",
+      "Neuer Pixel-CD-Rahmen (Runde 2)"
+    ]
+  },
+  {
+    "version": "1.0.2110",
+    "date": "2026-10-21",
+    "en": [
+      "Version number in the profile menu",
+      "New pixel icons for the top tabs",
+      "New pixel CD frame for albums"
+    ],
+    "de": [
+      "Versionsnummer im Profilmenü",
+      "Neue Pixel-Icons für die Tabs oben",
+      "Neuer Pixel-CD-Rahmen für Alben"
+    ]
+  }
+]
