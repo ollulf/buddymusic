@@ -34,7 +34,8 @@ export function renderQueue() {
   const root = h("div", { class: "cdq-wrap" }, stack, panel);
 
   let lastSig = "";
-  let lastUp = -1;
+  let lastRuns = null;
+  let lastUp = 0;
   const upcoming = () => { const q = queue(); const c = current(); const i = c ? q.indexOf(c) : -1; return { q, i, up: q.slice(i + 1) }; };
 
   const setLift = (on) => root.classList.toggle("lift", on);
@@ -92,7 +93,7 @@ export function renderQueue() {
     for (const s of up) {
       const last = runs[runs.length - 1];
       if (last && s.albumId && last.albumId === s.albumId) last.n++;
-      else runs.push({ albumId: s.albumId, song: s, n: 1 });
+      else runs.push({ albumId: s.albumId, song: s, n: 1, key: (s.albumId || "") + ":" + s.id });
     }
     const shown = Math.min(runs.length, MAX);
     const kids = [];
@@ -101,16 +102,19 @@ export function renderQueue() {
       const r = runs[shown - 1 - n];
       const c = h("span", { class: "case" + (r.n > 1 ? " album" : " single") + (n % 3 === 1 ? " alt" : n % 3 === 2 ? " alt2" : "") + (n === shown - 1 ? " top" : "") });
       c.style.setProperty("--c", spine(r.song));
+      c.dataset.key = r.key;
       kids.push(c);
     }
     cases.replaceChildren(...kids);
     const label = up.length ? t("queue.open", { n: up.length }) : `${t("queue.title")}: ${t("queue.empty")}`;
     stack.setAttribute("aria-label", label);
     stack.title = label;
-    if (lastUp >= 0 && up.length > lastUp && shown && !calm()) {
-      const topCase = cases.querySelector(".case.top");
-      if (topCase) { topCase.classList.add("drop"); topCase.addEventListener("animationend", () => topCase.classList.remove("drop"), { once: true }); }
+    if (lastRuns && up.length > lastUp && !calm()) {
+      const added = runs.slice(0, shown).find((r) => !lastRuns.has(r.key));
+      const el = added && [...cases.children].find((c) => c.dataset.key === added.key);
+      if (el) { el.classList.add("drop"); el.addEventListener("animationend", () => el.classList.remove("drop"), { once: true }); }
     }
+    lastRuns = new Set(runs.map((r) => r.key));
     lastUp = up.length;
     if (!q.length) close();
     else if (isOpen()) paintList();
