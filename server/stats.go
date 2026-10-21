@@ -154,6 +154,9 @@ func (s *Store) PurgeStats(before time.Time) error {
 	if _, err := s.db.Exec(`DELETE FROM play_events WHERE started_at < ?`, cut); err != nil {
 		return err
 	}
+	if _, err := s.db.Exec(`DELETE FROM start_events WHERE at < ?`, cut); err != nil {
+		return err
+	}
 	_, err := s.db.Exec(`DELETE FROM user_seen WHERE last_seen < ?`, cut)
 	return err
 }
@@ -202,6 +205,7 @@ type Dashboard struct {
 	Users      []*UserStats `json:"users"`
 	NowPlaying []NowPlaying `json:"nowPlaying"`
 	Logins     []LoginEvent `json:"logins"`
+	Starts     *StartStats  `json:"starts"`
 }
 
 func scanEach(rows *sql.Rows, err error, fn func(*sql.Rows) error) error {
@@ -351,6 +355,11 @@ func (s *Store) Dashboard(now time.Time, days int) (*Dashboard, error) {
 		}
 		return out.Users[i].User < out.Users[j].User
 	})
+	starts, err := s.StartStats(now)
+	if err != nil {
+		return nil, err
+	}
+	out.Starts = starts
 	return out, nil
 }
 

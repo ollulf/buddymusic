@@ -113,6 +113,8 @@ const meter = { t0: 0, b0: 0, done: false, playing: null, started: false };
 const play = { offset: 0, tries: 0, blob: "", heard: 0, heardAt: 0, gen: 0 };
 const watch = { t: -1, at: 0, stalled: false, sent: 0 };
 const pre = { url: "", blob: "", ctrl: null, speed: 0 };
+const startT = { at: 0, gen: 0, waits: 0, preload: false, auto: false, live: false };
+let autoAdvance = false;
 
 function bufferedEnd() {
   const b = audio.buffered;
@@ -215,7 +217,13 @@ function load(i, autoplay = true) {
   const song = current();
   if (!song) { audio.removeAttribute("src"); audio.load(); emit(); return; }
   startStream(song, pickTier(song, true));
-  if (autoplay) audio.play().catch(() => {});
+  const preloaded = !!play.blob || (!!preloader.src && preloader.src === audio.src);
+  dropPreload(audio.src);
+  startT.live = false;
+  if (autoplay) {
+    Object.assign(startT, { at: performance.now(), gen: play.gen, waits: 0, preload: preloaded, auto: autoAdvance, live: true });
+    audio.play().catch(() => { startT.live = false; });
+  }
   fetch(`/api/music/scrobble/${encodeURIComponent(song.id)}?submission=false`, { method: "POST" }).catch(() => {});
   updateSession();
   syncSession();
@@ -263,7 +271,7 @@ export function removeSongs(ids) {
 }
 
 export function jump(i) { if (state.queue[i]) load(i); }
-export function toggle() { if (!current()) return; audio.paused ? audio.play().catch(() => {}) : audio.pause(); }
+export function toggle() { if (!current()) return; if (audio.paused) audio.play().catch(() => {}); else { startT.live = false; audio.pause(); } }
 export function next() { const i = step(1); if (i >= 0) load(i); else { audio.pause(); emit(); } }
 export function prev() {
   if (position() > 3) { seek(0); return; }
@@ -301,11 +309,11 @@ export function setPreload(m) {
   if (m === "off") dropPreload();
   emit();
 }
-function dropPreload() {
+function dropPreload(keep = "") {
   if (pre.ctrl) pre.ctrl.abort();
   if (pre.blob) URL.revokeObjectURL(pre.blob);
   Object.assign(pre, { url: "", blob: "", ctrl: null });
-  if (preloader.src) { preloader.removeAttribute("src"); preloader.load(); }
+  if (preloader.src && preloader.src !== keep) { preloader.removeAttribute("src"); preloader.load(); }
 }
 export function setQuality(q) {
   if (!QUALITIES.includes(q)) return;
@@ -366,7 +374,7 @@ if ("mediaSession" in navigator) {
   const ms = navigator.mediaSession;
   const set = (a, fn) => { try { ms.setActionHandler(a, fn); } catch {} };
   set("play", () => audio.play().catch(() => {}));
-  set("pause", () => audio.pause());
+  set("pause", () => { startT.live = false; audio.pause(); });
   set("previoustrack", prev);
   set("nexttrack", next);
   set("seekto", (d) => seek(d.seekTime));
@@ -385,7 +393,8 @@ audio.addEventListener("ended", () => {
     return;
   }
   if (state.repeat === "one") { seek(0); audio.play().catch(() => {}); return; }
-  next();
+  autoAdvance = true;
+  try { next(); } finally { autoAdvance = false; }
 });
 function heardOK(t) {
   return t >= play.heard && t - play.heard < 2 + Math.max(0, Date.now() - play.heardAt) / 1000 * (audio.playbackRate || 1);
@@ -412,6 +421,22 @@ function reportJump(from, to, expected) {
   });
   fetch("/api/music/jumplog", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
 }
+
+function reportStart(ms) {
+  const spec = meter.playing || {};
+  const body = JSON.stringify({
+    ms: Math.round(ms), waits: startT.waits, tier: spec.tier || "", format: spec.format || spec.suffix || "",
+    kbps: spec.kbps || 0, quality: state.quality, preload: startT.preload, auto: startT.auto,
+  });
+  fetch("/api/music/startlog", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+}
+
+audio.addEventListener("waiting", () => { if (startT.live) startT.waits += 1; });
+audio.addEventListener("playing", () => {
+  if (!startT.live) return;
+  startT.live = false;
+  if (startT.gen === play.gen) reportStart(performance.now() - startT.at);
+});
 
 function checkJump() {
   const t = audio.currentTime || 0;
