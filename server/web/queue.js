@@ -86,18 +86,17 @@ export function renderQueue() {
     const kids = [];
     const rm = (n) => opB(t("queue.remove"), "✕", () => removeAt([n]));
     q.forEach((s, n) => {
-      if (n < i) return;
+      if (n < i || n > last) return;
       if (n === first && up.length) kids.push(divider(t("queue.upNext")));
-      if (n === last + 1 && n > i) kids.push(divider(t("queue.nextFrom")));
       let ops = [];
       if (n >= first && n <= last) ops = [
         opB(t("queue.up"), "▲", () => move(n, n - 1), n === first),
         opB(t("queue.down"), "▼", () => move(n, n + 1), n === last),
         rm(n),
       ];
-      else if (n !== i) ops = [rm(n)];
       kids.push(row(q, i, s, n, ops));
     });
+    if (!up.length) kids.push(h("li", { class: "qp-sec" }, t("queue.empty")));
     list.replaceChildren(...kids);
   };
 
