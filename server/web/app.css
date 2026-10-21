@@ -736,3 +736,8 @@ button.news-close { padding: 2px var(--sp-2); border: 2px solid var(--ink); box-
 .news-date { color: var(--muted); font-size: var(--fs-xs); }
 .news-rel .tag { font-size: var(--fs-xs); text-transform: uppercase; color: var(--accent); border: 2px solid var(--accent); padding: 0 var(--sp-1); }
 .news-rel ul { margin: 0; padding-left: var(--sp-4); display: grid; gap: 2px; font-size: var(--fs-sm); }
+@media (max-width: 760px) {
+  main:has(> .album-head) { padding-left: var(--sp-2); padding-right: var(--sp-2); }
+  main:has(> .album-head) .songs { padding: var(--sp-1) 2px; }
+  main:has(> .album-head) .song-main { padding-left: var(--sp-1); padding-right: var(--sp-1); }
+}
