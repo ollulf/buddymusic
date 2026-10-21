@@ -53,6 +53,13 @@ function ensureGraph(audio) {
   return graph.pending;
 }
 
+window.addEventListener("pagehide", (e) => {
+  const ctx = graph.ctx;
+  if (!ctx || ctx.state === "closed") return;
+  if (e.persisted) ctx.suspend().catch(() => {});
+  else ctx.close().catch(() => {});
+});
+
 function resume() {
   const ctx = graph.ctx;
   if (ctx && !running(ctx) && ctx.state !== "closed") ctx.resume().catch(() => {});
