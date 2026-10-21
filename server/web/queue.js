@@ -3,7 +3,7 @@ import { t } from "./i18n.js";
 import { onChange, queue, current, jump, move, removeSongs } from "./player.js";
 
 const SPINES = ["var(--accent)", "var(--orange)", "var(--accent-lo)", "var(--muted)", "var(--accent-hi)", "var(--fg)"];
-const MAX = 10;
+const MAX = 6;
 
 const spine = (song) => {
   const k = String(song.albumId || song.id || "");
@@ -18,8 +18,7 @@ const touchy = () => !!(window.matchMedia && window.matchMedia("(hover: none)").
 export function renderQueue() {
   const stack = h("button", { type: "button", class: "cdq", "aria-haspopup": "dialog", "aria-expanded": "false" });
   const cases = h("span", { class: "cdq-cases", "aria-hidden": "true" });
-  const badge = h("span", { class: "cdq-cnt", "aria-hidden": "true" });
-  stack.append(cases, badge);
+  stack.append(cases);
 
   const list = h("ol", { class: "qp-list" });
   const count = h("small");
@@ -35,7 +34,8 @@ export function renderQueue() {
   const root = h("div", { class: "cdq-wrap" }, stack, panel);
 
   let lastSig = "";
-  let lastUp = -1;
+  let lastRuns = null;
+  let lastUp = 0;
   const upcoming = () => { const q = queue(); const c = current(); const i = c ? q.indexOf(c) : -1; return { q, i, up: q.slice(i + 1) }; };
 
   const setLift = (on) => root.classList.toggle("lift", on);
@@ -89,25 +89,32 @@ export function renderQueue() {
     const sig = q.map((s) => s.id).join(",") + "|" + i;
     if (sig === lastSig) return;
     lastSig = sig;
-    const shown = Math.min(up.length, MAX);
+    const runs = [];
+    for (const s of up) {
+      const last = runs[runs.length - 1];
+      if (last && s.albumId && last.albumId === s.albumId) last.n++;
+      else runs.push({ albumId: s.albumId, song: s, n: 1, key: (s.albumId || "") + ":" + s.id });
+    }
+    const shown = Math.min(runs.length, MAX);
     const kids = [];
     if (!shown) kids.push(h("span", { class: "case empty" }));
     for (let n = 0; n < shown; n++) {
-      const c = h("span", { class: "case" + (n % 3 === 1 ? " alt" : n % 3 === 2 ? " alt2" : "") + (n === shown - 1 ? " top" : "") });
-      c.style.setProperty("--c", spine(up[shown - 1 - n]));
+      const r = runs[shown - 1 - n];
+      const c = h("span", { class: "case" + (r.n > 1 ? " album" : " single") + (n % 3 === 1 ? " alt" : n % 3 === 2 ? " alt2" : "") + (n === shown - 1 ? " top" : "") });
+      c.style.setProperty("--c", spine(r.song));
+      c.dataset.key = r.key;
       kids.push(c);
     }
-    if (up.length > MAX) kids.push(h("span", { class: "more" }, `+${up.length - MAX}`));
     cases.replaceChildren(...kids);
-    badge.textContent = String(up.length);
-    badge.hidden = !up.length;
     const label = up.length ? t("queue.open", { n: up.length }) : `${t("queue.title")}: ${t("queue.empty")}`;
     stack.setAttribute("aria-label", label);
     stack.title = label;
-    if (lastUp >= 0 && up.length > lastUp && shown && !calm()) {
-      const topCase = cases.querySelector(".case.top");
-      if (topCase) { topCase.classList.add("drop"); topCase.addEventListener("animationend", () => topCase.classList.remove("drop"), { once: true }); }
+    if (lastRuns && up.length > lastUp && !calm()) {
+      const added = runs.slice(0, shown).find((r) => !lastRuns.has(r.key));
+      const el = added && [...cases.children].find((c) => c.dataset.key === added.key);
+      if (el) { el.classList.add("drop"); el.addEventListener("animationend", () => el.classList.remove("drop"), { once: true }); }
     }
+    lastRuns = new Set(runs.map((r) => r.key));
     lastUp = up.length;
     if (!q.length) close();
     else if (isOpen()) paintList();
