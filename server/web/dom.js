@@ -35,10 +35,11 @@ export async function apiJSON(method, path, body) {
 
 export const coverURL = (id, size = 300) => (id ? `/api/music/cover/${encodeURIComponent(id)}?size=${size}` : "");
 
-export function cover(id, size = 300, cls = "art") {
+export function cover(id, size = 300, cls = "art", eager = false) {
   const box = h("div", { class: cls });
   if (id) {
-    const img = h("img", { src: coverURL(id, size), alt: "", loading: "lazy", decoding: "async" });
+    const img = h("img", eager ? { src: coverURL(id, size), alt: "", loading: "eager", fetchpriority: "high", decoding: "async" }
+      : { src: coverURL(id, size), alt: "", loading: "lazy", decoding: "async" });
     img.addEventListener("error", () => img.remove());
     box.append(img);
   }

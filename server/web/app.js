@@ -1,5 +1,5 @@
 import { renderUpload } from "./upload.js";
-import { renderLibrary, setNewAlbums } from "./library.js";
+import { renderLibrary, setNewAlbums, prefetchLibrary, dropLibraryPrefetch } from "./library.js";
 import { renderSearch, searchBox } from "./search.js";
 import { renderFavorites } from "./favorites.js";
 import { renderBar, playList, settings, setQuality, onChange, QUALITIES, qualityHint } from "./player.js";
@@ -359,6 +359,8 @@ function showApp(user, admin, avatar, me = {}) {
 }
 
 async function boot() {
+  const parts = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);
+  if (!parts[0] || parts[0] === "library") prefetchLibrary(parts.slice(1));
   try {
     const res = await fetch("/api/me");
     if (res.ok) {
@@ -366,6 +368,7 @@ async function boot() {
       return showApp(me.user, me.admin, me.avatar, me);
     }
   } catch {}
+  dropLibraryPrefetch();
   showLogin();
 }
 

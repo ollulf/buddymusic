@@ -295,6 +295,7 @@ button.heart[aria-pressed="true"]::before { content: ""; --i: var(--i-heartfull)
 .admin-list li:last-child { border-bottom: 0; }
 .admin-list li > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .admin-list li.failed strong { color: var(--bad); }
+.admin-sub { font-size: .75rem; font-weight: 400; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 16px 0 4px; }
 @media (max-width: 560px) {
   .stats { grid-template-columns: repeat(2, 1fr); }
   .admin-chart .cols { height: 150px; gap: 4px; }
