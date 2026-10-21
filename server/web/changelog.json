@@ -1,44 +1,19 @@
 [
   {
-    "version": "1.0.2110.4",
+    "version": "1.0.2110.5",
     "date": "2026-10-21",
     "en": [
+      "Connection indicator: a small Wi-Fi chip next to the quality label shows slow or offline connections; tap it for details",
       "New colours: pick a base and a key colour separately in Settings (6 bases, 8 key colours)",
       "The old named colour schemes are replaced; your choice moves to the closest base and key colour",
-      "\"What's new\" in the profile menu shows what changed in each version"
-    ],
-    "de": [
-      "Neue Farben: Basis und Akzentfarbe getrennt in den Einstellungen wählen (6 Basen, 8 Akzentfarben)",
-      "Die alten Farbschemata sind ersetzt; deine Wahl wechselt zur passenden Basis und Akzentfarbe",
-      "„Neuigkeiten“ im Profilmenü zeigt, was sich in jeder Version geändert hat"
-    ]
-  },
-  {
-    "version": "1.0.2110.3",
-    "date": "2026-10-21",
-    "en": [
+      "\"What's new\" in the profile menu shows what changed in each version",
       "Numbers (times, track numbers, volume, stats) use the clearer Departure Mono font",
       "The library loads a little faster",
       "The admin page shows how long songs take to start",
       "Picking another song stops the unused preload",
       "NEW stays on an album until you open it",
       "Big album covers are shrunk on upload",
-      "iPhone: after a stream error, playback moves on to the next song instead of going silent"
-    ],
-    "de": [
-      "Zahlen (Zeiten, Titelnummern, Lautstärke, Statistiken) nutzen die klarere Schrift Departure Mono",
-      "Die Bibliothek lädt etwas schneller",
-      "Die Admin-Seite zeigt, wie lange Songs zum Starten brauchen",
-      "Wählst du einen anderen Song, wird das ungenutzte Vorladen gestoppt",
-      "NEU bleibt an einem Album, bis du es öffnest",
-      "Große Albumcover werden beim Hochladen verkleinert",
-      "iPhone: Nach einem Stream-Fehler geht es mit dem nächsten Song weiter, statt still zu bleiben"
-    ]
-  },
-  {
-    "version": "1.0.2110.2",
-    "date": "2026-10-21",
-    "en": [
+      "iPhone: after a stream error, playback moves on to the next song instead of going silent",
       "Header buttons have a bevel again",
       "Softer dark fade at the edge of the play window",
       "Bigger CD",
@@ -46,9 +21,23 @@
       "Removed \"Saved on this device\" from the settings",
       "The CD's glow moves with it when it tucks away",
       "White CD rim and brighter text",
-      "New pixel CD frame (round 2)"
+      "New pixel CD frame (round 2)",
+      "Version number in the profile menu",
+      "New pixel icons for the top tabs",
+      "New pixel CD frame for albums"
     ],
     "de": [
+      "Verbindungsanzeige: ein kleines WLAN-Symbol neben der Qualitätsanzeige zeigt langsame oder fehlende Verbindung; antippen für Details",
+      "Neue Farben: Basis und Akzentfarbe getrennt in den Einstellungen wählen (6 Basen, 8 Akzentfarben)",
+      "Die alten Farbschemata sind ersetzt; deine Wahl wechselt zur passenden Basis und Akzentfarbe",
+      "„Neuigkeiten“ im Profilmenü zeigt, was sich in jeder Version geändert hat",
+      "Zahlen (Zeiten, Titelnummern, Lautstärke, Statistiken) nutzen die klarere Schrift Departure Mono",
+      "Die Bibliothek lädt etwas schneller",
+      "Die Admin-Seite zeigt, wie lange Songs zum Starten brauchen",
+      "Wählst du einen anderen Song, wird das ungenutzte Vorladen gestoppt",
+      "NEU bleibt an einem Album, bis du es öffnest",
+      "Große Albumcover werden beim Hochladen verkleinert",
+      "iPhone: Nach einem Stream-Fehler geht es mit dem nächsten Song weiter, statt still zu bleiben",
       "Die Buttons oben haben wieder eine Kante",
       "Weicherer dunkler Verlauf am Rand des Wiedergabefensters",
       "Größere CD",
@@ -56,18 +45,7 @@
       "„Auf diesem Gerät gespeichert“ aus den Einstellungen entfernt",
       "Das Leuchten der CD wandert mit, wenn sie sich wegklappt",
       "Weißer CD-Rand und hellere Schrift",
-      "Neuer Pixel-CD-Rahmen (Runde 2)"
-    ]
-  },
-  {
-    "version": "1.0.2110",
-    "date": "2026-10-21",
-    "en": [
-      "Version number in the profile menu",
-      "New pixel icons for the top tabs",
-      "New pixel CD frame for albums"
-    ],
-    "de": [
+      "Neuer Pixel-CD-Rahmen (Runde 2)",
       "Versionsnummer im Profilmenü",
       "Neue Pixel-Icons für die Tabs oben",
       "Neuer Pixel-CD-Rahmen für Alben"
