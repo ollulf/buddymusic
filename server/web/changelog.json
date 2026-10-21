@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.0.2110.4",
+    "date": "2026-10-21",
+    "en": [
+      "New colours: pick a base and a key colour separately in Settings (6 bases, 8 key colours)",
+      "The old named colour schemes are replaced; your choice moves to the closest base and key colour",
+      "\"What's new\" in the profile menu shows what changed in each version"
+    ],
+    "de": [
+      "Neue Farben: Basis und Akzentfarbe getrennt in den Einstellungen wählen (6 Basen, 8 Akzentfarben)",
+      "Die alten Farbschemata sind ersetzt; deine Wahl wechselt zur passenden Basis und Akzentfarbe",
+      "„Neuigkeiten“ im Profilmenü zeigt, was sich in jeder Version geändert hat"
+    ]
+  },
+  {
     "version": "1.0.2110.3",
     "date": "2026-10-21",
     "en": [
