@@ -275,7 +275,7 @@ function qualityButton() {
 }
 
 function showApp(user, admin, avatar, me = {}) {
-  setNewAlbums(me.newSince, me.ownAlbums);
+  setNewAlbums(me.newSince, me.ownAlbums, me.openedAlbums);
   const TABS = admin === true ? [...BASE_TABS, ["admin", t("tab.admin")]] : BASE_TABS;
   const opts = { onUnauthorized: showLogin, admin: admin === true };
   setPlaylistUser(user);

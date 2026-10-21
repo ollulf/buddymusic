@@ -50,6 +50,16 @@ CREATE TABLE IF NOT EXISTS user_seen (
 	last_seen INTEGER NOT NULL,
 	device TEXT NOT NULL DEFAULT '',
 	prev_seen INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS album_new_from (
+	user TEXT PRIMARY KEY,
+	since INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS album_opened (
+	user TEXT NOT NULL,
+	album_id TEXT NOT NULL,
+	opened_at INTEGER NOT NULL,
+	PRIMARY KEY (user, album_id)
 );`
 
 func (s *Store) RecordLogin(user string, at time.Time, ok bool, device string, remember bool) error {
@@ -91,6 +101,41 @@ func (s *Store) NewSince(user string, now time.Time) int64 {
 		return now.Unix()
 	}
 	return prev
+}
+
+func (s *Store) NewAlbumsFrom(user string, now time.Time) int64 {
+	var since int64
+	if s.db.QueryRow(`SELECT since FROM album_new_from WHERE user = ?`, user).Scan(&since) == nil {
+		return since
+	}
+	since = s.NewSince(user, now)
+	s.db.Exec(`INSERT OR IGNORE INTO album_new_from (user, since) VALUES (?, ?)`, user, since)
+	if s.db.QueryRow(`SELECT since FROM album_new_from WHERE user = ?`, user).Scan(&since) != nil {
+		return s.NewSince(user, now)
+	}
+	return since
+}
+
+func (s *Store) MarkAlbumOpened(user, albumID string, at time.Time) error {
+	_, err := s.db.Exec(`INSERT INTO album_opened (user, album_id, opened_at) VALUES (?, ?, ?)
+ON CONFLICT(user, album_id) DO UPDATE SET opened_at = excluded.opened_at`, user, albumID, at.Unix())
+	return err
+}
+
+func (s *Store) OpenedAlbums(user string) []string {
+	out := []string{}
+	rows, err := s.db.Query(`SELECT album_id FROM album_opened WHERE user = ? ORDER BY album_id`, user)
+	if err != nil {
+		return out
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		if rows.Scan(&id) == nil {
+			out = append(out, id)
+		}
+	}
+	return out
 }
 
 func (s *Store) OwnAlbums(user string) []string {

@@ -44,6 +44,7 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("GET /api/music/artist/{id}", a.requireUser(a.musicJSON("getArtist.view", "artist", idParam)))
 	mux.Handle("GET /api/music/albums", a.requireUser(a.musicJSON("getAlbumList2.view", "albumList2", albumListParams)))
 	mux.Handle("GET /api/music/album/{id}", a.requireUser(a.handleAlbum))
+	mux.Handle("POST /api/music/album/{id}/opened", a.requireUser(a.handleAlbumOpened))
 	mux.Handle("GET /api/music/random-songs", a.requireUser(a.musicJSON("getRandomSongs.view", "randomSongs", randomSongsParams)))
 	mux.Handle("GET /api/music/search", a.requireUser(a.musicJSON("search3.view", "searchResult3", searchParams)))
 	mux.Handle("GET /api/music/starred", a.requireUser(a.musicJSON("getStarred2.view", "starred2", noParams)))

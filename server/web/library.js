@@ -23,16 +23,29 @@ function caseCover(al, size, cls, eager = false) {
 
 let newSince = Infinity;
 let ownAlbums = new Set();
+let openedAlbums = new Set();
 const albumKey = (artist, name) => `${(artist || "").trim().toLowerCase()}|${(name || "").trim().toLowerCase()}`;
 
-export function setNewAlbums(since, own) {
+export function setNewAlbums(since, own, opened) {
   newSince = Number(since) > 0 ? Number(since) * 1000 : Infinity;
   ownAlbums = new Set(own || []);
+  openedAlbums = new Set(opened || []);
+}
+
+function markAlbumOpened(al) {
+  if (!al.id || !isNewAlbum(al)) return;
+  openedAlbums.add(al.id);
+  for (const card of document.querySelectorAll("a.album.is-new")) {
+    if (card.getAttribute("href") !== `#/library/album/${encodeURIComponent(al.id)}`) continue;
+    card.classList.remove("is-new");
+    card.querySelector(".new-ribbon")?.remove();
+  }
+  fetch(`/api/music/album/${encodeURIComponent(al.id)}/opened`, { method: "POST" }).catch(() => {});
 }
 
 function isNewAlbum(al) {
   const created = Date.parse(al.created || "");
-  return created > newSince && !ownAlbums.has(albumKey(al.artist, al.name || al.title));
+  return created > newSince && !openedAlbums.has(al.id) && !ownAlbums.has(albumKey(al.artist, al.name || al.title));
 }
 
 export function albumCard(al, i = EAGER_COVERS) {
@@ -139,6 +152,7 @@ async function renderAlbum(container, id, opts) {
   container.replaceChildren(h("div", { class: "muted" }, t("common.loading")));
   try {
     const al = await api(`/api/music/album/${encodeURIComponent(id)}`);
+    markAlbumOpened(al);
     const songs = (al.song || []).filter((s) => !deletedSongs.has(s.id)).map((s) => ({ ...s, coverArt: s.coverArt || al.coverArt }));
     const deleteTrack = opts.admin ? async (s) => {
       if (!confirm(s.title ? t("delete.confirmTrack", { title: s.title }) : t("delete.confirmTrackUntitled"))) return;

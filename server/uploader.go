@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const uploadsLibraryIndex = `
@@ -97,6 +98,20 @@ func (a *App) albumDirs(songs []navSong) (exact, suffix []string) {
 		suffix = append(suffix, d)
 	}
 	return exact, suffix
+}
+
+func (a *App) handleAlbumOpened(w http.ResponseWriter, r *http.Request, user string) {
+	id := r.PathValue("id")
+	if !validID(id) {
+		writeError(w, http.StatusBadRequest, "bad-request")
+		return
+	}
+	if err := a.store.MarkAlbumOpened(user, id, time.Now()); err != nil {
+		log.Printf("mark album opened: %v", err)
+		writeError(w, http.StatusInternalServerError, "store")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (a *App) handleAlbum(w http.ResponseWriter, r *http.Request, user string) {
