@@ -3,7 +3,6 @@ import { t } from "./i18n.js";
 import { onChange, queue, current, jump, move, removeAt, clearManual, entryInfo } from "./player.js";
 
 const SPINES = ["var(--accent)", "var(--orange)", "var(--accent-lo)", "var(--muted)", "var(--accent-hi)", "var(--fg)"];
-const MAX = 6;
 
 export const spine = (song) => {
   const k = String(song.albumId || song.id || "");
@@ -120,7 +119,9 @@ export function renderQueue() {
       if (last && last.batch === b) last.n++;
       else runs.push({ batch: b, song: s, n: 1, size, key: b + ":" + s.id });
     }
-    const shown = Math.min(runs.length, MAX);
+    const room = Math.max(6, Math.ceil(window.innerHeight / 7) + 4);
+    const shown = Math.min(runs.length, room);
+    stack.classList.toggle("deep", runs.length > 5);
     const kids = [];
     if (!shown) kids.push(h("span", { class: "case empty" }));
     for (let n = 0; n < shown; n++) {
