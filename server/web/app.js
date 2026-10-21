@@ -2,6 +2,7 @@ import { renderUpload } from "./upload.js";
 import { renderLibrary, setNewAlbums, prefetchLibrary, dropLibraryPrefetch } from "./library.js";
 import { renderSearch, searchBox } from "./search.js";
 import { renderFavorites } from "./favorites.js";
+import { renderQueue } from "./queue.js";
 import { renderBar, playList, settings, setQuality, onChange, stopAll, QUALITIES, qualityHint } from "./player.js";
 import { api, Unauthorized } from "./dom.js";
 import { renderPlaylists, setPlaylistUser } from "./playlists.js";
@@ -332,7 +333,7 @@ function showApp(user, admin, avatar, me = {}) {
     else location.hash = "#/library";
   };
   settingsView.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSettings(); });
-  playerBar ||= renderBar({ onUnauthorized: showLogin, onQuality: () => openQuality && openQuality() });
+  if (!playerBar) { playerBar = renderBar({ onUnauthorized: showLogin, onQuality: () => openQuality && openQuality() }); playerBar.append(renderQueue()); }
   root.replaceChildren(
     h("header", { class: "top" },
       h("nav", { class: "tabs", "aria-label": t("tab.sections") }, Object.values(links)),

@@ -342,6 +342,16 @@ const en = {
   "upload.dropHint": "or tap to pick · FLAC, MP3, M4A, OGG, Opus",
   "upload.albumHint": "Applies to every file below. Prefilled from the files' tags.",
   "upload.clear": "Clear uploaded",
+  "queue.title": "Queue",
+  "queue.open": { one: "Queue: {n} track up next", other: "Queue: {n} tracks up next" },
+  "queue.tracks": { one: "{n} track", other: "{n} tracks" },
+  "queue.empty": "Nothing queued yet",
+  "queue.hint": "Tap to jump · ▲▼ to move",
+  "queue.clear": "Clear",
+  "queue.close": "Close queue",
+  "queue.up": "Move up",
+  "queue.down": "Move down",
+  "queue.remove": "Remove from queue",
 };
 
 const de = {
@@ -684,6 +694,16 @@ const de = {
   "upload.dropHint": "oder tippen zum Auswählen · FLAC, MP3, M4A, OGG, Opus",
   "upload.albumHint": "Gilt für alle Dateien unten. Aus den Tags der Dateien vorausgefüllt.",
   "upload.clear": "Hochgeladene entfernen",
+  "queue.title": "Warteschlange",
+  "queue.open": { one: "Warteschlange: {n} Titel als Nächstes", other: "Warteschlange: {n} Titel als Nächstes" },
+  "queue.tracks": { one: "{n} Titel", other: "{n} Titel" },
+  "queue.empty": "Noch nichts eingereiht",
+  "queue.hint": "Tippen zum Springen · ▲▼ zum Verschieben",
+  "queue.clear": "Leeren",
+  "queue.close": "Warteschlange schließen",
+  "queue.up": "Nach oben",
+  "queue.down": "Nach unten",
+  "queue.remove": "Aus der Warteschlange entfernen",
 };
 
 const DICTS = { en, de };
