@@ -673,8 +673,13 @@ audio.addEventListener("timeupdate", () => {
 });
 for (const ev of ["play", "pause", "loadedmetadata", "durationchange", "seeking", "seeked", "emptied"]) audio.addEventListener(ev, emit);
 
+const mobileVolume = (() => {
+  if (/iPhone|iPad|iPod|Android/.test(navigator.userAgent || "") || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) return true;
+  try { return matchMedia("(pointer: coarse)").matches && matchMedia("(hover: none)").matches; } catch { return false; }
+})();
 const vol = (() => {
   let v = 80, m = false;
+  if (mobileVolume) return { v: 100, m: false };
   try { const n = parseInt(localStorage.getItem("bm.volume"), 10); if (n >= 0 && n <= 100) v = n; m = localStorage.getItem("bm.muted") === "1"; } catch {}
   return { v, m };
 })();
@@ -754,14 +759,19 @@ function volumeControl() {
 function fitMarquee(box, span) {
   box.classList.remove("run");
   if (box.childNodes.length > 1) box.lastChild.remove();
-  const over = span.scrollWidth - box.clientWidth;
-  if (over <= 1) return;
-  box.append(h("span", { class: "mq-t", "aria-hidden": "true" }, span.textContent));
+  span.style.removeProperty("--mq-gap");
+  if (!span.textContent) return;
+  void box.offsetWidth;
+  const gap = Math.max(40, box.clientWidth - span.scrollWidth);
+  span.style.setProperty("--mq-gap", `${gap}px`);
+  const copy = h("span", { class: "mq-t", "aria-hidden": "true" }, span.textContent);
+  copy.style.setProperty("--mq-gap", `${gap}px`);
+  box.append(copy);
   box.classList.add("run");
   const w = span.offsetWidth;
   box.style.setProperty("--mq-w", `${w}px`);
   box.style.setProperty("--mq-steps", String(Math.max(8, Math.round(w / 6))));
-  box.style.setProperty("--mq-dur", `${Math.max(6, w / 40).toFixed(1)}s`);
+  box.style.setProperty("--mq-dur", `${Math.max(4, w / 40).toFixed(1)}s`);
 }
 
 function setMarquee(box, span, text) {
@@ -815,7 +825,7 @@ export function renderBar(opts = {}) {
       h("div", { class: "bar-seek" }, pos, range, dur),
       h("div", { class: "pb-left" },
         h("div", { class: "pb-screen" }, h("div", { class: "pb-chips" }, netChip(net), rateB), info),
-        h("div", { class: "pb-btns" }, h("i", { class: "pb-grille" }), heartB, repeatB, shuffleB, volumeControl()))));
+        h("div", { class: "pb-btns" }, h("i", { class: "pb-grille" }), heartB, repeatB, shuffleB, mobileVolume ? null : volumeControl()))));
 
   bar.append(renderViz(audio, bar));
 
