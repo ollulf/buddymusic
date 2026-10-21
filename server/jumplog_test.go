@@ -12,7 +12,7 @@ import (
 
 func TestJumpLog(t *testing.T) {
 	a := newTestApp(t)
-	body := `{"track":"s1","format":"opus","kbps":128,"from":61.2,"to":59.9,"expected":62.1,"gap":-2.2,"visibility":"hidden","agent":"ios-safari"}`
+	body := `{"track":"s1","format":"opus","kbps":128,"from":61.2,"to":59.9,"expected":62.1,"gap":-2.2,"visibility":"hidden","agent":"ios-safari","event":"advance-refused","detail":"NotAllowedError"}`
 	if rec := do(t, a.Routes(), httptest.NewRequest("POST", "/api/music/jumplog", strings.NewReader(body))); rec.Code != http.StatusUnauthorized {
 		t.Fatalf("anon: %d", rec.Code)
 	}
@@ -29,7 +29,7 @@ func TestJumpLog(t *testing.T) {
 		t.Fatalf("authed: %d", code)
 	}
 	out := buf.String()
-	if !strings.Contains(out, "jumplog") || !strings.Contains(out, `track="s1"`) || !strings.Contains(out, `vis="hidden"`) {
+	if !strings.Contains(out, "jumplog") || !strings.Contains(out, `track="s1"`) || !strings.Contains(out, `vis="hidden"`) || !strings.Contains(out, `event="advance-refused"`) || !strings.Contains(out, `detail="NotAllowedError"`) {
 		t.Fatalf("log: %s", out)
 	}
 	if code := post(`{"track":"` + strings.Repeat("x", jumpLogBytes) + `"}`); code != http.StatusBadRequest {

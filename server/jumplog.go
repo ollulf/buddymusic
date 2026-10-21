@@ -55,6 +55,8 @@ type jumpReport struct {
 	Blob       bool    `json:"blob"`
 	Offset     float64 `json:"offset"`
 	Agent      string  `json:"agent"`
+	Event      string  `json:"event"`
+	Detail     string  `json:"detail"`
 }
 
 func (a *App) handleJumpLog(w http.ResponseWriter, r *http.Request, user string) {
@@ -67,8 +69,8 @@ func (a *App) handleJumpLog(w http.ResponseWriter, r *http.Request, user string)
 		writeError(w, http.StatusTooManyRequests, "rate-limited")
 		return
 	}
-	log.Printf("jumplog user=%q track=%q fmt=%q kbps=%d quality=%q from=%.2f to=%.2f expected=%.2f gap=%.2f vis=%q stalled=%t buffered=%.2f ready=%d blob=%t offset=%.0f agent=%q",
+	log.Printf("jumplog user=%q track=%q fmt=%q kbps=%d quality=%q from=%.2f to=%.2f expected=%.2f gap=%.2f vis=%q stalled=%t buffered=%.2f ready=%d blob=%t offset=%.0f agent=%q event=%q detail=%q",
 		clip(user, 64), clip(j.Track, 64), clip(j.Format, 16), j.Kbps, clip(j.Quality, 16), j.From, j.To, j.Expected, j.Gap,
-		clip(j.Visibility, 16), j.Stalled, j.Buffered, j.Ready, j.Blob, j.Offset, clip(j.Agent, 32))
+		clip(j.Visibility, 16), j.Stalled, j.Buffered, j.Ready, j.Blob, j.Offset, clip(j.Agent, 32), clip(j.Event, 24), clip(j.Detail, 64))
 	w.WriteHeader(http.StatusNoContent)
 }

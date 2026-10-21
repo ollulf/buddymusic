@@ -115,6 +115,7 @@ const watch = { t: -1, at: 0, stalled: false, sent: 0 };
 const pre = { url: "", blob: "", ctrl: null, speed: 0 };
 const startT = { at: 0, gen: 0, waits: 0, preload: false, auto: false, live: false };
 let autoAdvance = false;
+const adv = { gen: 0, stuck: false, retried: false, logged: false, fails: 0 };
 
 function bufferedEnd() {
   const b = audio.buffered;
@@ -192,7 +193,7 @@ function startStream(song, tier, from = 0) {
     blob = pre.blob;
     Object.assign(pre, { url: "", blob: "" });
   }
-  if (play.blob && play.blob !== blob) URL.revokeObjectURL(play.blob);
+  const stale = play.blob && play.blob !== blob ? play.blob : "";
   play.blob = blob;
   play.offset = off;
   play.heard = Math.max(0, from - off);
@@ -204,6 +205,7 @@ function startStream(song, tier, from = 0) {
   Object.assign(meter, { t0: performance.now(), b0: Math.max(0, seekTo), done: !!blob, started: false, playing: { ...spec, tier } });
   if (blob && pre.speed) { auto.speed = pre.speed; auto.measuredKbps = spec.kbps; }
   audio.src = blob || (off ? `${base}&timeOffset=${off}` : base);
+  if (stale) URL.revokeObjectURL(stale);
   const gen = play.gen;
   if (seekTo > 0.5) audio.addEventListener("loadedmetadata", () => { if (play.gen === gen) audio.currentTime = seekTo; }, { once: true });
 }
@@ -222,7 +224,16 @@ function load(i, autoplay = true) {
   startT.live = false;
   if (autoplay) {
     Object.assign(startT, { at: performance.now(), gen: play.gen, waits: 0, preload: preloaded, auto: autoAdvance, live: true });
-    audio.play().catch(() => { startT.live = false; });
+    adv.stuck = false;
+    adv.retried = false;
+    adv.gen = autoAdvance ? play.gen : 0;
+    const hidden = document.visibilityState === "hidden";
+    audio.play().catch((e) => {
+      startT.live = false;
+      if (adv.gen !== play.gen || !adv.gen) return;
+      adv.stuck = true;
+      if (hidden) logEvent("advance-refused", e && e.name);
+    });
   }
   fetch(`/api/music/scrobble/${encodeURIComponent(song.id)}?submission=false`, { method: "POST" }).catch(() => {});
   updateSession();
@@ -380,21 +391,44 @@ if ("mediaSession" in navigator) {
   set("seekto", (d) => seek(d.seekTime));
 }
 
-audio.addEventListener("ended", () => {
+function streamOver(failed) {
   const song = current();
-  const known = song && +song.duration > 0 ? +song.duration : 0;
+  if (!song) return;
+  const known = +song.duration > 0 ? +song.duration : 0;
   const t = audio.currentTime || 0;
   const at = play.offset + (heardOK(t) ? t : play.heard);
-  if (song && meter.playing && known - at > 3 && play.tries < 2) {
+  const missing = known ? known - at > 3 : failed;
+  if (failed && document.visibilityState === "hidden") logEvent("error", audio.error ? `code ${audio.error.code}` : "");
+  if (meter.playing && missing && play.tries < 2) {
     play.tries += 1;
     startStream(song, meter.playing.tier, Math.max(0, at - 0.5));
     audio.play().catch(() => {});
     emit();
     return;
   }
-  if (state.repeat === "one") { seek(0); audio.play().catch(() => {}); return; }
+  if (!failed && state.repeat === "one") { seek(0); audio.play().catch(() => {}); return; }
+  if (failed && ++adv.fails > 3) { adv.fails = 0; audio.pause(); emit(); return; }
   autoAdvance = true;
   try { next(); } finally { autoAdvance = false; }
+}
+audio.addEventListener("ended", () => streamOver(false));
+audio.addEventListener("error", () => { if (audio.getAttribute("src")) streamOver(true); });
+audio.addEventListener("canplay", () => {
+  if (!adv.stuck || adv.retried || adv.gen !== play.gen || !audio.paused) return;
+  adv.retried = true;
+  audio.play().then(() => { adv.stuck = false; }).catch(() => {});
+});
+audio.addEventListener("playing", () => {
+  adv.fails = 0;
+  if (!adv.gen || adv.gen !== play.gen) return;
+  adv.gen = 0;
+  adv.stuck = false;
+  if (!adv.logged && document.visibilityState === "hidden") { adv.logged = true; logEvent("advance-ok", ""); }
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible" || !adv.stuck || adv.gen !== play.gen || !audio.paused) return;
+  adv.stuck = false;
+  audio.play().catch(() => {});
 });
 function heardOK(t) {
   return t >= play.heard && t - play.heard < 2 + Math.max(0, Date.now() - play.heardAt) / 1000 * (audio.playbackRate || 1);
@@ -408,7 +442,12 @@ function agentFamily() {
   return `${os}-${br}${standalone ? "-app" : ""}`;
 }
 
-function reportJump(from, to, expected) {
+function logEvent(event, detail) {
+  const t = audio.currentTime || 0;
+  reportJump(t, t, t, event, detail || "");
+}
+
+function reportJump(from, to, expected, event = "", detail = "") {
   if (watch.sent >= 20) return;
   watch.sent += 1;
   const song = current();
@@ -417,7 +456,7 @@ function reportJump(from, to, expected) {
     track: song ? song.id : "", format: spec.format || "original", kbps: spec.kbps || 0, quality: state.quality,
     from: play.offset + from, to: play.offset + to, expected: play.offset + expected, gap: to - expected,
     visibility: document.visibilityState, stalled: watch.stalled, buffered: play.offset + bufferedEnd(),
-    ready: audio.readyState, blob: !!play.blob, offset: play.offset, agent: agentFamily(),
+    ready: audio.readyState, blob: !!play.blob, offset: play.offset, agent: agentFamily(), event, detail,
   });
   fetch("/api/music/jumplog", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
 }
@@ -466,7 +505,6 @@ for (const ev of ["play", "pause", "seeking", "seeked", "emptied", "loadstart", 
 audio.addEventListener("playing", () => { watch.t = audio.currentTime || 0; watch.at = Date.now(); });
 for (const ev of ["play", "pause", "playing", "waiting", "seeked", "ratechange", "loadedmetadata", "durationchange"]) audio.addEventListener(ev, syncSession);
 
-audio.addEventListener("error", () => { if (play.tries > 0 && current()) next(); });
 audio.addEventListener("pause", () => { listen.last = -1; report(false); });
 audio.addEventListener("play", () => { listen.last = audio.currentTime; report(true); });
 audio.addEventListener("seeking", () => { listen.last = -1; });
