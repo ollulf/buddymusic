@@ -6,7 +6,7 @@
 :root {
   --bh: 128px;
   --th: 60px;
-  --s: 232px;
+  --s: 208px;
   --sb: env(safe-area-inset-bottom, 0px);
   --pb-clear: calc(var(--bh) + var(--sb) + var(--th) + var(--s) - 80px + 16px);
   --z-glare: 1;
@@ -515,7 +515,7 @@ body.settings-open { overflow: hidden; }
 .album .jc ~ .new-ribbon { top: 4px; right: 4px; }
 
 footer.player.pb { --tw: 180px; --tl: calc(50% - var(--tw) / 2); --cream: #fff3c9; position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-player); height: calc(var(--bh) + var(--sb)); padding: 0; background: none; border: 0; box-shadow: none; }
-.pb-bay { position: absolute; left: calc(50% - 191px); bottom: calc(var(--bh) + var(--sb) + var(--th) - 6px); width: 220px; height: 172px; overflow: hidden; pointer-events: none; }
+.pb-bay { position: absolute; left: calc(25% - 65px); bottom: calc(var(--bh) + var(--sb) + var(--th) - 6px); width: 220px; height: 172px; overflow: hidden; pointer-events: none; }
 .pb-disc { position: absolute; left: 50%; bottom: calc(158px - var(--s)); width: var(--s); height: var(--s); margin-left: calc(var(--s) / -2); padding: 0; border: 0; border-radius: 50%; background: none; pointer-events: auto; cursor: pointer; transition: transform .3s steps(6); image-rendering: pixelated; }
 footer.player.pb::before { content: ""; position: absolute; left: 0; right: 0; bottom: calc(var(--bh) + var(--sb) - 2px); height: calc(var(--th) + var(--s) - 60px); background: linear-gradient(to top, rgb(0 0 0 / .97), rgb(0 0 0 / .94) 14%, rgb(0 0 0 / .86) 26%, rgb(0 0 0 / .72) 38%, rgb(0 0 0 / .55) 50%, rgb(0 0 0 / .38) 61%, rgb(0 0 0 / .24) 71%, rgb(0 0 0 / .13) 80%, rgb(0 0 0 / .05) 89%, rgb(0 0 0 / .015) 95%, transparent); pointer-events: none; transition: transform .3s steps(6), opacity .3s steps(6); }
 .pb-disc:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
@@ -526,13 +526,17 @@ footer.player.pb::before { content: ""; position: absolute; left: 0; right: 0; b
 .pb-label { position: absolute; left: 50%; top: 50%; width: 92%; height: 92%; transform: translate(-50%, -50%); border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: repeating-linear-gradient(45deg, var(--orange) 0 6px, var(--stripe) 6px 12px); }
 .pb-label img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .pb-label .hole { position: relative; width: 12%; height: 12%; border-radius: 50%; background: var(--bg); box-shadow: 0 0 0 2px var(--ink), 0 0 0 7px rgb(255 243 201 / .75), 0 0 0 9px var(--ink); }
-.pb-tab { position: absolute; left: var(--tl); bottom: calc(var(--bh) + var(--sb) - 4px); width: var(--tw); height: calc(var(--th) + 2px); background: var(--card); border: 2px solid var(--ink); border-bottom: 0; box-shadow: inset 2px 2px 0 var(--hi), inset -2px 0 0 var(--shade); display: flex; align-items: flex-end; justify-content: center; gap: 8px; padding: 0 8px 8px; z-index: 2; }
-.vz-house { --vz-bg: color-mix(in srgb, var(--accent) 9%, #040506); --vz-ghost: color-mix(in srgb, var(--accent) 12%, transparent); position: absolute; z-index: 1; left: calc(var(--tl) - 162px); bottom: calc(var(--bh) + var(--sb) - 4px); width: 164px; height: calc(var(--th) + 2px); box-sizing: border-box; display: flex; align-items: flex-end; justify-content: center; padding: 0 6px 8px; background: var(--card); border: 2px solid var(--ink); border-right: 0; border-bottom: 0; box-shadow: inset 2px 2px 0 var(--hi), inset -2px 0 0 var(--shade); pointer-events: none; }
+.vz-house { --vz-bg: color-mix(in srgb, var(--accent) 9%, #040506); --vz-ghost: color-mix(in srgb, var(--accent) 12%, transparent); position: absolute; z-index: 1; left: 0; bottom: calc(var(--bh) + var(--sb) - 4px); width: calc(var(--tl) + 2px); height: calc(var(--th) + 2px); box-sizing: border-box; display: flex; align-items: flex-end; justify-content: center; padding: 0 6px 8px; background: var(--card); border: 2px solid var(--ink); border-right: 0; border-bottom: 0; border-left: 0; box-shadow: inset 0 2px 0 var(--hi), inset -2px 0 0 var(--shade); pointer-events: none; }
+.pb-tab { position: absolute; left: var(--tl); bottom: calc(var(--bh) + var(--sb) - 4px); width: var(--tw); height: calc(var(--th) + 2px); background: var(--card); border: 2px solid var(--ink); border-bottom: 0; box-shadow: inset 2px 2px 0 var(--hi), inset -2px 0 0 var(--shade); display: flex; align-items: flex-end; justify-content: center; gap: 6px; padding: 0 4px 4px; z-index: 2; }
 .vz-house[hidden] { display: none; }
 .vz-lcd { display: block; padding: 3px; background: var(--vz-bg); border: 2px solid var(--ink); box-shadow: inset 0 0 0 1px var(--screen-rim); image-rendering: pixelated; }
-@media (max-width: 420px) { .vz-house { left: 4px; width: calc(var(--tl) - 2px); padding: 0 4px 8px; } .vz-lcd { padding: 2px; } .pb-bay { left: calc(25% - 63px); } }
+@media (max-width: 420px) { .vz-house { padding: 0 4px 8px; } .vz-lcd { padding: 2px; } }
 footer.player.pb:has(.vz-house[hidden]) .pb-bay, footer.player.pb:not(:has(.vz-house)) .pb-bay { left: calc(50% - 110px); }
 .pb-tab::before { content: ""; position: absolute; left: 4px; right: 4px; top: 4px; height: 4px; background: var(--ink); box-shadow: 0 2px 0 var(--shade), 0 -1px 0 var(--rail); }
+.pb-tab button.pb-b { width: 52px; height: 40px; }
+.pb-tab button.pb-b.play { width: 56px; height: 44px; }
+.pb-tab button.pb-b::before { width: 20px; height: 20px; -webkit-mask-size: 20px 20px; mask-size: 20px 20px; }
+.pb-tab button.pb-b.play::before { width: 24px; height: 24px; -webkit-mask-size: 24px 24px; mask-size: 24px 24px; }
 button.pb-b { width: 44px; height: 32px; padding: 0; border: 2px solid var(--ink); border-radius: 0; background: var(--card); color: var(--fg); box-shadow: var(--bevel); display: inline-grid; place-items: center; cursor: pointer; font-size: 0; line-height: 0; }
 button.pb-b:active { transform: translate(1px, 1px); }
 button.pb-b.big { width: 40px; height: 40px; background: var(--accent); color: var(--accent-fg); box-shadow: inset 2px 2px 0 var(--accent-hi), inset -2px -2px 0 var(--accent-lo); }
@@ -556,7 +560,7 @@ button.pb-b.heart[aria-pressed="true"] { color: var(--orange); }
 .pb-info { display: block; padding: var(--sp-1) var(--sp-2); text-decoration: none; color: inherit; min-width: 0; }
 .pb-info:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .pb-title { font-size: var(--fs-lg); line-height: 1.2; color: var(--screen-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: var(--sp-1); }
-.pb-sub { font-size: var(--fs-sm); line-height: 1.2; color: var(--screen-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-sub { font-size: var(--fs-md); line-height: 1.2; color: var(--screen-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pb-screen { --lcd-fg: var(--screen-fg); --lcd-bg: color-mix(in srgb, var(--lcd-fg) 9%, #040506); --lcd-ghost: color-mix(in srgb, var(--lcd-fg) 9%, transparent); --lcd-glow: color-mix(in srgb, var(--lcd-fg) 45%, transparent); background: var(--lcd-bg); }
 .pb-info { position: relative; overflow: hidden; }
 .pb-info::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, .32) 0 1px, transparent 1px 3px); }
@@ -565,7 +569,7 @@ button.pb-b.heart[aria-pressed="true"] { color: var(--orange); }
 .pb-title.mq { position: relative; text-overflow: clip; }
 .pb-title.mq::before { content: attr(data-ghost); position: absolute; left: 0; top: 0; color: var(--lcd-ghost); text-shadow: none; white-space: nowrap; pointer-events: none; }
 .mq-t { display: inline-block; position: relative; }
-.pb-title.mq.run .mq-t { padding-right: 3ch; animation: mq var(--mq-dur, 8s) steps(var(--mq-steps, 32)) infinite; }
+.pb-title.mq.run .mq-t { padding-right: var(--mq-gap, 3ch); animation: mq var(--mq-dur, 8s) steps(var(--mq-steps, 32)) infinite; }
 .pb-title.mq.run::before { display: none; }
 @keyframes mq { 0%, 15% { transform: translateX(0); } 100% { transform: translateX(calc(-1 * var(--mq-w, 100%))); } }
 @media (prefers-reduced-motion: reduce) { .pb-title.mq.run .mq-t { animation: none; } .pb-title.mq.run .mq-t + .mq-t { display: none; } .pb-title.mq.run .mq-t { display: block; overflow: hidden; text-overflow: ellipsis; padding-right: 0; } }

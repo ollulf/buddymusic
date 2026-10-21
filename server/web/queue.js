@@ -2,7 +2,19 @@ import { h, fmtTime } from "./dom.js";
 import { t } from "./i18n.js";
 import { onChange, queue, current, jump, move, removeAt, clearManual, entryInfo } from "./player.js";
 
-const SPINES = ["var(--accent)", "var(--orange)", "var(--accent-lo)", "var(--muted)", "var(--accent-hi)", "var(--fg)"];
+const SPINES = ["var(--accent)", "var(--orange)", "var(--accent-lo)", "var(--muted)", "var(--accent-hi)", "var(--fg)", "var(--steel)", "color-mix(in srgb, var(--accent) 50%, var(--orange))", "color-mix(in srgb, var(--orange) 55%, var(--fg))", "color-mix(in srgb, var(--accent-hi) 50%, var(--steel))"];
+const caseColors = new Map();
+
+export const caseColor = (key, below) => {
+  if (caseColors.has(key)) return caseColors.get(key);
+  let x = 0;
+  for (const c of key) x = (x * 131 + c.charCodeAt(0)) >>> 0;
+  let i = x % SPINES.length;
+  if (SPINES[i] === below) i = (i + 1) % SPINES.length;
+  caseColors.set(key, SPINES[i]);
+  if (caseColors.size > 500) caseColors.delete(caseColors.keys().next().value);
+  return SPINES[i];
+};
 
 export const spine = (song) => {
   const k = String(song.albumId || song.id || "");
@@ -129,11 +141,13 @@ export function renderQueue() {
     const room = Math.max(6, Math.ceil(window.innerHeight / 7) + 4);
     const shown = Math.min(runs.length, room);
     const kids = [];
+    let below = "";
     if (!shown) kids.push(h("span", { class: "case empty" }));
     for (let n = 0; n < shown; n++) {
       const r = runs[shown - 1 - n];
       const c = h("span", { class: "case" + (r.size > 1 ? " album" : " single") + tilt(r.key) + (n === shown - 1 ? " top" : "") });
-      c.style.setProperty("--c", spine(r.song));
+      below = caseColor(r.key, below);
+      c.style.setProperty("--c", below);
       c.dataset.key = r.key;
       kids.push(c);
     }

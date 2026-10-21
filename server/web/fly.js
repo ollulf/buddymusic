@@ -78,7 +78,7 @@ const fly = (songs, src) => {
   const peak = Math.min(from.y, to.y) - Math.max(60, Math.abs(to.x - from.x) * 0.25);
 
   const el = h("span", { class: "cdfly cdfly-case " + (album ? "album" : "single"), "aria-hidden": "true" });
-  el.style.setProperty("--c", spine(songs[0]));
+  el.style.setProperty("--c", (fresh && fresh.style.getPropertyValue("--c")) || spine(songs[0]));
   document.body.append(el);
 
   const frames = [];
