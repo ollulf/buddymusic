@@ -1,13 +1,13 @@
 [
   {
-    "version": "1.0.2110.13",
+    "version": "1.0.2110.14",
     "date": "2026-10-21",
     "en": [
       "Your queue as an endless stack of CDs next to the player: only songs you add yourself, a whole album added at once is one thick CD, and they play before the rest of the album; tap it to see what's up next",
       "Swipe a song right to queue it and watch it fly onto the stack, left to favourite it; everything else is in the ⋯ menu",
       "Bigger song titles on a retro LCD screen, and a wide pixel spectrum next to play/pause that moves whenever music plays (switch it off in Settings)",
       "Pick your own look in Settings: a base colour and a key colour",
-      "Playback is more reliable: it recovers from network drops and keeps playing on iPhone in the background",
+      "Playback is more reliable: it recovers from network drops, keeps playing on iPhone in the background, and stops when you close the app",
       "A small Wi-Fi sign shows when your connection is slow",
       "NEW stays on an album until you open it",
       "Send feedback straight from Settings; \"What's new\" and the app version are in the profile menu",
@@ -18,7 +18,7 @@
       "Song nach rechts wischen zum Einreihen und zusehen, wie er auf den Stapel fliegt, nach links für Favoriten; alles andere im ⋯-Menü",
       "Größere Songtitel auf einem Retro-LCD und ein breites Pixel-Spektrum neben Play/Pause, das sich bewegt, sobald Musik läuft (in den Einstellungen abschaltbar)",
       "Eigener Look in den Einstellungen: Basis- und Akzentfarbe wählen",
-      "Zuverlässigere Wiedergabe: fängt sich nach Netzaussetzern und spielt auf dem iPhone im Hintergrund weiter",
+      "Zuverlässigere Wiedergabe: fängt sich nach Netzaussetzern, spielt auf dem iPhone im Hintergrund weiter und stoppt, wenn du die App schließt",
       "Ein kleines WLAN-Zeichen zeigt, wenn die Verbindung langsam ist",
       "NEU bleibt an einem Album, bis du es öffnest",
       "Feedback direkt aus den Einstellungen senden; „Neuigkeiten“ und die App-Version im Profilmenü",
