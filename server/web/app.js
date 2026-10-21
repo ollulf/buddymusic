@@ -2,7 +2,7 @@ import { renderUpload } from "./upload.js";
 import { renderLibrary, setNewAlbums, prefetchLibrary, dropLibraryPrefetch } from "./library.js";
 import { renderSearch, searchBox } from "./search.js";
 import { renderFavorites } from "./favorites.js";
-import { renderBar, playList, settings, setQuality, onChange, QUALITIES, qualityHint } from "./player.js";
+import { renderBar, playList, settings, setQuality, onChange, stopAll, QUALITIES, qualityHint } from "./player.js";
 import { api, Unauthorized } from "./dom.js";
 import { renderPlaylists, setPlaylistUser } from "./playlists.js";
 import { renderAdmin } from "./admin.js";
@@ -30,6 +30,7 @@ const LOGIN_ERRORS = {
 };
 
 function showLogin() {
+  stopAll();
   const user = h("input", { name: "username", autocomplete: "username", required: true, autocapitalize: "none" });
   const pass = h("input", { name: "password", type: "password", autocomplete: "current-password", required: true });
   const remember = h("input", { name: "remember", type: "checkbox", checked: true });
