@@ -2,7 +2,7 @@ import { t } from "./i18n.js";
 import { h, coverURL, fmtTime } from "./dom.js";
 import { heartButton, retarget } from "./favs.js";
 import { netMonitor, netChip } from "./net.js";
-import { renderViz } from "./viz.js";
+import { renderViz, vizRisky } from "./viz.js";
 
 const SAVER_KEY = "bm.dataSaver";
 const QUALITY_KEY = "bm.quality";
@@ -631,6 +631,7 @@ audio.addEventListener("waiting", () => {
 });
 const life = { closing: false };
 function shutdown(e) {
+  if (e.persisted && vizRisky) return;
   report(false);
   life.closing = true;
   play.gen += 1;

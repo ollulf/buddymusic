@@ -7,6 +7,7 @@ const FRAME_MS = 50;
 const CALM_MS = 140;
 
 export const vizRisky = /iPhone|iPad|iPod/.test(navigator.userAgent || "") || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+export const vizSimulated = vizRisky;
 
 const subs = new Set();
 export function vizEnabled() {
@@ -39,7 +40,7 @@ function connect(ctx, audio) {
 function ensureGraph(audio) {
   if (graph.analyser) return Promise.resolve(true);
   if (graph.pending) return graph.pending;
-  if (!AC || document.hidden || !vizEnabled()) return Promise.resolve(false);
+  if (vizSimulated || !AC || document.hidden || !vizEnabled()) return Promise.resolve(false);
   let ctx;
   try { ctx = new AC(); } catch { return Promise.resolve(false); }
   const start = running(ctx) ? Promise.resolve() : Promise.race([ctx.resume().catch(() => {}), new Promise((r) => setTimeout(r, 400))]);
@@ -125,7 +126,25 @@ export function renderViz(audio, bar) {
     }
   };
 
+  const noise = new Array(BARS).fill(0);
+  const simulate = (calm) => {
+    const t = performance.now() / 1000;
+    const pos = audio.currentTime || 0;
+    const ph = (pos * 2.05) % 1;
+    const kick = Math.pow(Math.max(0, 1 - ph * 3.2), 2);
+    const swell = 0.75 + 0.25 * Math.sin(pos * 0.37) * Math.sin(pos * 0.11 + 1.3);
+    for (let i = 0; i < BARS; i++) {
+      const f = i / (BARS - 1);
+      noise[i] += (Math.random() - noise[i]) * (0.35 + f * 0.4);
+      const shape = 0.78 - f * 0.42 + 0.08 * Math.sin(t * (1.3 + f * 2.7) + i * 1.7);
+      const lv = Math.max(0, Math.min(1, swell * (shape * (0.55 + 0.45 * noise[i]) + kick * (1 - f) * 0.35)));
+      now[i] = calm ? now[i] + (lv - now[i]) * 0.5 : lv;
+      if (lv >= peak[i]) { peak[i] = lv; hold[i] = 8; } else if (hold[i] > 0) hold[i]--; else peak[i] = Math.max(0, peak[i] - 0.06);
+    }
+  };
+
   const sample = (calm) => {
+    if (vizSimulated) { simulate(calm); return; }
     const an = graph.analyser;
     if (!an) return;
     an.getByteFrequencyData(graph.data);
@@ -141,7 +160,7 @@ export function renderViz(audio, bar) {
 
   const clear = () => { now.fill(0); peak.fill(0); hold.fill(0); };
 
-  const live = () => vizEnabled() && !!graph.analyser && !audio.paused && !document.hidden && !house.hidden;
+  const live = () => vizEnabled() && (vizSimulated || !!graph.analyser) && !audio.paused && !document.hidden && !house.hidden;
 
   const tick = (ts) => {
     raf = 0;
@@ -169,7 +188,7 @@ export function renderViz(audio, bar) {
   };
 
   const wire = () => {
-    if (!vizEnabled() || document.hidden) return;
+    if (vizSimulated || !vizEnabled() || document.hidden) return;
     if (graph.analyser) { resume(); return; }
     ensureGraph(audio).then((ok) => { if (ok) { resume(); sync(); } });
   };
