@@ -1,28 +1,28 @@
 [
   {
-    "version": "1.0.2110.9",
+    "version": "1.0.2110.10",
     "date": "2026-10-21",
     "en": [
-      "Your queue as a stack of CDs next to the player: only songs you add yourself show up, a whole album added at once is one thick CD, and they play before the rest of the album",
+      "Your queue as a stack of wide CDs next to the player: only songs you add yourself, a whole album added at once is one thick CD, and they play before the rest of the album; tap it for a full-screen queue",
       "Swipe a song right to queue it and watch it fly onto the stack, left to favourite it; everything else is in the ⋯ menu",
-      "Song titles on a retro LCD screen, and a wide pixel spectrum next to play/pause, now on for everyone (switch it off in Settings)",
+      "Bigger song titles on a retro LCD screen, and a wide pixel spectrum next to play/pause that moves whenever music plays (switch it off in Settings)",
       "Pick your own look in Settings: a base colour and a key colour",
       "Playback is more reliable: it recovers from network drops and keeps playing on iPhone in the background",
       "A small Wi-Fi sign shows when your connection is slow",
       "NEW stays on an album until you open it",
       "Send feedback straight from Settings; \"What's new\" and the app version are in the profile menu",
-      "Fresh pixel look: new icons, CD frames, clearer numbers, tidier pages, and nothing hides behind the CD anymore"
+      "Fresh pixel look: a bigger CD, new icons, clearer numbers, tidier pages and settings, more room in albums on phones, and nothing hides behind the CD anymore"
     ],
     "de": [
-      "Deine Warteschlange als CD-Stapel neben dem Player: nur Songs, die du selbst hinzufügst, ein ganzes Album auf einmal ist eine dicke CD, und sie laufen vor dem Rest des Albums",
+      "Deine Warteschlange als Stapel breiter CDs neben dem Player: nur Songs, die du selbst hinzufügst, ein ganzes Album auf einmal ist eine dicke CD, und sie laufen vor dem Rest des Albums; ein Tipp zeigt sie bildschirmfüllend",
       "Song nach rechts wischen zum Einreihen und zusehen, wie er auf den Stapel fliegt, nach links für Favoriten; alles andere im ⋯-Menü",
-      "Songtitel auf einem Retro-LCD und ein breites Pixel-Spektrum neben Play/Pause, jetzt für alle an (in den Einstellungen abschaltbar)",
+      "Größere Songtitel auf einem Retro-LCD und ein breites Pixel-Spektrum neben Play/Pause, das sich bewegt, sobald Musik läuft (in den Einstellungen abschaltbar)",
       "Eigener Look in den Einstellungen: Basis- und Akzentfarbe wählen",
       "Zuverlässigere Wiedergabe: fängt sich nach Netzaussetzern und spielt auf dem iPhone im Hintergrund weiter",
       "Ein kleines WLAN-Zeichen zeigt, wenn die Verbindung langsam ist",
       "NEU bleibt an einem Album, bis du es öffnest",
       "Feedback direkt aus den Einstellungen senden; „Neuigkeiten“ und die App-Version im Profilmenü",
-      "Frischer Pixel-Look: neue Symbole, CD-Rahmen, klarere Zahlen, aufgeräumte Seiten, und nichts verschwindet mehr hinter der CD"
+      "Frischer Pixel-Look: größere CD, neue Symbole, klarere Zahlen, aufgeräumte Seiten und Einstellungen, mehr Platz in Alben auf dem Handy, und nichts verschwindet mehr hinter der CD"
     ]
   }
 ]
