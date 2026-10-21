@@ -415,4 +415,16 @@ async function boot() {
   showLogin();
 }
 
+let scrollTick = false;
+function syncScrolled() {
+  scrollTick = false;
+  document.body.classList.toggle('scrolled', window.scrollY > 8);
+}
+window.addEventListener('scroll', () => {
+  if (scrollTick) return;
+  scrollTick = true;
+  requestAnimationFrame(syncScrolled);
+}, { passive: true });
+syncScrolled();
+
 boot();

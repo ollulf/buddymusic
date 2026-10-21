@@ -2,6 +2,7 @@ import { t } from "./i18n.js";
 import { h, coverURL, fmtTime } from "./dom.js";
 import { heartButton, retarget } from "./favs.js";
 import { netMonitor, netChip } from "./net.js";
+import { renderViz } from "./viz.js";
 
 const SAVER_KEY = "bm.dataSaver";
 const QUALITY_KEY = "bm.quality";
@@ -761,6 +762,8 @@ export function renderBar(opts = {}) {
       h("div", { class: "pb-left" },
         h("div", { class: "pb-screen" }, h("div", { class: "pb-chips" }, netChip(net), rateB), info),
         h("div", { class: "pb-btns" }, h("i", { class: "pb-grille" }), heartB, repeatB, shuffleB, volumeControl()))));
+
+  bar.append(renderViz(audio, bar));
 
   const narrow = window.matchMedia ? window.matchMedia("(max-width: 760px)") : { matches: false };
   const setTucked = (on) => {
