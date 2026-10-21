@@ -123,7 +123,6 @@ export function renderQueue() {
   stack.addEventListener("click", (e) => {
     e.stopPropagation();
     if (isOpen()) { close(); return; }
-    if (touchy() && !root.classList.contains("lift")) { setLift(true); return; }
     open();
   });
   closeB.addEventListener("click", (e) => { e.stopPropagation(); close(); stack.focus({ preventScroll: true }); });
