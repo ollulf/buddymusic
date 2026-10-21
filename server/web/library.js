@@ -1,8 +1,9 @@
 import { t } from "./i18n.js";
 import { h, api, apiSend, cover, fmtTime, Unauthorized, setPageTitle } from "./dom.js";
 import * as player from "./player.js";
-import { heartButton } from "./favs.js";
-import { addToPlaylistButton } from "./playlists.js";
+import { heartButton, isStarred, toggleStar } from "./favs.js";
+import { addToPlaylistButton, openAddSheet, toast } from "./playlists.js";
+import { rowMenuButton, swipeRow } from "./rowactions.js";
 
 const deletedSongs = new Set();
 const deletedAlbums = new Set();
@@ -59,19 +60,38 @@ export function albumCard(al, i = EAGER_COVERS) {
 
 export function songRow(songs, i, opts = {}) {
   const s = songs[i];
-  return h("li", { class: "song-row" },
+  const fav = () => isStarred(s, "song");
+  const toggleFav = () => {
+    const on = !fav();
+    toggleStar(s, "song", opts);
+    toast(t(on ? "song.faved" : "song.unfaved", { title: s.title || t("player.unknownTitle") }));
+  };
+  const queue = () => {
+    player.addToQueue([s]);
+    toast(t("song.queued", { title: s.title || t("player.unknownTitle") }));
+  };
+  const menu = rowMenuButton(() => [
+    { icon: fav() ? "♥" : "♡", label: t(fav() ? "song.unfav" : "song.fav"), run: toggleFav },
+    { icon: "⤵", label: t("song.playNext"), run: () => player.playNext([s]) },
+    { icon: "+", label: t("song.addToQueue"), run: queue },
+    { icon: "☰", label: `${t("playlists.addTo")}…`, run: () => openAddSheet([s], opts) },
+    ...(opts.menu || []),
+    opts.onDelete ? { icon: "✕", label: t("library.deleteTrack"), danger: true, run: () => opts.onDelete(s) } : null,
+  ]);
+  const fg = h("div", { class: "row-fg" },
     h("button", { class: "song-main", onclick: () => player.playList(songs, i) },
       h("span", { class: "s-no" }, opts.showCover ? cover(s.coverArt, 64, "art tiny") : String(s.track || i + 1)),
       h("span", { class: "s-meta" },
         h("span", { class: "s-title" }, s.title || t("player.unknownTitle")),
         opts.showArtist ? h("span", { class: "s-sub" }, [s.artist, s.album].filter(Boolean).join(" · ")) : null),
       h("span", { class: "s-dur" }, fmtTime(s.duration))),
-    heartButton(s, "song", { cls: "more", onUnauthorized: opts.onUnauthorized }),
-    h("button", { class: "icon more", title: t("song.playNext"), "aria-label": t("song.playNext"), onclick: () => player.playNext([s]) }, "⤵"),
-    h("button", { class: "icon more", title: t("song.addToQueue"), "aria-label": t("song.addToQueue"), onclick: () => player.addToQueue([s]) }, "+"),
-    addToPlaylistButton([s], opts),
-    opts.extra || null,
-    opts.onDelete ? h("button", { class: "icon more danger", title: t("library.deleteTrack"), "aria-label": t("library.deleteTrack"), onclick: () => opts.onDelete(s) }, "✕") : null);
+    menu);
+  const li = h("li", { class: "song-row" }, fg);
+  swipeRow(li, fg, {
+    right: { icon: "+", label: () => t("song.swipeQueue"), run: queue },
+    left: { icon: "♥", label: () => t(fav() ? "song.unfav" : "song.swipeFav"), run: toggleFav },
+  });
+  return li;
 }
 
 export function artistList(artists) {

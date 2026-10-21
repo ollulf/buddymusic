@@ -7,6 +7,8 @@ const RECENT = 2000;
 
 let tapEl = null;
 let tapAt = 0;
+let rowEl = null;
+let rowAt = 0;
 
 const calm = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
@@ -21,6 +23,7 @@ const center = (r) => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
 
 const sourcePoint = () => {
   if (tapEl && performance.now() - tapAt < RECENT && shown(tapEl)) return center(tapEl.getBoundingClientRect());
+  if (rowEl && performance.now() - rowAt < RECENT * 5 && shown(rowEl)) return center(rowEl.getBoundingClientRect());
   return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 };
 
@@ -94,6 +97,11 @@ const fly = (songs) => {
 document.addEventListener("click", (e) => {
   const el = e.target && e.target.closest && e.target.closest("button, [role=button], a, li");
   if (el) { tapEl = el; tapAt = performance.now(); }
+}, true);
+
+document.addEventListener("pointerdown", (e) => {
+  const li = e.target && e.target.closest && e.target.closest("li");
+  if (li) { rowEl = li; rowAt = performance.now(); }
 }, true);
 
 document.addEventListener("queueadd", (e) => fly(e.detail && e.detail.songs));

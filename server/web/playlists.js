@@ -125,10 +125,10 @@ async function renderPlaylist(container, id, opts) {
   const publicBox = h("input", { type: "checkbox", checked: !!pl.public, onchange: (e) => patch({ public: e.target.checked }) });
   const rows = songs.map((_, i) => songRow(songs, i, {
     showArtist: true, showCover: true, onUnauthorized: opts.onUnauthorized,
-    extra: own ? [
-      h("button", { class: "icon more", title: t("playlists.moveUp"), "aria-label": t("playlists.moveUp"), disabled: i === 0, onclick: () => move(i, -1) }, "↑"),
-      h("button", { class: "icon more", title: t("playlists.moveDown"), "aria-label": t("playlists.moveDown"), disabled: i === songs.length - 1, onclick: () => move(i, 1) }, "↓"),
-      h("button", { class: "icon more danger", title: t("playlists.remove"), "aria-label": t("playlists.remove"), onclick: () => saveSongs(songs.filter((_, j) => j !== i)) }, "−"),
+    menu: own ? [
+      { icon: "↑", label: t("playlists.moveUp"), disabled: i === 0, run: () => move(i, -1) },
+      { icon: "↓", label: t("playlists.moveDown"), disabled: i === songs.length - 1, run: () => move(i, 1) },
+      { icon: "−", label: t("playlists.remove"), danger: true, run: () => saveSongs(songs.filter((_, j) => j !== i)) },
     ] : null,
   }));
   container.replaceChildren(
@@ -199,7 +199,7 @@ export async function openAddSheet(songs, opts = {}) {
   }
 }
 
-function toast(text) {
+export function toast(text) {
   const el = h("div", { class: "toast", role: "status" }, text);
   document.body.append(el);
   setTimeout(() => el.remove(), 2200);
