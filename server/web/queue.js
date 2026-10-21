@@ -98,6 +98,12 @@ export function renderQueue() {
     list.replaceChildren(...kids);
   };
 
+  const tilt = (k) => {
+    let x = 0;
+    for (const ch of k) x = (x * 31 + ch.charCodeAt(0)) >>> 0;
+    return ["", " alt", " alt2"][x % 3];
+  };
+
   const paint = () => {
     const { q, i, up } = upcoming();
     const sig = q.map((s) => s.id + (entryInfo(s).manual ? "+" + entryInfo(s).batch : "")).join(",") + "|" + i;
@@ -115,7 +121,7 @@ export function renderQueue() {
     if (!shown) kids.push(h("span", { class: "case empty" }));
     for (let n = 0; n < shown; n++) {
       const r = runs[shown - 1 - n];
-      const c = h("span", { class: "case" + (r.size > 1 ? " album" : " single") + (n % 3 === 1 ? " alt" : n % 3 === 2 ? " alt2" : "") + (n === shown - 1 ? " top" : "") });
+      const c = h("span", { class: "case" + (r.size > 1 ? " album" : " single") + tilt(r.key) + (n === shown - 1 ? " top" : "") });
       c.style.setProperty("--c", spine(r.song));
       c.dataset.key = r.key;
       kids.push(c);
