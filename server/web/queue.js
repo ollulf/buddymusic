@@ -63,9 +63,9 @@ export function renderQueue() {
   const opB = (label, glyph, fn, off = false) => h("button", { type: "button", class: "qp-op", disabled: off, "aria-label": label, title: label, onclick: (e) => { e.stopPropagation(); fn(); } }, glyph);
 
   const row = (q, i, s, n, ops) => {
-    const li = h("li", { class: n === i ? "cur" : n < i ? "done" : "", style: `--c:${spine(s)}` },
+    const li = h("li", { class: n === i ? "cur" : "", style: `--c:${spine(s)}` },
       h("span", { class: "sp" }),
-      h("span", { class: "n" }, n === i ? "▶" : String(n + 1)),
+      h("span", { class: "n" }, n === i ? "▶" : String(n - i)),
       h("span", { class: "t" }, s.title || t("player.unknownTitle"), h("i", {}, [s.artist, s.duration ? fmtTime(+s.duration) : ""].filter(Boolean).join(" · "))),
       h("span", { class: "ops" }, ops));
     li.tabIndex = 0;
@@ -84,6 +84,7 @@ export function renderQueue() {
     const kids = [];
     const rm = (n) => opB(t("queue.remove"), "✕", () => removeAt([n]));
     q.forEach((s, n) => {
+      if (n < i) return;
       if (n === first && up.length) kids.push(divider(t("queue.upNext")));
       if (n === last + 1 && n > i) kids.push(divider(t("queue.nextFrom")));
       let ops = [];

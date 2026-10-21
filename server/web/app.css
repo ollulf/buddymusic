@@ -659,7 +659,6 @@ button.pb-b.vol[aria-expanded="true"] { color: var(--accent); }
 .qp-list li .t i { display: block; font-style: normal; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
 .qp-list li.cur { background: var(--screen); color: var(--screen-fg); box-shadow: inset 4px 0 0 var(--accent); }
 .qp-list li.cur .n { color: var(--accent); }
-.qp-list li.done { opacity: .5; }
 .qp-list li.qp-sec { display: block; min-height: 0; padding: 6px 6px 2px; font: 11px var(--pix); text-transform: uppercase; letter-spacing: 1px; color: var(--muted); cursor: default; border-bottom: 2px solid var(--ink); }
 .qp-list li.qp-sec:hover { background: none; }
 .qp-list .ops { display: flex; gap: 3px; }
