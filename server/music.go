@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var errNoCreds = errors.New("no session credentials")
@@ -187,7 +188,18 @@ func searchParams(r *http.Request) (url.Values, bool) {
 
 var passHeaders = []string{"Content-Type", "Content-Length", "Content-Range", "Accept-Ranges", "Last-Modified", "ETag"}
 
-var streamClient = &http.Client{}
+var streamClient = &http.Client{Transport: streamTransport()}
+
+func streamTransport() *http.Transport {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.Proxy = nil
+	t.MaxIdleConnsPerHost = 16
+	return t
+}
+
+var streamIdle = 30 * time.Second
+
+var errUpstreamIdle = errors.New("navidrome sent nothing for too long")
 
 func (a *App) proxyBinary(w http.ResponseWriter, r *http.Request, endpoint string, q url.Values, cache string) (sent int64) {
 	creds, err := a.sessionCreds(r)
@@ -195,7 +207,11 @@ func (a *App) proxyBinary(w http.ResponseWriter, r *http.Request, endpoint strin
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
-	req, err := http.NewRequestWithContext(r.Context(), "GET", a.nav.base+"/rest/"+endpoint+"?"+a.nav.query(creds, q).Encode(), nil)
+	ctx, cancel := context.WithCancelCause(r.Context())
+	defer cancel(nil)
+	idle := time.AfterFunc(streamIdle, func() { cancel(errUpstreamIdle) })
+	defer idle.Stop()
+	req, err := http.NewRequestWithContext(ctx, "GET", a.nav.base+"/rest/"+endpoint+"?"+a.nav.query(creds, q).Encode(), nil)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "proxy")
 		return
@@ -206,8 +222,12 @@ func (a *App) proxyBinary(w http.ResponseWriter, r *http.Request, endpoint strin
 		}
 	}
 	res, err := streamClient.Do(req)
+	idle.Stop()
 	if err != nil {
 		if r.Context().Err() == nil {
+			if errors.Is(context.Cause(ctx), errUpstreamIdle) {
+				err = errUpstreamIdle
+			}
 			log.Printf("music %s: %v", endpoint, err)
 		}
 		writeError(w, http.StatusBadGateway, "navidrome-unreachable")
@@ -230,7 +250,9 @@ func (a *App) proxyBinary(w http.ResponseWriter, r *http.Request, endpoint strin
 	buf := make([]byte, 32<<10)
 	flusher, _ := w.(http.Flusher)
 	for {
+		idle.Reset(streamIdle)
 		n, rerr := res.Body.Read(buf)
+		idle.Stop()
 		if n > 0 {
 			m, werr := w.Write(buf[:n])
 			sent += int64(m)
@@ -244,6 +266,9 @@ func (a *App) proxyBinary(w http.ResponseWriter, r *http.Request, endpoint strin
 		if rerr != nil {
 			if endpoint != "stream.view" || r.Context().Err() != nil {
 				return
+			}
+			if errors.Is(context.Cause(ctx), errUpstreamIdle) {
+				rerr = errUpstreamIdle
 			}
 			want := res.ContentLength
 			if rerr != io.EOF || (want > 0 && sent < want) {
