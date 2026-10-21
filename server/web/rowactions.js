@@ -34,25 +34,31 @@ function showMenu(btn, items) {
       onclick: (e) => { e.stopPropagation(); closeRowMenu(); it.run(); },
     }, h("span", { class: "rm-ico", "aria-hidden": "true" }, it.icon || ""), h("span", {}, it.label))));
   document.body.append(pop);
-  const r = btn.getBoundingClientRect();
-  const w = pop.offsetWidth, ph = pop.offsetHeight;
-  const left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w));
-  const below = r.bottom + 4 + ph <= window.innerHeight - 8;
-  pop.style.left = `${left + window.scrollX}px`;
-  pop.style.top = `${(below ? r.bottom + 4 : Math.max(8, r.top - ph - 4)) + window.scrollY}px`;
+  const place = () => {
+    const r = btn.getBoundingClientRect();
+    const w = pop.offsetWidth, ph = pop.offsetHeight;
+    const below = r.bottom + 4 + ph <= window.innerHeight - 8;
+    pop.style.left = `${Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w))}px`;
+    pop.style.top = `${below ? r.bottom + 4 : Math.max(8, r.top - ph - 4)}px`;
+  };
+  place();
   btn.setAttribute("aria-expanded", "true");
   const outside = (e) => { if (!pop.contains(e.target) && e.target !== btn) closeRowMenu(); };
   const key = (e) => { if (e.key === "Escape") { closeRowMenu(); btn.focus(); } };
   const nav = () => closeRowMenu();
+  const resize = () => place();
+  const scroll = (e) => { if (!pop.contains(e.target)) closeRowMenu(); };
   document.addEventListener("pointerdown", outside, true);
   document.addEventListener("keydown", key);
   window.addEventListener("hashchange", nav);
-  window.addEventListener("resize", nav);
+  window.addEventListener("resize", resize);
+  document.addEventListener("scroll", scroll, true);
   openMenu = { pop, btn, off: () => {
     document.removeEventListener("pointerdown", outside, true);
     document.removeEventListener("keydown", key);
     window.removeEventListener("hashchange", nav);
-    window.removeEventListener("resize", nav);
+    window.removeEventListener("resize", resize);
+    document.removeEventListener("scroll", scroll, true);
   } };
   pop.querySelector("button:not(:disabled)")?.focus();
 }
