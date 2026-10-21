@@ -645,30 +645,26 @@ button.pb-b.vol[aria-expanded="true"] { color: var(--accent); }
 .cdq .case.album { height: 22px; }
 @media (max-width: 420px) { .cdq { left: calc(var(--tl) + var(--tw) + 4px); width: calc(var(--tl) - 8px); } .cdq .case { width: min(100px, calc(50vw - var(--tw) / 2 - 14px)); } .cdq .case.single { width: min(80px, calc(50vw - var(--tw) / 2 - 34px)); } }
 .cdq .case.album::before { content: ""; position: absolute; left: 10px; right: 6px; bottom: 3px; height: 2px; background: rgb(0 0 0 / .3); }
-.qpanel { position: fixed; z-index: 5; left: 0; right: 0; top: var(--qp-top, 0px); bottom: calc(var(--bh) + var(--sb) - 2px); display: flex; flex-direction: column; box-sizing: border-box; background: var(--card); color: var(--fg); border: 0; border-bottom: 2px solid var(--ink); overscroll-behavior: contain; font-size: 13px; }
+.qpanel { position: fixed; z-index: 5; left: 0; right: 0; top: var(--qp-top, 0px); bottom: calc(var(--bh) + var(--sb) - 2px); display: flex; flex-direction: column; box-sizing: border-box; background: var(--card); color: var(--fg); border: 0; border-bottom: 2px solid var(--ink); overscroll-behavior: contain; }
 .qpanel[hidden] { display: none; }
 .qp-head { display: flex; align-items: center; gap: var(--sp-2); padding: 6px 8px; min-height: 32px; background: var(--shade); border-bottom: 2px solid var(--ink); }
-.qp-head strong { font: 16px/1.2 var(--mys); letter-spacing: 1px; text-transform: uppercase; }
+.qp-head strong { font: var(--fs-lg)/1.2 var(--mys); letter-spacing: .07em; text-transform: uppercase; color: var(--accent); }
 .qp-head small { flex: 1; font: 11px var(--num); color: var(--muted); }
 .qp-x, .qp-op, .qp-clear { border: 2px solid var(--ink); background: var(--card); color: var(--fg); box-shadow: var(--bevel); font: 12px var(--pix); cursor: pointer; padding: 0; }
 .qp-x { width: 28px; height: 26px; }
-.qp-list { list-style: none; margin: 0; padding: 4px 4px calc(var(--th) + 8px); flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
-.qp-list li { display: grid; grid-template-columns: 8px 22px 1fr auto; align-items: center; gap: 6px; padding: 2px 6px 2px 0; min-height: 34px; border-bottom: 1px solid var(--shade); cursor: pointer; }
+.qp-list { list-style: none; margin: 0; padding: var(--sp-1) var(--sp-2) calc(var(--th) + 8px); flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; font-size: var(--fs-md); }
+.qp-list li { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2); background: var(--card); border-bottom: 2px dashed var(--shade); cursor: pointer; }
+.qp-list li:last-child { border-bottom: 0; }
 .qp-list li:hover, .qp-list li:focus-visible { background: var(--shade); outline: none; }
-.qp-list li .sp { align-self: stretch; background: var(--c); border-right: 2px solid var(--ink); }
-.qp-list li .n { font: 11px var(--num); color: var(--muted); text-align: right; }
-.qp-list li .t { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.qp-list li .t i { display: block; font-style: normal; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
-.qp-list li.cur { background: var(--screen); color: var(--screen-fg); box-shadow: inset 4px 0 0 var(--accent); }
-.qp-list li.cur .n { color: var(--accent); }
-.qp-list li.qp-sec { display: block; min-height: 0; padding: 6px 6px 2px; font: 11px var(--pix); text-transform: uppercase; letter-spacing: 1px; color: var(--muted); cursor: default; border-bottom: 2px solid var(--ink); }
+.qp-list li.cur .s-no, .qp-list li.cur .s-title { color: var(--accent); }
+.qp-list li.qp-sec { display: block; padding: var(--sp-3) var(--sp-2) var(--sp-1); font-family: var(--mys); font-size: var(--fs-lg); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); cursor: default; border-bottom: 0; }
 .qp-list li.qp-sec:hover { background: none; }
+.qp-list li.qp-empty { font: var(--fs-md) var(--pix); text-transform: none; letter-spacing: 0; }
 .qp-list .ops { display: flex; gap: 3px; }
 .qp-op { width: 26px; height: 26px; font-size: 10px; }
 .qp-op:disabled, .qp-clear:disabled { opacity: .4; cursor: default; }
 .qp-clear { color: var(--orange); padding: 2px 8px; min-height: 26px; }
 @media (max-width: 760px), (pointer: coarse) {
-  .qp-list li { min-height: 48px; }
   .qp-op, .qp-x { width: 44px; height: 44px; }
   .qp-clear { min-height: 44px; padding: 0 14px; }
   .qp-head { min-height: 48px; }

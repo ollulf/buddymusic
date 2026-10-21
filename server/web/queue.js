@@ -65,10 +65,12 @@ export function renderQueue() {
   const opB = (label, glyph, fn, off = false) => h("button", { type: "button", class: "qp-op", disabled: off, "aria-label": label, title: label, onclick: (e) => { e.stopPropagation(); fn(); } }, glyph);
 
   const row = (q, i, s, n, ops) => {
-    const li = h("li", { class: n === i ? "cur" : "", style: `--c:${spine(s)}` },
-      h("span", { class: "sp" }),
-      h("span", { class: "n" }, n === i ? "▶" : String(n - i)),
-      h("span", { class: "t" }, s.title || t("player.unknownTitle"), h("i", {}, [s.artist, s.duration ? fmtTime(+s.duration) : ""].filter(Boolean).join(" · "))),
+    const li = h("li", { class: n === i ? "cur" : "" },
+      h("span", { class: "s-no" }, n === i ? "▶" : String(n - i)),
+      h("span", { class: "s-meta" },
+        h("span", { class: "s-title" }, s.title || t("player.unknownTitle")),
+        s.artist ? h("span", { class: "s-sub" }, s.artist) : null),
+      h("span", { class: "s-dur" }, s.duration ? fmtTime(+s.duration) : ""),
       h("span", { class: "ops" }, ops));
     li.tabIndex = 0;
     li.addEventListener("click", () => jump(n));
@@ -96,7 +98,7 @@ export function renderQueue() {
       ];
       kids.push(row(q, i, s, n, ops));
     });
-    if (!up.length) kids.push(h("li", { class: "qp-sec" }, t("queue.empty")));
+    if (!up.length) kids.push(h("li", { class: "qp-sec qp-empty" }, t("queue.empty")));
     list.replaceChildren(...kids);
   };
 
