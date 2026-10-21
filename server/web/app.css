@@ -671,7 +671,6 @@ button.pb-b.vol[aria-expanded="true"] { color: var(--accent); }
   .qp-clear { min-height: 44px; padding: 0 14px; }
   .qp-head { min-height: 48px; }
 }
-@media (max-width: 760px) { footer.player.pb.tucked .cdq-wrap:not(.open) .cdq { visibility: hidden; } }
 .cdq .case.wait { visibility: hidden; }
 .cdq .case.land { animation: cdq-land .3s steps(3) both; }
 @keyframes cdq-land { 0% { transform: translateY(-3px) scaleY(.7); } 50% { transform: translateY(1px) scaleY(1.15); } 100% { transform: none; } }
