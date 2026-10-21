@@ -78,6 +78,7 @@ export function renderViz(audio, bar) {
   let geo = null;
   let raf = 0;
   let last = 0;
+  let beat = 0;
 
   const readColours = () => {
     const cs = getComputedStyle(house);
@@ -137,6 +138,7 @@ export function renderViz(audio, bar) {
 
   const tick = (ts) => {
     raf = 0;
+    beat = performance.now();
     if (!live()) { clear(); draw(); return; }
     const calm = reduced.matches;
     if (graph.ctx && !running(graph.ctx)) resume();
@@ -148,8 +150,15 @@ export function renderViz(audio, bar) {
     const on = vizEnabled();
     house.hidden = !on;
     if (on && graph.analyser && !audio.paused && !document.hidden) resume();
-    if (live()) { if (!raf) raf = requestAnimationFrame(tick); }
+    if (live()) { if (!raf) { last = 0; beat = performance.now(); raf = requestAnimationFrame(tick); } }
     else { if (raf) cancelAnimationFrame(raf); raf = 0; clear(); if (on) draw(); }
+  };
+
+  const keep = () => {
+    if (!live()) return;
+    if (raf && performance.now() - beat > 1000) { cancelAnimationFrame(raf); raf = 0; }
+    if (!raf) sync();
+    else if (graph.ctx && !running(graph.ctx)) resume();
   };
 
   const wire = () => {
@@ -164,6 +173,7 @@ export function renderViz(audio, bar) {
   subs.add(() => { if (!audio.paused) wire(); });
 
   for (const ev of ["play", "playing", "pause", "ended", "emptied"]) audio.addEventListener(ev, sync);
+  for (const ev of ["timeupdate", "loadeddata", "canplay"]) audio.addEventListener(ev, keep);
   reduced.addEventListener("change", sync);
   compact.addEventListener("change", () => { layout(); draw(); });
   tiny.addEventListener("change", () => { layout(); draw(); });
