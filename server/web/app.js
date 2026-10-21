@@ -3,6 +3,7 @@ import { renderLibrary, setNewAlbums, prefetchLibrary, dropLibraryPrefetch } fro
 import { renderSearch, searchBox } from "./search.js";
 import { renderFavorites } from "./favorites.js";
 import { renderQueue } from "./queue.js";
+import "./fly.js";
 import { renderBar, playList, settings, setQuality, onChange, stopAll, QUALITIES, qualityHint } from "./player.js";
 import { api, Unauthorized } from "./dom.js";
 import { renderPlaylists, setPlaylistUser } from "./playlists.js";

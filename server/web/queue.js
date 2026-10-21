@@ -5,7 +5,7 @@ import { onChange, queue, current, jump, move, removeSongs } from "./player.js";
 const SPINES = ["var(--accent)", "var(--orange)", "var(--accent-lo)", "var(--muted)", "var(--accent-hi)", "var(--fg)"];
 const MAX = 6;
 
-const spine = (song) => {
+export const spine = (song) => {
   const k = String(song.albumId || song.id || "");
   let x = 0;
   for (const c of k) x = (x * 31 + c.charCodeAt(0)) >>> 0;

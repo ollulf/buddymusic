@@ -265,16 +265,20 @@ export function playList(songs, start = 0) {
 export function playNext(songs) {
   const at = state.index + 1;
   state.queue.splice(at, 0, ...songs);
-  if (state.index < 0) return playList(state.queue, 0);
+  if (state.index < 0) { playList(state.queue, 0); return queued(songs); }
   rebuildOrder();
   emit();
+  queued(songs);
 }
 
+const queued = (songs) => document.dispatchEvent(new CustomEvent("queueadd", { detail: { songs } }));
+
 export function addToQueue(songs) {
-  if (state.index < 0) return playList(songs, 0);
+  if (state.index < 0) { playList(songs, 0); return queued(songs); }
   state.queue.push(...songs);
   rebuildOrder();
   emit();
+  queued(songs);
 }
 
 export function removeSongs(ids) {
