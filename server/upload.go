@@ -276,7 +276,7 @@ func (a *App) placeUpload(ctx context.Context, u *Upload, form *uploadForm, stor
 	os.Chmod(dst, 0o664)
 	var coverErr error
 	if form.cover != nil {
-		coverErr = replaceCover(dir, form.cover)
+		coverErr = replaceCover(ctx, dir, form.cover)
 	} else if tags.Cover && !hasCoverFile(dir) {
 		coverErr = extractCover(ctx, dst, filepath.Join(dir, "cover.jpg"))
 	}

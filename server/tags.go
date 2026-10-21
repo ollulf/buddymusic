@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -245,5 +246,5 @@ func extractCover(ctx context.Context, audio, out string) error {
 	if err != nil {
 		return err
 	}
-	return writeNew(out, data)
+	return writeNew(out, shrinkCover(ctx, filepath.Dir(out), data))
 }

@@ -1,12 +1,12 @@
 import { renderUpload } from "./upload.js";
-import { renderLibrary, setNewAlbums } from "./library.js";
+import { renderLibrary, setNewAlbums, prefetchLibrary, dropLibraryPrefetch } from "./library.js";
 import { renderSearch, searchBox } from "./search.js";
 import { renderFavorites } from "./favorites.js";
 import { renderBar, playList, settings, setQuality, onChange, QUALITIES, qualityHint } from "./player.js";
 import { api, Unauthorized } from "./dom.js";
 import { renderPlaylists, setPlaylistUser } from "./playlists.js";
 import { renderAdmin } from "./admin.js";
-import { t, relTime } from "./i18n.js";
+import { t, relTime, lang } from "./i18n.js";
 import { renderSettings, GEAR, AVATAR, paintAvatar } from "./settings.js";
 
 const root = document.getElementById("app");
@@ -205,6 +205,41 @@ function friendsPanel() {
   };
 }
 
+let changelog = null;
+
+async function loadChangelog() {
+  if (changelog) return changelog;
+  const res = await fetch("/changelog.json", { cache: "no-cache" });
+  if (!res.ok) throw new Error(String(res.status));
+  changelog = await res.json();
+  return changelog;
+}
+
+function openChangelog(version, returnTo) {
+  const body = h("div", { class: "news-body", tabindex: "0" }, h("p", { class: "muted" }, t("common.loading")));
+  const closeBtn = h("button", { class: "ghost news-close", type: "button", "aria-label": t("news.close"), title: t("news.close"), autofocus: true, onclick: () => dlg.close() }, "✕");
+  const dlg = h("dialog", { class: "sheet card news", "aria-labelledby": "news-title" },
+    h("div", { class: "news-head" }, h("h2", { id: "news-title" }, t("news.title")), closeBtn),
+    body);
+  dlg.addEventListener("click", (e) => {
+    if (e.target !== dlg) return;
+    const r = dlg.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dlg.close();
+  });
+  dlg.addEventListener("close", () => { dlg.remove(); returnTo?.focus(); });
+  document.body.append(dlg);
+  dlg.showModal();
+  closeBtn.focus();
+  loadChangelog().then((list) => {
+    const entries = Array.isArray(list) ? list : [];
+    if (!entries.length) return body.replaceChildren(h("p", { class: "muted" }, t("news.empty")));
+    body.replaceChildren(...entries.map((r) => h("section", { class: r.version === version ? "news-rel current" : "news-rel" },
+      h("h3", {}, h("span", { class: "news-ver" }, r.version), r.date ? h("span", { class: "news-date" }, r.date) : null,
+        r.version === version ? h("span", { class: "tag" }, t("news.current")) : null),
+      h("ul", {}, (r[lang] || r.en || []).map((line) => h("li", {}, line))))));
+  }).catch(() => body.replaceChildren(h("p", { class: "muted" }, t("news.failed"))));
+}
+
 let headerAvatar = { version: 0, paint() {} };
 
 function profileMenu(user, admin, avatar, version) {
@@ -220,7 +255,8 @@ function profileMenu(user, admin, avatar, version) {
     friends.el, settingsItem,
     h("button", { class: "ghost", type: "button", role: "menuitem", onclick: logout }, t("profile.logout")),
     h("p", { class: "powered" }, t("app.powered")),
-    h("p", { class: "version" }, t("app.version", { v: version || "dev" })));
+    h("p", { class: "version" }, t("app.version", { v: version || "dev" }), " ",
+      h("button", { class: "linkish news-link", type: "button", role: "menuitem", "aria-haspopup": "dialog", onclick: () => { close(); openChangelog(version, btn); } }, t("news.open"))));
   const close = (focus) => {
     menu.hidden = true;
     friends.stop();
@@ -275,7 +311,7 @@ function qualityButton() {
 }
 
 function showApp(user, admin, avatar, me = {}) {
-  setNewAlbums(me.newSince, me.ownAlbums);
+  setNewAlbums(me.newSince, me.ownAlbums, me.openedAlbums);
   const TABS = admin === true ? [...BASE_TABS, ["admin", t("tab.admin")]] : BASE_TABS;
   const opts = { onUnauthorized: showLogin, admin: admin === true };
   setPlaylistUser(user);
@@ -359,6 +395,8 @@ function showApp(user, admin, avatar, me = {}) {
 }
 
 async function boot() {
+  const parts = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);
+  if (!parts[0] || parts[0] === "library") prefetchLibrary(parts.slice(1));
   try {
     const res = await fetch("/api/me");
     if (res.ok) {
@@ -366,6 +404,7 @@ async function boot() {
       return showApp(me.user, me.admin, me.avatar, me);
     }
   } catch {}
+  dropLibraryPrefetch();
   showLogin();
 }
 

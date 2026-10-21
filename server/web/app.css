@@ -723,6 +723,7 @@ button.heart[aria-pressed="true"]::before { content: ""; --i: var(--i-heartfull)
 .admin-list li:last-child { border-bottom: 0; }
 .admin-list li > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .admin-list li.failed strong { color: var(--bad); }
+.admin-sub { font-size: .75rem; font-weight: 400; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 16px 0 4px; }
 @media (max-width: 560px) {
   .stats { grid-template-columns: repeat(2, 1fr); }
   .admin-chart .cols { height: 150px; gap: 4px; }
@@ -894,3 +895,15 @@ header.top .saver-toggle + .profile { margin-left: 4px; }
   .page-title { font-size: 28px; }
 }
 .s-no, .s-dur, .bar-time, .pb-vol-val, .stat strong, .admin-table .num, .profile-menu .version { font-family: var(--num); font-variant-numeric: tabular-nums; }
+.profile-menu .news-link { font-family: var(--pix); font-size: 12px; color: var(--accent); box-shadow: none; }
+dialog.sheet.news { width: min(400px, calc(100vw - 32px)); max-height: min(70vh, 560px); overflow: hidden; padding: 12px 14px 14px; gap: 8px; }
+.news-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.news-head h2 { margin: 0; font-size: 20px; color: var(--accent); }
+button.news-close { padding: 2px 8px; border: 2px solid var(--ink); box-shadow: var(--bevel); background: var(--card); }
+.news-body { overflow-y: auto; min-height: 0; display: grid; gap: 12px; padding-right: 4px; }
+.news-body:focus-visible { outline: 2px solid var(--focus); }
+.news-rel h3 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 0 0 4px; font-size: 16px; }
+.news-ver, .news-date { font-family: var(--num); font-variant-numeric: tabular-nums; }
+.news-date { color: var(--muted); font-size: 12px; }
+.news-rel .tag { font-size: 11px; text-transform: uppercase; color: var(--accent); border: 2px solid var(--accent); padding: 0 4px; }
+.news-rel ul { margin: 0; padding-left: 18px; display: grid; gap: 2px; font-size: 14px; }
