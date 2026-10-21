@@ -51,6 +51,8 @@ export function renderQueue() {
     stack.setAttribute("aria-expanded", "false");
   };
   const open = () => {
+    const top = document.querySelector("header.top");
+    panel.style.setProperty("--qp-top", `${top ? Math.max(0, top.getBoundingClientRect().bottom + 2) : 0}px`);
     panel.hidden = false;
     root.classList.add("open");
     stack.setAttribute("aria-expanded", "true");

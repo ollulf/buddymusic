@@ -643,14 +643,14 @@ button.pb-b.vol[aria-expanded="true"] { color: var(--accent); }
 .cdq .case.single { width: 60px; height: 8px; }
 .cdq .case.album { height: 22px; }
 .cdq .case.album::before { content: ""; position: absolute; left: 10px; right: 6px; bottom: 3px; height: 2px; background: rgb(0 0 0 / .3); }
-.qpanel { position: absolute; z-index: 5; left: clamp(16px, calc(var(--tl) + var(--tw) / 2 - 180px), calc(100% - 376px)); bottom: calc(var(--bh) + var(--sb) - 2px); width: 360px; max-width: calc(100% - 32px); box-sizing: border-box; background: var(--card); color: var(--fg); border: 2px solid var(--ink); box-shadow: var(--bevel), 4px 4px 0 var(--ink); font-size: 13px; }
+.qpanel { position: fixed; z-index: 5; left: 0; right: 0; top: var(--qp-top, 0px); bottom: calc(var(--bh) + var(--sb) - 2px); display: flex; flex-direction: column; box-sizing: border-box; background: var(--card); color: var(--fg); border: 0; border-bottom: 2px solid var(--ink); overscroll-behavior: contain; font-size: 13px; }
 .qpanel[hidden] { display: none; }
 .qp-head { display: flex; align-items: center; gap: var(--sp-2); padding: 6px 8px; min-height: 32px; background: var(--shade); border-bottom: 2px solid var(--ink); }
 .qp-head strong { font: 16px/1.2 var(--mys); letter-spacing: 1px; text-transform: uppercase; }
 .qp-head small { flex: 1; font: 11px var(--num); color: var(--muted); }
 .qp-x, .qp-op, .qp-clear { border: 2px solid var(--ink); background: var(--card); color: var(--fg); box-shadow: var(--bevel); font: 12px var(--pix); cursor: pointer; padding: 0; }
 .qp-x { width: 28px; height: 26px; }
-.qp-list { list-style: none; margin: 0; padding: 4px; max-height: min(46vh, 320px); overflow-y: auto; overscroll-behavior: contain; }
+.qp-list { list-style: none; margin: 0; padding: 4px 4px calc(var(--th) + 8px); flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .qp-list li { display: grid; grid-template-columns: 8px 22px 1fr auto; align-items: center; gap: 6px; padding: 2px 6px 2px 0; min-height: 34px; border-bottom: 1px solid var(--shade); cursor: pointer; }
 .qp-list li:hover, .qp-list li:focus-visible { background: var(--shade); outline: none; }
 .qp-list li .sp { align-self: stretch; background: var(--c); border-right: 2px solid var(--ink); }
@@ -666,7 +666,6 @@ button.pb-b.vol[aria-expanded="true"] { color: var(--accent); }
 .qp-op { width: 26px; height: 26px; font-size: 10px; }
 .qp-op:disabled, .qp-clear:disabled { opacity: .4; cursor: default; }
 .qp-clear { color: var(--orange); padding: 2px 8px; min-height: 26px; }
-@media (max-width: 760px) { .qpanel { left: 16px; right: 16px; width: auto; max-width: none; } }
 @media (max-width: 760px), (pointer: coarse) {
   .qp-list li { min-height: 48px; }
   .qp-op, .qp-x { width: 44px; height: 44px; }
