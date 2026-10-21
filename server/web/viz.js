@@ -4,6 +4,7 @@ const LV = 10;
 const BK = 3;
 const RANGES = [[1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [7, 8], [9, 10], [11, 12], [13, 14], [15, 17], [18, 20], [21, 23], [24, 26], [27, 29], [30, 31]];
 const FRAME_MS = 50;
+const CALM_MS = 140;
 
 export const vizRisky = /iPhone|iPad|iPod/.test(navigator.userAgent || "") || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
@@ -19,31 +20,42 @@ export function setVizEnabled(on) {
 }
 export const vizRouted = () => !!graph.analyser;
 
-const graph = { ctx: null, analyser: null, data: null };
+const graph = { ctx: null, analyser: null, data: null, pending: null };
+const AC = window.AudioContext || window.webkitAudioContext;
+const running = (ctx) => ctx.state === "running";
+
+function connect(ctx, audio) {
+  const src = ctx.createMediaElementSource(audio);
+  const an = ctx.createAnalyser();
+  an.fftSize = 64;
+  an.smoothingTimeConstant = 0.55;
+  src.connect(an);
+  an.connect(ctx.destination);
+  graph.ctx = ctx;
+  graph.analyser = an;
+  graph.data = new Uint8Array(an.frequencyBinCount);
+}
 
 function ensureGraph(audio) {
-  if (graph.analyser) return true;
-  const AC = window.AudioContext || window.webkitAudioContext;
-  if (!AC) return false;
-  try {
-    const ctx = new AC();
-    const src = ctx.createMediaElementSource(audio);
-    const an = ctx.createAnalyser();
-    an.fftSize = 64;
-    an.smoothingTimeConstant = 0.55;
-    src.connect(an);
-    an.connect(ctx.destination);
-    graph.ctx = ctx;
-    graph.analyser = an;
-    graph.data = new Uint8Array(an.frequencyBinCount);
-  } catch {
-    return false;
-  }
-  return true;
+  if (graph.analyser) return Promise.resolve(true);
+  if (graph.pending) return graph.pending;
+  if (!AC || document.hidden || !vizEnabled()) return Promise.resolve(false);
+  let ctx;
+  try { ctx = new AC(); } catch { return Promise.resolve(false); }
+  const start = running(ctx) ? Promise.resolve() : Promise.race([ctx.resume().catch(() => {}), new Promise((r) => setTimeout(r, 400))]);
+  graph.pending = start.then(() => {
+    graph.pending = null;
+    if (graph.analyser) { ctx.close().catch(() => {}); return true; }
+    if (!running(ctx) || document.hidden) { ctx.close().catch(() => {}); return false; }
+    try { connect(ctx, audio); } catch { ctx.close().catch(() => {}); return false; }
+    return true;
+  });
+  return graph.pending;
 }
 
 function resume() {
-  if (graph.ctx && graph.ctx.state === "suspended") graph.ctx.resume().catch(() => {});
+  const ctx = graph.ctx;
+  if (ctx && !running(ctx) && ctx.state !== "closed") ctx.resume().catch(() => {});
 }
 
 export function renderViz(audio, bar) {
@@ -86,7 +98,7 @@ export function renderViz(audio, bar) {
     geo = { bw, gap, hgt, s };
   };
 
-  const draw = () => {
+  const draw = (calm) => {
     if (!geo) layout();
     if (!colours) readColours();
     const { bw, gap, hgt, s } = geo;
@@ -99,13 +111,13 @@ export function renderViz(audio, bar) {
       const p = Math.min(LV - 1, Math.round(peak[i] * LV));
       for (let k = 0; k < LV; k++) {
         const y = hgt - (k + 1) * BK - k;
-        g.fillStyle = k < n ? (k >= LV - 2 ? colours.hot : colours.on) : k === p && p >= n && p > 0 ? colours.pk : colours.ghost;
+        g.fillStyle = k < n ? (k >= LV - 2 ? colours.hot : colours.on) : !calm && k === p && p >= n && p > 0 ? colours.pk : colours.ghost;
         g.fillRect(x, y, bw, BK);
       }
     }
   };
 
-  const sample = () => {
+  const sample = (calm) => {
     const an = graph.analyser;
     if (!an) return;
     an.getByteFrequencyData(graph.data);
@@ -114,44 +126,44 @@ export function renderViz(audio, bar) {
       let m = 0;
       for (let j = a; j <= b && j < graph.data.length; j++) m = Math.max(m, graph.data[j]);
       const lv = Math.min(1, Math.pow(m / 255, 1.4) * 1.15);
-      now[i] = lv;
+      now[i] = calm ? now[i] + (lv - now[i]) * 0.5 : lv;
       if (lv >= peak[i]) { peak[i] = lv; hold[i] = 8; } else if (hold[i] > 0) hold[i]--; else peak[i] = Math.max(0, peak[i] - 0.06);
     }
   };
 
   const clear = () => { now.fill(0); peak.fill(0); hold.fill(0); };
 
-  const live = () => vizEnabled() && !!graph.analyser && !audio.paused && !document.hidden && !bar.classList.contains("tucked") && !reduced.matches && !house.hidden;
+  const live = () => vizEnabled() && !!graph.analyser && !audio.paused && !document.hidden && !house.hidden;
 
   const tick = (ts) => {
     raf = 0;
     if (!live()) { clear(); draw(); return; }
-    if (ts - last >= FRAME_MS) { last = ts; sample(); draw(); }
+    const calm = reduced.matches;
+    if (graph.ctx && !running(graph.ctx)) resume();
+    if (ts - last >= (calm ? CALM_MS : FRAME_MS)) { last = ts; sample(calm); draw(calm); }
     raf = requestAnimationFrame(tick);
   };
 
   const sync = () => {
     const on = vizEnabled();
     house.hidden = !on;
-    if (on && graph.analyser) resume();
+    if (on && graph.analyser && !audio.paused && !document.hidden) resume();
     if (live()) { if (!raf) raf = requestAnimationFrame(tick); }
     else { if (raf) cancelAnimationFrame(raf); raf = 0; clear(); if (on) draw(); }
   };
 
-  const gesture = () => {
-    if (!vizEnabled()) return;
-    if (ensureGraph(audio)) {
-      resume();
-      document.removeEventListener("pointerdown", gesture, true);
-      document.removeEventListener("keydown", gesture, true);
-      sync();
-    }
+  const wire = () => {
+    if (!vizEnabled() || document.hidden) return;
+    if (graph.analyser) { resume(); return; }
+    ensureGraph(audio).then((ok) => { if (ok) { resume(); sync(); } });
   };
-  document.addEventListener("pointerdown", gesture, true);
-  document.addEventListener("keydown", gesture, true);
 
-  for (const ev of ["play", "playing", "pause", "ended", "emptied"]) audio.addEventListener(ev, () => { if (ev === "play") resume(); sync(); });
-  document.addEventListener("visibilitychange", sync);
+  for (const ev of ["pointerdown", "pointerup", "touchend", "click", "keydown"]) document.addEventListener(ev, wire, true);
+  for (const ev of ["play", "playing"]) audio.addEventListener(ev, wire);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && !audio.paused) wire(); sync(); });
+  subs.add(() => { if (!audio.paused) wire(); });
+
+  for (const ev of ["play", "playing", "pause", "ended", "emptied"]) audio.addEventListener(ev, sync);
   reduced.addEventListener("change", sync);
   compact.addEventListener("change", () => { layout(); draw(); });
   tiny.addEventListener("change", () => { layout(); draw(); });
