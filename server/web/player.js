@@ -292,6 +292,18 @@ export function removeSongs(ids) {
 }
 
 export function jump(i) { if (state.queue[i]) load(i); }
+export function move(from, to) {
+  const n = state.queue.length;
+  if (from === to || from < 0 || to < 0 || from >= n || to >= n) return;
+  const [song] = state.queue.splice(from, 1);
+  state.queue.splice(to, 0, song);
+  const i = state.index;
+  if (i === from) state.index = to;
+  else if (from < i && to >= i) state.index = i - 1;
+  else if (from > i && to <= i) state.index = i + 1;
+  rebuildOrder();
+  emit();
+}
 export function toggle() { if (!current()) return; if (audio.paused) audio.play().catch(() => {}); else { startT.live = false; audio.pause(); } }
 export function next() { const i = step(1); if (i >= 0) load(i); else { audio.pause(); emit(); } }
 export function prev() {

@@ -1,0 +1,135 @@
+import { h, coverURL, fmtTime } from "./dom.js";
+import { t } from "./i18n.js";
+import { onChange, queue, current, jump, move, removeSongs } from "./player.js";
+
+const SPINES = ["var(--accent)", "var(--orange)", "var(--accent-lo)", "var(--muted)", "var(--accent-hi)", "var(--fg)"];
+const MAX = 10;
+
+const spine = (song) => {
+  const k = String(song.albumId || song.id || "");
+  let x = 0;
+  for (const c of k) x = (x * 31 + c.charCodeAt(0)) >>> 0;
+  return SPINES[x % SPINES.length];
+};
+
+const calm = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+const touchy = () => !!(window.matchMedia && window.matchMedia("(hover: none)").matches);
+
+export function renderQueue() {
+  const stack = h("button", { type: "button", class: "cdq", "aria-haspopup": "dialog", "aria-expanded": "false" });
+  const cases = h("span", { class: "cdq-cases", "aria-hidden": "true" });
+  const badge = h("span", { class: "cdq-cnt", "aria-hidden": "true" });
+  stack.append(cases, badge);
+
+  const list = h("ol", { class: "qp-list" });
+  const count = h("small");
+  const closeB = h("button", { type: "button", class: "qp-x", "aria-label": t("queue.close"), title: t("queue.close") }, "✕");
+  const clearB = h("button", { type: "button", class: "qp-clear" }, t("queue.clear"));
+  const art = h("img", { alt: "", decoding: "async", draggable: "false" });
+  const lifted = h("div", { class: "qp-cover", "aria-hidden": "true" }, art);
+  const panel = h("div", { class: "qpanel", role: "dialog", "aria-label": t("queue.title"), hidden: true },
+    lifted,
+    h("div", { class: "qp-head" }, h("strong", {}, t("queue.title")), count, closeB),
+    list,
+    h("div", { class: "qp-foot" }, h("span", {}, t("queue.hint")), clearB));
+  const root = h("div", { class: "cdq-wrap" }, stack, panel);
+
+  let lastSig = "";
+  let lastUp = -1;
+  const upcoming = () => { const q = queue(); const c = current(); const i = c ? q.indexOf(c) : -1; return { q, i, up: q.slice(i + 1) }; };
+
+  const setLift = (on) => root.classList.toggle("lift", on);
+  const isOpen = () => !panel.hidden;
+  const close = () => {
+    if (!isOpen() && !root.classList.contains("lift")) return;
+    panel.hidden = true;
+    root.classList.remove("open");
+    setLift(false);
+    stack.setAttribute("aria-expanded", "false");
+  };
+  const open = () => {
+    panel.hidden = false;
+    root.classList.add("open");
+    stack.setAttribute("aria-expanded", "true");
+    paintList();
+    const cur = list.querySelector("li.cur");
+    if (cur) cur.scrollIntoView({ block: "nearest" });
+    closeB.focus({ preventScroll: true });
+  };
+
+  const opB = (label, glyph, fn, off = false) => h("button", { type: "button", class: "qp-op", disabled: off, "aria-label": label, title: label, onclick: (e) => { e.stopPropagation(); fn(); } }, glyph);
+
+  const paintList = () => {
+    const { q, i } = upcoming();
+    count.textContent = t("queue.tracks", { n: q.length });
+    const top = q[i + 1] || q[i];
+    const id = top && (top.coverArt || top.albumId);
+    lifted.style.setProperty("--c", top ? spine(top) : "var(--muted)");
+    if (id) { art.hidden = false; art.onerror = () => { art.hidden = true; }; art.src = coverURL(id, 128); } else { art.hidden = true; art.removeAttribute("src"); }
+    clearB.disabled = q.length <= 1;
+    list.replaceChildren(...q.map((s, n) => {
+      const li = h("li", { class: n === i ? "cur" : n < i ? "done" : "", style: `--c:${spine(s)}` },
+        h("span", { class: "sp" }),
+        h("span", { class: "n" }, n === i ? "▶" : String(n + 1)),
+        h("span", { class: "t" }, s.title || t("player.unknownTitle"), h("i", {}, [s.artist, s.duration ? fmtTime(+s.duration) : ""].filter(Boolean).join(" · "))),
+        h("span", { class: "ops" }, n === i ? [] : [
+          opB(t("queue.up"), "▲", () => move(n, n - 1), n === 0),
+          opB(t("queue.down"), "▼", () => move(n, n + 1), n === q.length - 1),
+          opB(t("queue.remove"), "✕", () => removeSongs([s.id])),
+        ]));
+      li.tabIndex = 0;
+      li.addEventListener("click", () => jump(n));
+      li.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target === li) jump(n); });
+      return li;
+    }));
+  };
+
+  const paint = () => {
+    const { q, i, up } = upcoming();
+    const sig = q.map((s) => s.id).join(",") + "|" + i;
+    if (sig === lastSig) return;
+    lastSig = sig;
+    const shown = Math.min(up.length, MAX);
+    const kids = [];
+    if (!shown) kids.push(h("span", { class: "case empty" }));
+    for (let n = 0; n < shown; n++) {
+      const c = h("span", { class: "case" + (n % 3 === 1 ? " alt" : n % 3 === 2 ? " alt2" : "") + (n === shown - 1 ? " top" : "") });
+      c.style.setProperty("--c", spine(up[shown - 1 - n]));
+      kids.push(c);
+    }
+    if (up.length > MAX) kids.push(h("span", { class: "more" }, `+${up.length - MAX}`));
+    cases.replaceChildren(...kids);
+    badge.textContent = String(up.length);
+    badge.hidden = !up.length;
+    const label = up.length ? t("queue.open", { n: up.length }) : `${t("queue.title")}: ${t("queue.empty")}`;
+    stack.setAttribute("aria-label", label);
+    stack.title = label;
+    if (lastUp >= 0 && up.length > lastUp && shown && !calm()) {
+      const topCase = cases.querySelector(".case.top");
+      if (topCase) { topCase.classList.add("drop"); topCase.addEventListener("animationend", () => topCase.classList.remove("drop"), { once: true }); }
+    }
+    lastUp = up.length;
+    if (!q.length) close();
+    else if (isOpen()) paintList();
+  };
+
+  stack.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (isOpen()) { close(); return; }
+    if (touchy() && !root.classList.contains("lift")) { setLift(true); return; }
+    open();
+  });
+  closeB.addEventListener("click", (e) => { e.stopPropagation(); close(); stack.focus({ preventScroll: true }); });
+  clearB.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const c = current();
+    removeSongs(queue().filter((s) => s !== c && (!c || s.id !== c.id)).map((s) => s.id));
+  });
+  panel.addEventListener("click", (e) => e.stopPropagation());
+  document.addEventListener("click", (e) => { if (!root.contains(e.target)) close(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && (isOpen() || root.classList.contains("lift"))) { close(); stack.focus({ preventScroll: true }); } });
+
+  onChange(paint);
+  paint();
+  return root;
+}
