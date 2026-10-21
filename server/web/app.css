@@ -483,10 +483,10 @@ body.settings-open { overflow: hidden; }
 .settings-radios { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
 .settings-radios label { display: flex; align-items: baseline; gap: 4px; cursor: pointer; }
 .swatch-label { font-size: .88rem; color: var(--muted); margin: 10px 0 4px; }
-.swatch-row { display: flex; flex-wrap: wrap; gap: 8px; }
-.swatch { position: relative; width: 36px; height: 36px; padding: 0; border: 2px solid var(--line); border-radius: 0; cursor: pointer; box-shadow: none; }
+.swatch-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.swatch { position: relative; width: 32px; height: 32px; padding: 0; border: 2px solid var(--line); border-radius: 0; cursor: pointer; box-shadow: none; }
 .swatch-base { background: var(--sw-a); }
-.swatch-base::before { content: ""; position: absolute; inset: 7px 7px 11px 7px; background: var(--sw-b); }
+.swatch-base::before { content: ""; position: absolute; inset: 6px 6px 10px 6px; background: var(--sw-b); }
 .swatch-key { background: linear-gradient(135deg, var(--sw-a) 0 64%, var(--sw-b) 64% 100%); }
 .swatch[aria-checked="true"] { outline: 3px solid var(--fg); outline-offset: 2px; }
 .swatch[aria-checked="true"]::after { content: ""; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; background: var(--fg); box-shadow: 0 0 0 2px var(--line); }
