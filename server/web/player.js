@@ -684,8 +684,35 @@ function volumeControl() {
   return wrap;
 }
 
+function fitMarquee(box, span) {
+  box.classList.remove("run");
+  if (box.childNodes.length > 1) box.lastChild.remove();
+  const over = span.scrollWidth - box.clientWidth;
+  if (over <= 1) return;
+  box.append(h("span", { class: "mq-t", "aria-hidden": "true" }, span.textContent));
+  box.classList.add("run");
+  const w = span.offsetWidth;
+  box.style.setProperty("--mq-w", `${w}px`);
+  box.style.setProperty("--mq-steps", String(Math.max(8, Math.round(w / 6))));
+  box.style.setProperty("--mq-dur", `${Math.max(6, w / 40).toFixed(1)}s`);
+}
+
+function setMarquee(box, span, text) {
+  if (span.textContent === text && box.dataset.fit === String(box.clientWidth)) return;
+  span.textContent = text;
+  box.dataset.ghost = text.replace(/\S/g, "8");
+  box.dataset.fit = String(box.clientWidth);
+  fitMarquee(box, span);
+  if (!box._mqObs && window.ResizeObserver) {
+    let lastW = box.clientWidth;
+    box._mqObs = new ResizeObserver(() => { if (box.clientWidth !== lastW) { lastW = box.clientWidth; box.dataset.fit = String(lastW); fitMarquee(box, span); } });
+    box._mqObs.observe(box);
+  }
+}
+
 export function renderBar(opts = {}) {
-  const title = h("div", { class: "pb-title" });
+  const titleText = h("span", { class: "mq-t" });
+  const title = h("div", { class: "pb-title mq" }, titleText);
   const sub = h("div", { class: "pb-sub" });
   const info = h("a", { class: "pb-info", "aria-label": t("player.openAlbum") }, title, sub);
   const pos = h("span", { class: "bar-time" }, "0:00");
@@ -749,7 +776,7 @@ export function renderBar(opts = {}) {
     paintSpin();
     if (!song) return;
     const name = song.title || t("player.unknownTitle");
-    title.textContent = name;
+    setMarquee(title, titleText, name);
     sub.textContent = [song.artist, song.album].filter(Boolean).join(" · ");
     const what = bar.classList.contains("tucked") ? t("player.showDisc") : isPlaying() ? t("player.pause") : t("player.play");
     disc.setAttribute("aria-label", `${what}: ${name}${song.artist ? `, ${song.artist}` : ""}`);
