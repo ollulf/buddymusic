@@ -556,7 +556,7 @@ button.pb-b.heart[aria-pressed="true"] { color: var(--orange); }
 .pb-info { display: block; padding: var(--sp-1) var(--sp-2); text-decoration: none; color: inherit; min-width: 0; }
 .pb-info:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .pb-title { font-size: var(--fs-lg); line-height: 1.2; color: var(--screen-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: var(--sp-1); }
-.pb-sub { font-size: var(--fs-sm); line-height: 1.2; color: var(--screen-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-sub { font-size: var(--fs-md); line-height: 1.2; color: var(--screen-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pb-screen { --lcd-fg: var(--screen-fg); --lcd-bg: color-mix(in srgb, var(--lcd-fg) 9%, #040506); --lcd-ghost: color-mix(in srgb, var(--lcd-fg) 9%, transparent); --lcd-glow: color-mix(in srgb, var(--lcd-fg) 45%, transparent); background: var(--lcd-bg); }
 .pb-info { position: relative; overflow: hidden; }
 .pb-info::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, .32) 0 1px, transparent 1px 3px); }
@@ -565,7 +565,7 @@ button.pb-b.heart[aria-pressed="true"] { color: var(--orange); }
 .pb-title.mq { position: relative; text-overflow: clip; }
 .pb-title.mq::before { content: attr(data-ghost); position: absolute; left: 0; top: 0; color: var(--lcd-ghost); text-shadow: none; white-space: nowrap; pointer-events: none; }
 .mq-t { display: inline-block; position: relative; }
-.pb-title.mq.run .mq-t { padding-right: 3ch; animation: mq var(--mq-dur, 8s) steps(var(--mq-steps, 32)) infinite; }
+.pb-title.mq.run .mq-t { padding-right: var(--mq-gap, 3ch); animation: mq var(--mq-dur, 8s) steps(var(--mq-steps, 32)) infinite; }
 .pb-title.mq.run::before { display: none; }
 @keyframes mq { 0%, 15% { transform: translateX(0); } 100% { transform: translateX(calc(-1 * var(--mq-w, 100%))); } }
 @media (prefers-reduced-motion: reduce) { .pb-title.mq.run .mq-t { animation: none; } .pb-title.mq.run .mq-t + .mq-t { display: none; } .pb-title.mq.run .mq-t { display: block; overflow: hidden; text-overflow: ellipsis; padding-right: 0; } }

@@ -754,14 +754,19 @@ function volumeControl() {
 function fitMarquee(box, span) {
   box.classList.remove("run");
   if (box.childNodes.length > 1) box.lastChild.remove();
-  const over = span.scrollWidth - box.clientWidth;
-  if (over <= 1) return;
-  box.append(h("span", { class: "mq-t", "aria-hidden": "true" }, span.textContent));
+  span.style.removeProperty("--mq-gap");
+  if (!span.textContent) return;
+  void box.offsetWidth;
+  const gap = Math.max(40, box.clientWidth - span.scrollWidth);
+  span.style.setProperty("--mq-gap", `${gap}px`);
+  const copy = h("span", { class: "mq-t", "aria-hidden": "true" }, span.textContent);
+  copy.style.setProperty("--mq-gap", `${gap}px`);
+  box.append(copy);
   box.classList.add("run");
   const w = span.offsetWidth;
   box.style.setProperty("--mq-w", `${w}px`);
   box.style.setProperty("--mq-steps", String(Math.max(8, Math.round(w / 6))));
-  box.style.setProperty("--mq-dur", `${Math.max(6, w / 40).toFixed(1)}s`);
+  box.style.setProperty("--mq-dur", `${Math.max(4, w / 40).toFixed(1)}s`);
 }
 
 function setMarquee(box, span, text) {
