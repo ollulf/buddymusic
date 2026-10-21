@@ -364,6 +364,8 @@ const en = {
   "queue.up": "Move up",
   "queue.down": "Move down",
   "queue.remove": "Remove from queue",
+  "queue.upNext": "Up next",
+  "queue.nextFrom": "Next from album/playlist",
 };
 
 const de = {
@@ -728,6 +730,8 @@ const de = {
   "queue.up": "Nach oben",
   "queue.down": "Nach unten",
   "queue.remove": "Aus der Warteschlange entfernen",
+  "queue.upNext": "Als Nächstes",
+  "queue.nextFrom": "Weiter aus Album/Playlist",
 };
 
 const DICTS = { en, de };

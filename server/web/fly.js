@@ -27,7 +27,7 @@ const sourcePoint = () => {
   return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 };
 
-const isAlbum = (songs) => songs.length > 1 && !!songs[0].albumId && songs.every((s) => s.albumId === songs[0].albumId);
+const isAlbum = (songs) => songs.length > 1;
 
 const once = (el, cls, ms) => {
   el.classList.remove(cls);
