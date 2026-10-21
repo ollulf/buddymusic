@@ -6,7 +6,7 @@
 :root {
   --bh: 128px;
   --th: 60px;
-  --s: 232px;
+  --s: 208px;
   --sb: env(safe-area-inset-bottom, 0px);
   --pb-clear: calc(var(--bh) + var(--sb) + var(--th) + var(--s) - 80px + 16px);
   --z-glare: 1;
