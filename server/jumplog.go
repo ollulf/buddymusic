@@ -15,8 +15,10 @@ const (
 )
 
 type jumpLimiter struct {
-	mu   sync.Mutex
-	hits map[string][]time.Time
+	mu     sync.Mutex
+	hits   map[string][]time.Time
+	window time.Duration
+	max    int
 }
 
 func (l *jumpLimiter) allow(user string, now time.Time) bool {
@@ -25,13 +27,20 @@ func (l *jumpLimiter) allow(user string, now time.Time) bool {
 	if l.hits == nil {
 		l.hits = map[string][]time.Time{}
 	}
+	window, max := l.window, l.max
+	if window == 0 {
+		window = jumpLogWindow
+	}
+	if max == 0 {
+		max = jumpLogMax
+	}
 	kept := l.hits[user][:0]
 	for _, t := range l.hits[user] {
-		if now.Sub(t) < jumpLogWindow {
+		if now.Sub(t) < window {
 			kept = append(kept, t)
 		}
 	}
-	if len(kept) >= jumpLogMax {
+	if len(kept) >= max {
 		l.hits[user] = kept
 		return false
 	}

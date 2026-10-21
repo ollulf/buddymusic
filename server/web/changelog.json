@@ -1,8 +1,14 @@
 [
   {
-    "version": "1.0.2110.5",
+    "version": "1.0.2110.6",
     "date": "2026-10-21",
     "en": [
+      "CD stack next to the player shows your queue: tap it to see, reorder or remove upcoming songs",
+      "The song title sits on a retro LCD screen in your key colour; long titles scroll",
+      "Playback recovers from stalls and short network drops instead of hanging or skipping songs",
+      "Music stops when you log out",
+      "Send feedback from Settings",
+      "Cleaner page titles, menus always above album covers, more consistent text sizes",
       "Connection indicator: a small Wi-Fi chip next to the quality label shows slow or offline connections; tap it for details",
       "New colours: pick a base and a key colour separately in Settings (6 bases, 8 key colours)",
       "The old named colour schemes are replaced; your choice moves to the closest base and key colour",
@@ -27,6 +33,12 @@
       "New pixel CD frame for albums"
     ],
     "de": [
+      "CD-Stapel neben dem Player zeigt deine Warteschlange: antippen zum Ansehen, Umsortieren oder Entfernen",
+      "Der Songtitel steht auf einem Retro-LCD in deiner Akzentfarbe; lange Titel laufen durch",
+      "Die Wiedergabe fängt sich nach Hängern und kurzen Netzaussetzern, statt stehenzubleiben oder Songs zu überspringen",
+      "Die Musik stoppt beim Abmelden",
+      "Feedback direkt aus den Einstellungen senden",
+      "Aufgeräumte Seitentitel, Menüs immer über den Albumcovern, einheitlichere Schriftgrößen",
       "Verbindungsanzeige: ein kleines WLAN-Symbol neben der Qualitätsanzeige zeigt langsame oder fehlende Verbindung; antippen für Details",
       "Neue Farben: Basis und Akzentfarbe getrennt in den Einstellungen wählen (6 Basen, 8 Akzentfarben)",
       "Die alten Farbschemata sind ersetzt; deine Wahl wechselt zur passenden Basis und Akzentfarbe",

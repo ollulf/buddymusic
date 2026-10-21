@@ -2,7 +2,8 @@ import { renderUpload } from "./upload.js";
 import { renderLibrary, setNewAlbums, prefetchLibrary, dropLibraryPrefetch } from "./library.js";
 import { renderSearch, searchBox } from "./search.js";
 import { renderFavorites } from "./favorites.js";
-import { renderBar, playList, settings, setQuality, onChange, QUALITIES, qualityHint } from "./player.js";
+import { renderQueue } from "./queue.js";
+import { renderBar, playList, settings, setQuality, onChange, stopAll, QUALITIES, qualityHint } from "./player.js";
 import { api, Unauthorized } from "./dom.js";
 import { renderPlaylists, setPlaylistUser } from "./playlists.js";
 import { renderAdmin } from "./admin.js";
@@ -30,6 +31,7 @@ const LOGIN_ERRORS = {
 };
 
 function showLogin() {
+  stopAll();
   const user = h("input", { name: "username", autocomplete: "username", required: true, autocapitalize: "none" });
   const pass = h("input", { name: "password", type: "password", autocomplete: "current-password", required: true });
   const remember = h("input", { name: "remember", type: "checkbox", checked: true });
@@ -69,6 +71,7 @@ async function logout() {
 }
 
 const BASE_TABS = ["library", "search", "favorites", "playlists", "upload"].map((k) => [k, t(`tab.${k}`)]);
+let titleHandler = null;
 let routeHandler = null;
 let playerBar = null;
 let openQuality = null;
@@ -317,7 +320,11 @@ function showApp(user, admin, avatar, me = {}) {
   setPlaylistUser(user);
   const views = Object.fromEntries(TABS.map(([k]) => [k, h("main", { class: `view view-${k}`, hidden: true })]));
   const links = Object.fromEntries(TABS.filter(([k]) => k !== "search").map(([k, label]) => [k, h("a", { class: "tab", href: `#/${k}`, title: label, "aria-label": label }, pixelIcon(TAB_ICONS[k]), h("span", { class: "tab-label", "aria-hidden": "true" }, label))]));
-  const titleEl = h("div", { class: "page-title" });
+  const titleEl = h("h1", { class: "page-title" });
+  const setTitle = (text) => { titleEl.textContent = text; titleEl.title = text; document.title = `${text} · buddymusic`; };
+  if (titleHandler) window.removeEventListener("page-title", titleHandler);
+  titleHandler = (e) => setTitle(e.detail);
+  window.addEventListener("page-title", titleHandler);
   const titleRow = h("div", { class: "title-row" }, titleEl, searchBox());
   const settingsView = h("main", { class: "view view-settings", hidden: true });
   let cameFromApp = false;
@@ -326,7 +333,7 @@ function showApp(user, admin, avatar, me = {}) {
     else location.hash = "#/library";
   };
   settingsView.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSettings(); });
-  playerBar ||= renderBar({ onUnauthorized: showLogin, onQuality: () => openQuality && openQuality() });
+  if (!playerBar) { playerBar = renderBar({ onUnauthorized: showLogin, onQuality: () => openQuality && openQuality() }); playerBar.append(renderQueue()); }
   root.replaceChildren(
     h("header", { class: "top" },
       h("nav", { class: "tabs", "aria-label": t("tab.sections") }, Object.values(links)),
@@ -359,7 +366,7 @@ function showApp(user, admin, avatar, me = {}) {
       document.body.classList.remove("settings-open");
     }
     if (inSettings) {
-      titleEl.textContent = t("settings.title");
+      setTitle(t("settings.title"));
       titleRow.classList.remove("no-search");
       return;
     }
@@ -371,7 +378,7 @@ function showApp(user, admin, avatar, me = {}) {
       if (k === tab) links[k].setAttribute("aria-current", "page");
       else links[k].removeAttribute("aria-current");
     }
-    titleEl.textContent = TABS.find(([k]) => k === tab)[1];
+    setTitle(TABS.find(([k]) => k === tab)[1]);
     titleRow.classList.toggle("no-search", tab === "upload" || tab === "admin");
     const key = [tab, ...parts.slice(1)].join("/");
     if (tab === "library" && key !== shown) {

@@ -1,5 +1,5 @@
 import { t } from "./i18n.js";
-import { h, api, apiSend, cover, fmtTime, Unauthorized } from "./dom.js";
+import { h, api, apiSend, cover, fmtTime, Unauthorized, setPageTitle } from "./dom.js";
 import * as player from "./player.js";
 import { heartButton } from "./favs.js";
 import { addToPlaylistButton } from "./playlists.js";
@@ -171,12 +171,12 @@ async function renderAlbum(container, id, opts) {
       location.hash = "#/library";
     };
     const total = songs.reduce((t, s) => t + (s.duration || 0), 0);
+    setPageTitle(al.name || t("library.unknownAlbum"), container);
     container.replaceChildren(
       h("a", { class: "back", href: "#/library" }, t("library.back")),
       h("section", { class: "album-head" },
         caseCover(al, 600, "art big"),
         h("div", { class: "album-info" },
-          h("h1", {}, al.name || t("library.unknownAlbum")),
           h("a", { class: "muted", href: al.artistId ? `#/library/artist/${encodeURIComponent(al.artistId)}` : "#/library/artists" }, al.artist || ""),
           h("div", { class: "muted" }, [al.year, t("common.songCount", { n: songs.length }), fmtTime(total)].filter(Boolean).join(" · ")),
           Array.isArray(al.uploadedBy) && al.uploadedBy.length
@@ -198,9 +198,9 @@ async function renderArtist(container, id, opts) {
   container.replaceChildren(h("div", { class: "muted" }, t("common.loading")));
   try {
     const ar = await api(`/api/music/artist/${encodeURIComponent(id)}`);
+    setPageTitle(ar.name || t("library.unknownArtist"), container);
     container.replaceChildren(
       h("a", { class: "back", href: "#/library/artists" }, t("library.backArtists")),
-      h("h1", {}, ar.name || t("library.unknownArtist")),
       h("div", { class: "grid" }, liveAlbums(ar.album).map(albumCard)));
   } catch (e) {
     container.replaceChildren(h("a", { class: "back", href: "#/library/artists" }, t("library.backArtists")), failBox(e, opts));
