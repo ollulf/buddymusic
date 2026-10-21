@@ -111,7 +111,10 @@ function pickTier(song, commit) {
 }
 
 const meter = { t0: 0, b0: 0, done: false, playing: null, started: false };
-const play = { offset: 0, tries: 0, blob: "", heard: 0, heardAt: 0, gen: 0 };
+const play = { offset: 0, tries: 0, blob: "", heard: 0, heardAt: 0, gen: 0, okSince: 0, triedAt: 0 };
+const RETRY_DELAYS = [0, 1500, 4000, 8000];
+const STALL_MS = 15000;
+const stall = { t: 0, b: 0, at: 0 };
 const watch = { t: -1, at: 0, stalled: false, sent: 0 };
 const pre = { url: "", blob: "", ctrl: null, speed: 0 };
 const startT = { at: 0, gen: 0, waits: 0, preload: false, auto: false, live: false };
@@ -226,6 +229,7 @@ function load(i, autoplay = true) {
   Object.assign(listen, { song: current(), secs: 0, last: -1, sent: 0 });
   state.scrobbled = false;
   play.tries = 0;
+  play.triedAt = 0;
   const song = current();
   if (!song) { audio.removeAttribute("src"); audio.load(); emit(); return; }
   startStream(song, pickTier(song, true));
@@ -375,6 +379,7 @@ function preloadNext() {
     .then((res) => { if (!res.ok) throw new Error(String(res.status)); return res.blob(); })
     .then((b) => {
       if (pre.ctrl !== ctrl) return;
+      if (b.size < 4096) throw new Error("short");
       const secs = Math.max((performance.now() - t0) / 1000, 0.25);
       Object.assign(pre, { ctrl: null, blob: URL.createObjectURL(b), speed: Math.max(0.01, (b.size * 8 / 1000 / secs) / spec.kbps) });
     })
@@ -401,19 +406,39 @@ if ("mediaSession" in navigator) {
   set("seekto", (d) => seek(d.seekTime));
 }
 
-function streamOver(failed) {
+function retryStream(song, at) {
+  const delay = RETRY_DELAYS[play.tries] || 0;
+  play.tries += 1;
+  const gen = play.gen;
+  let done = false;
+  const go = () => {
+    if (done || play.gen !== gen || current() !== song) return;
+    done = true;
+    const back = play.okSince >= play.triedAt ? 0.5 : 0;
+    play.triedAt = Date.now();
+    startStream(song, meter.playing.tier, Math.max(0, at - back));
+    audio.play().catch(() => {});
+    emit();
+  };
+  if (!delay) { go(); return; }
+  setTimeout(() => {
+    if (navigator.onLine !== false) { go(); return; }
+    window.addEventListener("online", go, { once: true });
+    setTimeout(go, 20000);
+  }, delay);
+}
+
+function streamOver(failed, why = "") {
   const song = current();
   if (!song) return;
   const known = +song.duration > 0 ? +song.duration : 0;
   const t = audio.currentTime || 0;
   const at = play.offset + (heardOK(t) ? t : play.heard);
   const missing = known ? known - at > 3 : failed;
-  if (failed && document.visibilityState === "hidden") logEvent("error", audio.error ? `code ${audio.error.code}` : "");
-  if (meter.playing && missing && play.tries < 2) {
-    play.tries += 1;
-    startStream(song, meter.playing.tier, Math.max(0, at - 0.5));
-    audio.play().catch(() => {});
-    emit();
+  if (why) logEvent(why, `ready ${audio.readyState} net ${audio.networkState} try ${play.tries}`);
+  else if (failed && document.visibilityState === "hidden") logEvent("error", audio.error ? `code ${audio.error.code}` : "");
+  if (meter.playing && missing && play.tries < RETRY_DELAYS.length) {
+    retryStream(song, at);
     return;
   }
   if (!failed && state.repeat === "one") { seek(0); audio.play().catch(() => {}); return; }
@@ -430,6 +455,7 @@ audio.addEventListener("canplay", () => {
 });
 audio.addEventListener("playing", () => {
   adv.fails = 0;
+  play.okSince = Date.now();
   if (!adv.gen || adv.gen !== play.gen) return;
   adv.gen = 0;
   adv.stuck = false;
@@ -440,6 +466,19 @@ document.addEventListener("visibilitychange", () => {
   adv.stuck = false;
   audio.play().catch(() => {});
 });
+setInterval(() => {
+  if (audio.paused || audio.seeking || play.blob || !current() || !audio.getAttribute("src") || audio.readyState >= 3) {
+    stall.at = 0;
+    return;
+  }
+  const t = audio.currentTime || 0;
+  const b = bufferedEnd();
+  if (!stall.at || t !== stall.t || b > stall.b + 0.05) { Object.assign(stall, { t, b, at: Date.now() }); return; }
+  if (Date.now() - stall.at < STALL_MS) return;
+  stall.at = 0;
+  streamOver(true, "stall");
+}, 2000);
+
 function heardOK(t) {
   return t >= play.heard && t - play.heard < 2 + Math.max(0, Date.now() - play.heardAt) / 1000 * (audio.playbackRate || 1);
 }
@@ -534,6 +573,7 @@ audio.addEventListener("timeupdate", () => {
   const t = audio.currentTime;
   checkJump();
   if (heardOK(t)) play.heard = t;
+  if (play.tries && play.okSince && !audio.paused && Date.now() - play.okSince > 30000) play.tries = 0;
   play.heardAt = Date.now();
   if (listen.last >= 0 && t > listen.last && t - listen.last < 2) listen.secs += t - listen.last;
   listen.last = t;
