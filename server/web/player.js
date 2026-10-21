@@ -805,9 +805,17 @@ export function renderBar(opts = {}) {
   };
   disc.addEventListener("click", () => { if (bar.classList.contains("tucked")) setTucked(false); else toggle(); });
   let lastY = window.scrollY;
+  let holdUntil = 0;
+  window.addEventListener("bm:tuck", () => {
+    if (!narrow.matches) return;
+    holdUntil = Date.now() + 600;
+    setTucked(true);
+  });
   window.addEventListener("scroll", () => {
     const y = window.scrollY;
-    if (!narrow.matches || y <= 0) setTucked(false);
+    if (Date.now() < holdUntil) { lastY = y; return; }
+    if (!narrow.matches) setTucked(false);
+    else if (y <= 0) { if (y < lastY - 6) setTucked(false); }
     else if (y > lastY + 6) setTucked(true);
     else if (y < lastY - 6) setTucked(false);
     lastY = y;
