@@ -1,4 +1,4 @@
-import { h, coverURL, fmtTime } from "./dom.js";
+import { h, fmtTime } from "./dom.js";
 import { t } from "./i18n.js";
 import { onChange, queue, current, jump, move, removeSongs } from "./player.js";
 
@@ -24,13 +24,9 @@ export function renderQueue() {
   const count = h("small");
   const closeB = h("button", { type: "button", class: "qp-x", "aria-label": t("queue.close"), title: t("queue.close") }, "✕");
   const clearB = h("button", { type: "button", class: "qp-clear" }, t("queue.clear"));
-  const art = h("img", { alt: "", decoding: "async", draggable: "false" });
-  const lifted = h("div", { class: "qp-cover", "aria-hidden": "true" }, art);
   const panel = h("div", { class: "qpanel", role: "dialog", "aria-label": t("queue.title"), hidden: true },
-    lifted,
-    h("div", { class: "qp-head" }, h("strong", {}, t("queue.title")), count, closeB),
-    list,
-    h("div", { class: "qp-foot" }, h("span", {}, t("queue.hint")), clearB));
+    h("div", { class: "qp-head" }, h("strong", {}, t("queue.title")), count, clearB, closeB),
+    list);
   const root = h("div", { class: "cdq-wrap" }, stack, panel);
 
   let lastSig = "";
@@ -62,10 +58,6 @@ export function renderQueue() {
   const paintList = () => {
     const { q, i } = upcoming();
     count.textContent = t("queue.tracks", { n: q.length });
-    const top = q[i + 1] || q[i];
-    const id = top && (top.coverArt || top.albumId);
-    lifted.style.setProperty("--c", top ? spine(top) : "var(--muted)");
-    if (id) { art.hidden = false; art.onerror = () => { art.hidden = true; }; art.src = coverURL(id, 128); } else { art.hidden = true; art.removeAttribute("src"); }
     clearB.disabled = q.length <= 1;
     list.replaceChildren(...q.map((s, n) => {
       const li = h("li", { class: n === i ? "cur" : n < i ? "done" : "", style: `--c:${spine(s)}` },
