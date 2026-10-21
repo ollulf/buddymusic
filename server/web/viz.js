@@ -1,8 +1,8 @@
 const KEY = "bm.viz";
-const BARS = 12;
+const BARS = 16;
 const LV = 10;
 const BK = 3;
-const RANGES = [[1, 1], [2, 2], [3, 3], [4, 4], [5, 6], [7, 8], [9, 10], [11, 13], [14, 17], [18, 21], [22, 26], [27, 31]];
+const RANGES = [[1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [7, 8], [9, 10], [11, 12], [13, 14], [15, 17], [18, 20], [21, 23], [24, 26], [27, 29], [30, 31]];
 const FRAME_MS = 50;
 
 export const vizRisky = /iPhone|iPad|iPod/.test(navigator.userAgent || "") || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -11,7 +11,7 @@ const subs = new Set();
 export function vizEnabled() {
   let v = null;
   try { v = localStorage.getItem(KEY); } catch {}
-  return v === null ? !vizRisky : v === "1";
+  return v === null ? true : v === "1";
 }
 export function setVizEnabled(on) {
   try { localStorage.setItem(KEY, on ? "1" : "0"); } catch {}
@@ -56,7 +56,9 @@ export function renderViz(audio, bar) {
 
   const g = canvas.getContext("2d");
   const reduced = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: false, addEventListener() {} };
-  const compact = window.matchMedia ? window.matchMedia("(max-width: 420px)") : { matches: false, addEventListener() {} };
+  const mq = (q) => window.matchMedia ? window.matchMedia(q) : { matches: false, addEventListener() {} };
+  const compact = mq("(max-width: 420px)");
+  const tiny = mq("(max-width: 375px)");
   const now = new Array(BARS).fill(0);
   const peak = new Array(BARS).fill(0);
   const hold = new Array(BARS).fill(0);
@@ -72,7 +74,7 @@ export function renderViz(audio, bar) {
   };
 
   const layout = () => {
-    const bw = compact.matches ? 4 : 5;
+    const bw = tiny.matches ? 3 : compact.matches ? 4 : 7;
     const gap = compact.matches ? 1 : 2;
     const w = BARS * bw + (BARS - 1) * gap;
     const hgt = LV * BK + (LV - 1);
@@ -152,6 +154,7 @@ export function renderViz(audio, bar) {
   document.addEventListener("visibilitychange", sync);
   reduced.addEventListener("change", sync);
   compact.addEventListener("change", () => { layout(); draw(); });
+  tiny.addEventListener("change", () => { layout(); draw(); });
   new MutationObserver(sync).observe(bar, { attributes: true, attributeFilter: ["class"] });
   new MutationObserver(() => { colours = null; draw(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-key", "data-base"] });
   subs.add(sync);
