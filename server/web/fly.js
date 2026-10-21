@@ -72,7 +72,9 @@ const fly = (songs, src) => {
   const from = sourcePoint(src);
   aimEl = null;
   const tr = target.getBoundingClientRect();
+  const sr = stack.getBoundingClientRect();
   const to = fresh ? center(tr) : { x: tr.left + tr.width / 2, y: tr.top - (album ? 10 : 4) };
+  to.y = Math.max(to.y, sr.top + 24);
   const peak = Math.min(from.y, to.y) - Math.max(60, Math.abs(to.x - from.x) * 0.25);
 
   const el = h("span", { class: "cdfly cdfly-case " + (album ? "album" : "single"), "aria-hidden": "true" });

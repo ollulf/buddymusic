@@ -1,9 +1,9 @@
 [
   {
-    "version": "1.0.2110.10",
+    "version": "1.0.2110.11",
     "date": "2026-10-21",
     "en": [
-      "Your queue as a stack of wide CDs next to the player: only songs you add yourself, a whole album added at once is one thick CD, and they play before the rest of the album; tap it for a full-screen queue",
+      "Your queue as an endless stack of CDs next to the player: only songs you add yourself, a whole album added at once is one thick CD, and they play before the rest of the album; tap it to see your queue full screen",
       "Swipe a song right to queue it and watch it fly onto the stack, left to favourite it; everything else is in the ⋯ menu",
       "Bigger song titles on a retro LCD screen, and a wide pixel spectrum next to play/pause that moves whenever music plays (switch it off in Settings)",
       "Pick your own look in Settings: a base colour and a key colour",
@@ -11,10 +11,10 @@
       "A small Wi-Fi sign shows when your connection is slow",
       "NEW stays on an album until you open it",
       "Send feedback straight from Settings; \"What's new\" and the app version are in the profile menu",
-      "Fresh pixel look: a bigger CD, new icons, clearer numbers, tidier pages and settings, more room in albums on phones, and nothing hides behind the CD anymore"
+      "Fresh pixel look: a bigger, cleaner CD centred over the controls, a deeper fade at the bottom, new icons, tidier pages and settings, and more room in albums on phones"
     ],
     "de": [
-      "Deine Warteschlange als Stapel breiter CDs neben dem Player: nur Songs, die du selbst hinzufügst, ein ganzes Album auf einmal ist eine dicke CD, und sie laufen vor dem Rest des Albums; ein Tipp zeigt sie bildschirmfüllend",
+      "Deine Warteschlange als endloser CD-Stapel neben dem Player: nur Songs, die du selbst hinzufügst, ein ganzes Album auf einmal ist eine dicke CD, und sie laufen vor dem Rest des Albums; ein Tipp zeigt sie bildschirmfüllend",
       "Song nach rechts wischen zum Einreihen und zusehen, wie er auf den Stapel fliegt, nach links für Favoriten; alles andere im ⋯-Menü",
       "Größere Songtitel auf einem Retro-LCD und ein breites Pixel-Spektrum neben Play/Pause, das sich bewegt, sobald Musik läuft (in den Einstellungen abschaltbar)",
       "Eigener Look in den Einstellungen: Basis- und Akzentfarbe wählen",
@@ -22,7 +22,7 @@
       "Ein kleines WLAN-Zeichen zeigt, wenn die Verbindung langsam ist",
       "NEU bleibt an einem Album, bis du es öffnest",
       "Feedback direkt aus den Einstellungen senden; „Neuigkeiten“ und die App-Version im Profilmenü",
-      "Frischer Pixel-Look: größere CD, neue Symbole, klarere Zahlen, aufgeräumte Seiten und Einstellungen, mehr Platz in Alben auf dem Handy, und nichts verschwindet mehr hinter der CD"
+      "Frischer Pixel-Look: größere, klarere CD mittig über den Tasten, tieferer Schatten unten, neue Symbole, aufgeräumte Seiten und Einstellungen, mehr Platz in Alben auf dem Handy"
     ]
   }
 ]
