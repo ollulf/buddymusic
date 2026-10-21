@@ -1,5 +1,6 @@
 import { settings, setQuality, setFormat, setPreload, PRELOADS, onChange, QUALITIES, FORMATS, qualityHint, opusSupported } from "./player.js";
 import { t, lang, LANGS, setLang } from "./i18n.js";
+import { apiJSON, Unauthorized } from "./dom.js";
 
 const h = (tag, attrs = {}, ...kids) => {
   const el = document.createElement(tag);
@@ -195,12 +196,55 @@ function languageRow() {
     radios("language", Object.keys(LANGS), (k) => LANGS[k], () => lang, setLang));
 }
 
+const FEEDBACK_MAX = 2000;
+const FEEDBACK_KINDS = ["bug", "idea", "other"];
+let lastPage = location.hash;
+window.addEventListener("hashchange", (e) => {
+  const old = new URL(e.oldURL).hash;
+  if (!old.startsWith("#/settings")) lastPage = old;
+});
+
+function feedbackRow() {
+  let kind = "bug";
+  const text = h("textarea", { class: "feedback-text", rows: "5", maxlength: String(FEEDBACK_MAX), "aria-label": t("feedback.textLabel"), placeholder: t("feedback.placeholder") });
+  const send = h("button", { class: "primary", type: "submit", disabled: true }, t("feedback.send"));
+  const status = h("div", { class: "profile-status", role: "status" });
+  const sync = () => { send.disabled = !text.value.trim(); };
+  text.addEventListener("input", () => { sync(); if (status.dataset.ok) { status.textContent = ""; delete status.dataset.ok; } });
+  const form = h("form", { class: "feedback-form" },
+    h("p", { class: "muted" }, t("feedback.hint")),
+    radios("feedbackkind", FEEDBACK_KINDS, (k) => t(`feedback.kind.${k}`), () => kind, (k) => { kind = k; }),
+    text,
+    h("div", { class: "feedback-actions" }, send, status));
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const body = text.value.trim();
+    if (!body) return;
+    send.disabled = text.disabled = true;
+    delete status.dataset.ok;
+    status.textContent = t("feedback.sending");
+    try {
+      await apiJSON("POST", "/api/feedback", { category: kind, text: body, lang, page: lastPage });
+      text.value = "";
+      status.dataset.ok = "1";
+      status.textContent = t("feedback.thanks");
+    } catch (err) {
+      status.textContent = err instanceof Unauthorized ? t("feedback.login") : err.message === "rate-limited" ? t("feedback.tooMany") : t("feedback.failed");
+    } finally {
+      text.disabled = false;
+      sync();
+    }
+  });
+  return form;
+}
+
 const ITEMS = [
   { id: "language", label: () => t("settings.language"), render: languageRow },
   { id: "theme", label: () => t("settings.theme"), render: themeRow },
   { id: "quality", label: () => t("settings.quality"), render: qualityRow },
   { id: "format", label: () => t("settings.format"), render: formatRow },
   { id: "preload", label: () => t("settings.preload"), render: preloadRow },
+  { id: "feedback", label: () => t("settings.feedback"), render: feedbackRow },
 ];
 
 export function renderSettings(el, { onClose, ...profile }) {

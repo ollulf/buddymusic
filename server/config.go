@@ -23,6 +23,7 @@ type Config struct {
 	TrustedNets  []netip.Prefix
 	SecureCookie bool
 	ScanDelay    time.Duration
+	Feedback     string
 }
 
 func env(key, def string) string {
@@ -42,6 +43,7 @@ func LoadConfig() (*Config, error) {
 		ScanPassword: os.Getenv("SCAN_PASSWORD"),
 		SecureCookie: env("SECURE_COOKIE", "false") == "true",
 		ScanDelay:    10 * time.Second,
+		Feedback:     os.Getenv("FEEDBACK_DIR"),
 	}
 	mb, err := strconv.Atoi(env("MAX_UPLOAD_MB", "200"))
 	if err != nil || mb <= 0 {
@@ -69,3 +71,10 @@ func LoadConfig() (*Config, error) {
 
 func (c *Config) IncomingDir() string { return filepath.Join(c.MusicRoot, "_incoming") }
 func (c *Config) LibraryDir() string  { return filepath.Join(c.MusicRoot, "library") }
+
+func (c *Config) FeedbackDir() string {
+	if c.Feedback != "" {
+		return c.Feedback
+	}
+	return filepath.Join(c.MusicRoot, "_feedback")
+}

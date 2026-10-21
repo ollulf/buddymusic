@@ -33,7 +33,7 @@ usermod -aG music buddymusic
 
 echo
 echo "== Folders"
-for d in "$MUSIC/_incoming" "$MUSIC/library"; do
+for d in "$MUSIC/_incoming" "$MUSIC/library" "$MUSIC/_feedback"; do
     install -d -g music -m 2775 "$d"
 done
 
