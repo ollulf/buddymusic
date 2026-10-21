@@ -1,6 +1,7 @@
 import { settings, setQuality, setFormat, setPreload, PRELOADS, onChange, QUALITIES, FORMATS, qualityHint, opusSupported } from "./player.js";
 import { t, lang, LANGS, setLang } from "./i18n.js";
 import { apiJSON, Unauthorized } from "./dom.js";
+import { vizEnabled, setVizEnabled, vizRisky, vizRouted } from "./viz.js";
 
 const h = (tag, attrs = {}, ...kids) => {
   const el = document.createElement(tag);
@@ -190,6 +191,17 @@ function themeRow() {
     h("div", { class: "swatch-row", role: "radiogroup", "aria-labelledby": "swatch-key-label" }, keys));
 }
 
+function vizRow() {
+  const box = h("input", { type: "checkbox", onchange: () => { setVizEnabled(box.checked); note.hidden = box.checked || !vizRouted(); } });
+  box.checked = vizEnabled();
+  const note = h("p", { class: "muted", hidden: box.checked || !vizRouted() }, t("settings.vizOffNote"));
+  return h("div", {},
+    h("p", { class: "muted" }, t("settings.vizHint")),
+    vizRisky ? h("p", { class: "muted" }, t("settings.vizIos")) : null,
+    h("div", { class: "settings-radios" }, h("label", {}, box, " ", t("settings.vizOn"))),
+    note);
+}
+
 function languageRow() {
   return h("div", {},
     h("p", { class: "muted" }, t("settings.languageHint")),
@@ -241,6 +253,7 @@ function feedbackRow() {
 const ITEMS = [
   { id: "language", label: () => t("settings.language"), render: languageRow },
   { id: "theme", label: () => t("settings.theme"), render: themeRow },
+  { id: "viz", label: () => t("settings.viz"), render: vizRow },
   { id: "quality", label: () => t("settings.quality"), render: qualityRow },
   { id: "format", label: () => t("settings.format"), render: formatRow },
   { id: "preload", label: () => t("settings.preload"), render: preloadRow },

@@ -2,6 +2,7 @@ import { t } from "./i18n.js";
 import { h, coverURL, fmtTime } from "./dom.js";
 import { heartButton, retarget } from "./favs.js";
 import { netMonitor, netChip } from "./net.js";
+import { renderViz } from "./viz.js";
 
 const SAVER_KEY = "bm.dataSaver";
 const QUALITY_KEY = "bm.quality";
@@ -265,16 +266,20 @@ export function playList(songs, start = 0) {
 export function playNext(songs) {
   const at = state.index + 1;
   state.queue.splice(at, 0, ...songs);
-  if (state.index < 0) return playList(state.queue, 0);
+  if (state.index < 0) { playList(state.queue, 0); return queued(songs); }
   rebuildOrder();
   emit();
+  queued(songs);
 }
 
+const queued = (songs) => document.dispatchEvent(new CustomEvent("queueadd", { detail: { songs } }));
+
 export function addToQueue(songs) {
-  if (state.index < 0) return playList(songs, 0);
+  if (state.index < 0) { playList(songs, 0); return queued(songs); }
   state.queue.push(...songs);
   rebuildOrder();
   emit();
+  queued(songs);
 }
 
 export function removeSongs(ids) {
@@ -761,6 +766,8 @@ export function renderBar(opts = {}) {
       h("div", { class: "pb-left" },
         h("div", { class: "pb-screen" }, h("div", { class: "pb-chips" }, netChip(net), rateB), info),
         h("div", { class: "pb-btns" }, h("i", { class: "pb-grille" }), heartB, repeatB, shuffleB, volumeControl()))));
+
+  bar.append(renderViz(audio, bar));
 
   const narrow = window.matchMedia ? window.matchMedia("(max-width: 760px)") : { matches: false };
   const setTucked = (on) => {
