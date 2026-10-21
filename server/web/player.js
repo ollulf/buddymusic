@@ -629,7 +629,29 @@ audio.addEventListener("waiting", () => {
   auto.stalls += 1;
   auto.next = null;
 });
-window.addEventListener("pagehide", () => report(false));
+const life = { closing: false };
+function shutdown(e) {
+  report(false);
+  life.closing = true;
+  play.gen += 1;
+  autoAdvance = false;
+  startT.live = false;
+  adv.stuck = false;
+  stall.at = 0;
+  audio.pause();
+  preloader.pause();
+  if (!e.persisted) {
+    audio.removeAttribute("src");
+    audio.load();
+    dropPreload();
+  }
+  if ("mediaSession" in navigator) {
+    try { navigator.mediaSession.metadata = null; navigator.mediaSession.playbackState = "none"; } catch {}
+  }
+}
+window.addEventListener("pagehide", shutdown);
+window.addEventListener("pageshow", (e) => { if (e.persisted) life.closing = false; });
+audio.addEventListener("play", () => { if (life.closing) audio.pause(); });
 audio.addEventListener("timeupdate", () => {
   const song = current();
   if (!song) return;
