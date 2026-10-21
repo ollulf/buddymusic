@@ -1,9 +1,9 @@
 [
   {
-    "version": "1.0.2110.6",
+    "version": "1.0.2110.7",
     "date": "2026-10-21",
     "en": [
-      "Your queue as a stack of CDs next to the player: tap it to see, reorder or remove songs",
+      "Your queue as a stack of CDs next to the player (albums thick, songs slim): tap it to see, reorder or remove songs",
       "Song titles on a retro LCD screen; long titles scroll",
       "Pick your own look in Settings: a base colour and a key colour",
       "Playback is more reliable: it recovers from network drops and keeps playing on iPhone in the background",
@@ -11,10 +11,10 @@
       "NEW stays on an album until you open it",
       "Send feedback straight from Settings",
       "\"What's new\" and the app version in the profile menu",
-      "Fresh pixel look: new tab icons, CD frames, clearer numbers and tidier pages"
+      "Fresh pixel look: new tab icons, CD frames, clearer numbers, tidier pages, and nothing hides behind the CD anymore"
     ],
     "de": [
-      "Deine Warteschlange als CD-Stapel neben dem Player: antippen zum Ansehen, Umsortieren oder Entfernen",
+      "Deine Warteschlange als CD-Stapel neben dem Player (Alben dick, Songs dünn): antippen zum Ansehen, Umsortieren oder Entfernen",
       "Songtitel auf einem Retro-LCD; lange Titel laufen durch",
       "Eigener Look in den Einstellungen: Basis- und Akzentfarbe wählen",
       "Zuverlässigere Wiedergabe: fängt sich nach Netzaussetzern und spielt auf dem iPhone im Hintergrund weiter",
@@ -22,7 +22,7 @@
       "NEU bleibt an einem Album, bis du es öffnest",
       "Feedback direkt aus den Einstellungen senden",
       "„Neuigkeiten“ und die App-Version im Profilmenü",
-      "Frischer Pixel-Look: neue Tab-Symbole, CD-Rahmen, klarere Zahlen und aufgeräumte Seiten"
+      "Frischer Pixel-Look: neue Tab-Symbole, CD-Rahmen, klarere Zahlen, aufgeräumte Seiten, und nichts verschwindet mehr hinter der CD"
     ]
   }
 ]
