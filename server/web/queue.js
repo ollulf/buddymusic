@@ -3,7 +3,6 @@ import { t } from "./i18n.js";
 import { onChange, queue, current, jump, move, removeAt, clearManual, entryInfo } from "./player.js";
 
 const SPINES = ["var(--accent)", "var(--orange)", "var(--accent-lo)", "var(--muted)", "var(--accent-hi)", "var(--fg)"];
-const MAX = 6;
 
 export const spine = (song) => {
   const k = String(song.albumId || song.id || "");
@@ -65,10 +64,12 @@ export function renderQueue() {
   const opB = (label, glyph, fn, off = false) => h("button", { type: "button", class: "qp-op", disabled: off, "aria-label": label, title: label, onclick: (e) => { e.stopPropagation(); fn(); } }, glyph);
 
   const row = (q, i, s, n, ops) => {
-    const li = h("li", { class: n === i ? "cur" : "", style: `--c:${spine(s)}` },
-      h("span", { class: "sp" }),
-      h("span", { class: "n" }, n === i ? "▶" : String(n - i)),
-      h("span", { class: "t" }, s.title || t("player.unknownTitle"), h("i", {}, [s.artist, s.duration ? fmtTime(+s.duration) : ""].filter(Boolean).join(" · "))),
+    const li = h("li", { class: n === i ? "cur" : "" },
+      h("span", { class: "s-no" }, n === i ? "▶" : String(n - i)),
+      h("span", { class: "s-meta" },
+        h("span", { class: "s-title" }, s.title || t("player.unknownTitle")),
+        s.artist ? h("span", { class: "s-sub" }, s.artist) : null),
+      h("span", { class: "s-dur" }, s.duration ? fmtTime(+s.duration) : ""),
       h("span", { class: "ops" }, ops));
     li.tabIndex = 0;
     li.addEventListener("click", () => jump(n));
@@ -86,18 +87,17 @@ export function renderQueue() {
     const kids = [];
     const rm = (n) => opB(t("queue.remove"), "✕", () => removeAt([n]));
     q.forEach((s, n) => {
-      if (n < i) return;
+      if (n < i || n > last) return;
       if (n === first && up.length) kids.push(divider(t("queue.upNext")));
-      if (n === last + 1 && n > i) kids.push(divider(t("queue.nextFrom")));
       let ops = [];
       if (n >= first && n <= last) ops = [
         opB(t("queue.up"), "▲", () => move(n, n - 1), n === first),
         opB(t("queue.down"), "▼", () => move(n, n + 1), n === last),
         rm(n),
       ];
-      else if (n !== i) ops = [rm(n)];
       kids.push(row(q, i, s, n, ops));
     });
+    if (!up.length) kids.push(h("li", { class: "qp-sec qp-empty" }, t("queue.empty")));
     list.replaceChildren(...kids);
   };
 
@@ -119,7 +119,9 @@ export function renderQueue() {
       if (last && last.batch === b) last.n++;
       else runs.push({ batch: b, song: s, n: 1, size, key: b + ":" + s.id });
     }
-    const shown = Math.min(runs.length, MAX);
+    const room = Math.max(6, Math.ceil(window.innerHeight / 7) + 4);
+    const shown = Math.min(runs.length, room);
+    stack.classList.toggle("deep", runs.length > 5);
     const kids = [];
     if (!shown) kids.push(h("span", { class: "case empty" }));
     for (let n = 0; n < shown; n++) {
