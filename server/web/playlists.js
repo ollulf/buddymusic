@@ -1,5 +1,5 @@
 import { t } from "./i18n.js";
-import { h, api, apiJSON, fmtTime, Unauthorized } from "./dom.js";
+import { h, api, apiJSON, fmtTime, Unauthorized, setPageTitle } from "./dom.js";
 import { songRow } from "./library.js";
 import * as player from "./player.js";
 
@@ -70,13 +70,13 @@ async function renderOverview(container, opts) {
     const pl = await createPlaylist(name.trim(), [], opts);
     if (pl) location.hash = `#/playlists/${encodeURIComponent(pl.id)}`;
   } }, t("playlists.new"));
-  container.replaceChildren(h("div", { class: "pl-top" }, h("h1", {}, t("tab.playlists")), newBtn), h("div", { class: "muted" }, t("common.loading")));
+  container.replaceChildren(h("div", { class: "pl-top" }, newBtn), h("div", { class: "muted" }, t("common.loading")));
   try {
     const all = await listPlaylists();
     const own = all.filter(mine);
     const friends = all.filter((pl) => !mine(pl));
     container.replaceChildren(
-      h("div", { class: "pl-top" }, h("h1", {}, t("tab.playlists")), newBtn),
+      h("div", { class: "pl-top" }, newBtn),
       h("section", {},
         h("h2", {}, t("playlists.mine", { n: own.length })),
         own.length ? h("ul", { class: "songs card" }, own.map((pl) => playlistRow(pl, opts, reload)))
@@ -87,7 +87,7 @@ async function renderOverview(container, opts) {
           : h("p", { class: "card muted" }, t("playlists.noneFriends"))));
   } catch (e) {
     if (e instanceof Unauthorized) return opts.onUnauthorized?.();
-    container.replaceChildren(h("h1", {}, t("tab.playlists")), h("div", { class: "card muted" }, ERRORS[e.message] || t("playlists.loadFailed")));
+    container.replaceChildren(h("div", { class: "card muted" }, ERRORS[e.message] || t("playlists.loadFailed")));
   }
 }
 
@@ -121,6 +121,7 @@ async function renderPlaylist(container, id, opts) {
     saveSongs(list);
   };
   const total = songs.reduce((t, s) => t + (s.duration || 0), 0);
+  setPageTitle(pl.name || t("playlists.untitled"), container);
   const publicBox = h("input", { type: "checkbox", checked: !!pl.public, onchange: (e) => patch({ public: e.target.checked }) });
   const rows = songs.map((_, i) => songRow(songs, i, {
     showArtist: true, showCover: true, onUnauthorized: opts.onUnauthorized,
@@ -133,8 +134,7 @@ async function renderPlaylist(container, id, opts) {
   container.replaceChildren(
     back,
     h("section", { class: "pl-head" },
-      h("h1", {}, pl.name || t("playlists.untitled"), own && pl.public ? h("span", { class: "badge" }, t("playlists.publicBadge")) : null),
-      h("div", { class: "muted" }, [own ? t("playlists.yours") : t("playlists.by", { owner: pl.owner }), t("common.songCount", { n: songs.length }), fmtTime(total)].join(" · ")),
+      h("div", { class: "muted" }, [own ? t("playlists.yours") : t("playlists.by", { owner: pl.owner }), t("common.songCount", { n: songs.length }), fmtTime(total)].join(" · "), own && pl.public ? h("span", { class: "badge" }, t("playlists.publicBadge")) : null),
       h("div", { class: "actions" },
         h("button", { class: "primary", disabled: !songs.length, onclick: () => player.playList(songs, 0) }, t("favorites.playAll")),
         h("button", { disabled: !songs.length, onclick: () => shuffle(songs) }, t("player.shuffle")),

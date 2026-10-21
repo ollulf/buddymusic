@@ -5,14 +5,13 @@ import { isStarred } from "./favs.js";
 import * as player from "./player.js";
 
 export async function renderFavorites(container, opts = {}) {
-  container.replaceChildren(h("h1", {}, t("tab.favorites")), h("div", { class: "muted" }, t("common.loading")));
+  container.replaceChildren(h("div", { class: "muted" }, t("common.loading")));
   try {
     const data = await api("/api/music/starred");
     const songs = (data.song || []).filter((s) => isStarred(s, "song"));
     const albums = (data.album || []).filter((al) => isStarred(al, "album"));
     const live = () => songs.filter((s) => isStarred(s, "song"));
     container.replaceChildren(
-      h("h1", {}, t("tab.favorites")),
       h("section", {},
         h("h2", {}, t("favorites.songs", { n: songs.length })),
         songs.length
@@ -29,7 +28,7 @@ export async function renderFavorites(container, opts = {}) {
           : h("p", { class: "card muted" }, t("favorites.noAlbums"))));
   } catch (e) {
     if (e instanceof Unauthorized) return opts.onUnauthorized?.();
-    container.replaceChildren(h("h1", {}, t("tab.favorites")),
+    container.replaceChildren(
       h("div", { class: "card muted" }, e.message === "navidrome-unreachable" ? t("common.navidrome") : t("favorites.loadFailed")));
   }
 }

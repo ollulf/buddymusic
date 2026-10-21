@@ -103,16 +103,33 @@ function startTimes(d) {
       : h("p", { class: "muted" }, t("admin.noStarts")));
 }
 
+const fmtStamp = (ms) => new Date(ms).toLocaleString(lang, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
+function feedbackList(list) {
+  return h("section", { class: "card" },
+    h("h2", {}, t("admin.feedback")),
+    !list
+      ? h("p", { class: "muted" }, t("admin.feedbackFailed"))
+      : list.length
+        ? h("ul", { class: "admin-list feedback-list" }, list.map((f) => h("li", {},
+            h("strong", {}, f.user),
+            h("span", { class: "muted" }, [fmtStamp(f.createdAt), t(`feedback.kind.${f.category}`), f.version, f.userAgent].filter(Boolean).join(" · ")),
+            h("p", { class: "feedback-msg" }, f.text))))
+        : h("p", { class: "muted" }, t("admin.noFeedback")));
+}
+
 let timer = null;
 
 export async function renderAdmin(container, opts = {}) {
   clearInterval(timer);
   const title = h("div", { class: "admin-head" },
-    h("h1", {}, t("tab.admin")),
     h("button", { type: "button", onclick: () => renderAdmin(container, opts) }, t("admin.refresh")));
   if (!container.firstChild) container.replaceChildren(title, h("div", { class: "muted" }, t("common.loading")));
   try {
-    const d = await api("/api/admin/stats");
+    const [d, fb] = await Promise.all([
+      api("/api/admin/stats"),
+      api("/api/admin/feedback").then((r) => r.feedback).catch((e) => { if (e instanceof Unauthorized) throw e; return null; }),
+    ]);
     const color = (u) => COLORS[d.users.findIndex((x) => x.user === u) % COLORS.length];
     const tot = d.totals;
     container.replaceChildren(
@@ -127,6 +144,7 @@ export async function renderAdmin(container, opts = {}) {
       chart(d, color),
       userTable(d, color),
       startTimes(d),
+      feedbackList(fb),
       loginLog(d));
     timer = setInterval(() => {
       if (container.hidden) return clearInterval(timer);

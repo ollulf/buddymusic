@@ -10,6 +10,11 @@ export const h = (tag, attrs = {}, ...kids) => {
   return el;
 };
 
+export function setPageTitle(text, view) {
+  if (view && view.hidden) return;
+  window.dispatchEvent(new CustomEvent("page-title", { detail: text }));
+}
+
 export class Unauthorized extends Error {}
 
 export async function api(path) {

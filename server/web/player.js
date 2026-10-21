@@ -340,6 +340,23 @@ function dropPreload(keep = "") {
   Object.assign(pre, { url: "", blob: "", ctrl: null });
   if (preloader.src && preloader.src !== keep) { preloader.removeAttribute("src"); preloader.load(); }
 }
+export function stopAll() {
+  listen.song = null;
+  autoAdvance = false;
+  play.gen += 1;
+  Object.assign(adv, { gen: 0, stuck: false, retried: false, logged: false, fails: 0 });
+  Object.assign(startT, { gen: 0, live: false });
+  meter.playing = null;
+  audio.pause();
+  audio.removeAttribute("src");
+  audio.load();
+  if (play.blob) URL.revokeObjectURL(play.blob);
+  Object.assign(play, { offset: 0, tries: 0, blob: "", heard: 0 });
+  dropPreload();
+  Object.assign(state, { queue: [], index: -1, order: [], scrobbled: false });
+  if ("mediaSession" in navigator) { navigator.mediaSession.metadata = null; navigator.mediaSession.playbackState = "none"; }
+  emit();
+}
 export function setQuality(q) {
   if (!QUALITIES.includes(q)) return;
   state.quality = q;
