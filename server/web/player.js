@@ -1,6 +1,7 @@
 import { t } from "./i18n.js";
 import { h, coverURL, fmtTime } from "./dom.js";
 import { heartButton, retarget } from "./favs.js";
+import { netMonitor, netChip } from "./net.js";
 
 const SAVER_KEY = "bm.dataSaver";
 const QUALITY_KEY = "bm.quality";
@@ -137,6 +138,15 @@ function measure() {
 }
 
 export const current = () => state.queue[state.index] || null;
+const net = netMonitor(audio, () => {
+  const p = meter.playing || {};
+  return {
+    speedKbps: auto.speed && auto.measuredKbps ? auto.speed * auto.measuredKbps : 0,
+    kbps: p.kbps || 0, format: p.format || "", known: !!p.known, full: meter.done,
+    ahead: Math.max(0, bufferedEnd() - (audio.currentTime || 0)),
+    down: state.quality === "auto" && !!p.tier && p.tier !== "original",
+  };
+});
 export const queue = () => state.queue.slice();
 export const isPlaying = () => !audio.paused;
 export const duration = () => {
@@ -474,7 +484,7 @@ audio.addEventListener("waiting", () => { if (startT.live) startT.waits += 1; })
 audio.addEventListener("playing", () => {
   if (!startT.live) return;
   startT.live = false;
-  if (startT.gen === play.gen) reportStart(performance.now() - startT.at);
+  if (startT.gen === play.gen) { const ms = performance.now() - startT.at; net.noteStart(ms); reportStart(ms); }
 });
 
 function checkJump() {
@@ -652,7 +662,7 @@ export function renderBar(opts = {}) {
     h("div", { class: "pb-main" },
       h("div", { class: "bar-seek" }, pos, range, dur),
       h("div", { class: "pb-left" },
-        h("div", { class: "pb-screen" }, rateB, info),
+        h("div", { class: "pb-screen" }, h("div", { class: "pb-chips" }, netChip(net), rateB), info),
         h("div", { class: "pb-btns" }, heartB, repeatB, shuffleB, volumeControl(), h("i", { class: "pb-grille" })))));
 
   const narrow = window.matchMedia ? window.matchMedia("(max-width: 760px)") : { matches: false };
