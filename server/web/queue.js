@@ -56,16 +56,15 @@ export function renderQueue() {
     root.classList.add("open");
     stack.setAttribute("aria-expanded", "true");
     paintList();
-    const cur = list.querySelector("li.cur");
-    if (cur) cur.scrollIntoView({ block: "nearest" });
+    list.scrollTop = 0;
     closeB.focus({ preventScroll: true });
   };
 
   const opB = (label, glyph, fn, off = false) => h("button", { type: "button", class: "qp-op", disabled: off, "aria-label": label, title: label, onclick: (e) => { e.stopPropagation(); fn(); } }, glyph);
 
   const row = (q, i, s, n, ops) => {
-    const li = h("li", { class: n === i ? "cur" : "" },
-      h("span", { class: "s-no" }, n === i ? "▶" : String(n - i)),
+    const li = h("li", {},
+      h("span", { class: "s-no" }, String(n - i)),
       h("span", { class: "s-meta" },
         h("span", { class: "s-title" }, s.title || t("player.unknownTitle")),
         s.artist ? h("span", { class: "s-sub" }, s.artist) : null),
@@ -76,8 +75,6 @@ export function renderQueue() {
     li.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target === li) jump(n); });
     return li;
   };
-  const divider = (label) => h("li", { class: "qp-sec", "aria-hidden": "true" }, label);
-
   const paintList = () => {
     const { q, i, up } = upcoming();
     const first = i + 1;
@@ -87,15 +84,12 @@ export function renderQueue() {
     const kids = [];
     const rm = (n) => opB(t("queue.remove"), "✕", () => removeAt([n]));
     q.forEach((s, n) => {
-      if (n < i || n > last) return;
-      if (n === first && up.length) kids.push(divider(t("queue.upNext")));
-      let ops = [];
-      if (n >= first && n <= last) ops = [
+      if (n < first || n > last) return;
+      kids.push(row(q, i, s, n, [
         opB(t("queue.up"), "▲", () => move(n, n - 1), n === first),
         opB(t("queue.down"), "▼", () => move(n, n + 1), n === last),
         rm(n),
-      ];
-      kids.push(row(q, i, s, n, ops));
+      ]));
     });
     if (!up.length) kids.push(h("li", { class: "qp-sec qp-empty" }, t("queue.empty")));
     list.replaceChildren(...kids);
