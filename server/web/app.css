@@ -305,7 +305,7 @@ button.icon.danger:hover, button.icon.danger:focus-visible { color: var(--bad); 
   .song { grid-template-columns: 1fr 72px; }
   .song:has(.disc) { grid-template-columns: 1fr 64px 56px; }
 }
-.pl-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.pl-top { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
 .pl-row { display: flex; align-items: center; gap: 2px; border-bottom: 1px solid var(--line); }
 .pl-row:last-child { border-bottom: 0; }
 .pl-main { flex: 1; min-width: 0; display: flex; padding: 8px 6px; border-radius: 0; text-decoration: none; }
@@ -407,7 +407,7 @@ button.heart[aria-pressed="true"]::before { content: ""; --i: var(--i-heartfull)
 
 .login .privacy { margin: 0; font-size: .8rem; }
 .view-admin > * { min-width: 0; }
-.admin-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.admin-head { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
 .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; background: var(--card); border: 2px solid var(--ink); box-shadow: var(--bevel); padding: 10px 12px; }
 .stat-label { color: var(--muted); font-size: .78rem; text-transform: uppercase; }
@@ -619,7 +619,7 @@ header.top .avatar.has-pic { position: relative; }
 header.top .avatar.has-pic::after { content: ""; position: absolute; inset: 0; box-shadow: inherit; pointer-events: none; }
 header.top .saver-toggle + .profile { margin-left: 4px; }
 .title-row { display: flex; align-items: center; gap: 10px; max-width: 820px; margin: 0 auto; padding: 12px 16px 0; }
-.page-title { font: 400 32px/1 var(--mys); letter-spacing: .02em; color: var(--accent); flex: none; }
+.page-title { font: 400 32px/1 var(--mys); letter-spacing: .02em; color: var(--accent); flex: 0 1 auto; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .title-row .hsearch { flex: 1 1 auto; min-width: 0; max-width: 420px; margin-left: auto; }
 .title-row .search-box { height: 40px; padding: 4px 10px; font-size: 15px; }
 .title-row.no-search .hsearch, .title-row.no-search > .search-box { visibility: hidden; }

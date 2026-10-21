@@ -108,7 +108,6 @@ let timer = null;
 export async function renderAdmin(container, opts = {}) {
   clearInterval(timer);
   const title = h("div", { class: "admin-head" },
-    h("h1", {}, t("tab.admin")),
     h("button", { type: "button", onclick: () => renderAdmin(container, opts) }, t("admin.refresh")));
   if (!container.firstChild) container.replaceChildren(title, h("div", { class: "muted" }, t("common.loading")));
   try {

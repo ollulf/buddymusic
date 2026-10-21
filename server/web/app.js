@@ -70,6 +70,7 @@ async function logout() {
 }
 
 const BASE_TABS = ["library", "search", "favorites", "playlists", "upload"].map((k) => [k, t(`tab.${k}`)]);
+let titleHandler = null;
 let routeHandler = null;
 let playerBar = null;
 let openQuality = null;
@@ -318,7 +319,11 @@ function showApp(user, admin, avatar, me = {}) {
   setPlaylistUser(user);
   const views = Object.fromEntries(TABS.map(([k]) => [k, h("main", { class: `view view-${k}`, hidden: true })]));
   const links = Object.fromEntries(TABS.filter(([k]) => k !== "search").map(([k, label]) => [k, h("a", { class: "tab", href: `#/${k}`, title: label, "aria-label": label }, pixelIcon(TAB_ICONS[k]), h("span", { class: "tab-label", "aria-hidden": "true" }, label))]));
-  const titleEl = h("div", { class: "page-title" });
+  const titleEl = h("h1", { class: "page-title" });
+  const setTitle = (text) => { titleEl.textContent = text; titleEl.title = text; document.title = `${text} · buddymusic`; };
+  if (titleHandler) window.removeEventListener("page-title", titleHandler);
+  titleHandler = (e) => setTitle(e.detail);
+  window.addEventListener("page-title", titleHandler);
   const titleRow = h("div", { class: "title-row" }, titleEl, searchBox());
   const settingsView = h("main", { class: "view view-settings", hidden: true });
   let cameFromApp = false;
@@ -360,7 +365,7 @@ function showApp(user, admin, avatar, me = {}) {
       document.body.classList.remove("settings-open");
     }
     if (inSettings) {
-      titleEl.textContent = t("settings.title");
+      setTitle(t("settings.title"));
       titleRow.classList.remove("no-search");
       return;
     }
@@ -372,7 +377,7 @@ function showApp(user, admin, avatar, me = {}) {
       if (k === tab) links[k].setAttribute("aria-current", "page");
       else links[k].removeAttribute("aria-current");
     }
-    titleEl.textContent = TABS.find(([k]) => k === tab)[1];
+    setTitle(TABS.find(([k]) => k === tab)[1]);
     titleRow.classList.toggle("no-search", tab === "upload" || tab === "admin");
     const key = [tab, ...parts.slice(1)].join("/");
     if (tab === "library" && key !== shown) {
