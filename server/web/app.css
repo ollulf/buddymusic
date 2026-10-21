@@ -656,7 +656,6 @@ button.pb-b.vol[aria-expanded="true"] { color: var(--accent); }
 .qp-list li { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2); background: var(--card); border-bottom: 2px dashed var(--shade); cursor: pointer; }
 .qp-list li:last-child { border-bottom: 0; }
 .qp-list li:hover, .qp-list li:focus-visible { background: var(--shade); outline: none; }
-.qp-list li.cur .s-no, .qp-list li.cur .s-title { color: var(--accent); }
 .qp-list li.qp-sec { display: block; padding: var(--sp-3) var(--sp-2) var(--sp-1); font-family: var(--mys); font-size: var(--fs-lg); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); cursor: default; border-bottom: 0; }
 .qp-list li.qp-sec:hover { background: none; }
 .qp-list li.qp-empty { font: var(--fs-md) var(--pix); text-transform: none; letter-spacing: 0; }
