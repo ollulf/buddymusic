@@ -783,7 +783,7 @@ export function renderBar(opts = {}) {
     svgEl("circle", { cx: 20, cy: 20, r: 20, fill: "#0b0c14" }),
     svgEl("circle", { cx: 20, cy: 20, r: 19.2, fill: "#ffffff" }),
     svgEl("circle", { cx: 20, cy: 20, r: 18.6, fill: "#0b0c14" }));
-  const label = h("div", { class: "pb-label" }, labelImg, h("span", { class: "hole" }), h("span", { class: "shine" }));
+  const label = h("div", { class: "pb-label" }, labelImg, h("span", { class: "hole" }));
   const disc = h("button", { type: "button", class: "pb-disc" }, h("div", { class: "pb-spin" }, rim, label));
 
   const bar = h("footer", { class: "player pb", hidden: true },
