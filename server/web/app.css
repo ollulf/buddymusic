@@ -264,6 +264,11 @@ button.icon.row-more { flex: none; min-width: 44px; min-height: 44px; padding: 0
 .row-menu-item.danger { color: var(--bad); }
 .row-menu-item:disabled { opacity: .45; }
 .rm-ico { width: 1.2em; text-align: center; }
+.song-row.now-playing .row-fg { background: color-mix(in srgb, var(--accent) 14%, var(--card)); }
+.song-row.now-playing .s-title { color: var(--accent); }
+.song-row.now-playing .s-no { color: var(--accent); font-size: 0; }
+.song-row.now-playing .s-no::before { content: "\25B6"; font-size: var(--fs-md); }
+.song-row.now-playing .s-no .art { display: none; }
 .song-row:last-child { border-bottom: 0; }
 .song-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--sp-3); border: 0; background: none; text-align: left; padding: var(--sp-2) var(--sp-2); border-radius: 0; color: var(--fg); font-size: var(--fs-md); box-shadow: none; }
 .song-main:hover { background: var(--shade); }

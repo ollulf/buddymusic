@@ -59,6 +59,17 @@ export function albumCard(al, i = EAGER_COVERS) {
     h("span", { class: "a-sub" }, [al.artist, al.year].filter(Boolean).join(" · ")));
 }
 
+function markNow(li) {
+  const cur = player.current();
+  const on = !!cur && cur.id === li.dataset.song;
+  li.classList.toggle("now-playing", on);
+  if (on) li.setAttribute("aria-current", "true"); else li.removeAttribute("aria-current");
+}
+
+player.onChange(() => {
+  for (const li of document.querySelectorAll("li.song-row[data-song]")) markNow(li);
+});
+
 export function songRow(songs, i, opts = {}) {
   const s = songs[i];
   const fav = () => isStarred(s, "song");
@@ -92,6 +103,7 @@ export function songRow(songs, i, opts = {}) {
       h("span", { class: "s-dur" }, fmtTime(s.duration))),
     menu);
   const li = h("li", { class: "song-row" }, fg);
+  if (s.id) { li.dataset.song = s.id; markNow(li); }
   swipeRow(li, fg, {
     right: { icon: "+", label: () => t("song.swipeQueue"), run: queue },
     left: { icon: "♥", label: () => t(fav() ? "song.unfav" : "song.swipeFav"), run: toggleFav },
