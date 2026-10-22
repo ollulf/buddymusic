@@ -1,6 +1,6 @@
 [
   {
-    "version": "1.0.2210",
+    "version": "1.0.2210.2",
     "date": "2026-10-22",
     "en": [
       "On iPhone, music keeps playing when the screen is locked or you switch tabs",
@@ -8,7 +8,8 @@
       "Bigger artist and album text, and the song title scrolls around the screen in a loop",
       "Bigger play and skip buttons",
       "The visualizer reaches the left edge, and the spinning CD is a bit smaller",
-      "No volume button on phones: use your phone's buttons"
+      "No volume button on phones: use your phone's buttons",
+      "Send feedback again: it's now in the profile menu next to Settings"
     ],
     "de": [
       "Auf dem iPhone läuft die Musik weiter, wenn der Bildschirm gesperrt ist oder du den Tab wechselst",
@@ -16,7 +17,8 @@
       "Größerer Text für Künstler und Album, und der Songtitel läuft in einer Schleife über das Display",
       "Größere Play- und Skip-Tasten",
       "Der Visualizer reicht bis zum linken Rand, und die drehende CD ist etwas kleiner",
-      "Kein Lautstärke-Knopf auf dem Handy: nutze die Tasten deines Handys"
+      "Kein Lautstärke-Knopf auf dem Handy: nutze die Tasten deines Handys",
+      "Feedback senden funktioniert wieder: jetzt im Profilmenü neben den Einstellungen"
     ]
   },
   {
