@@ -719,7 +719,7 @@ header.top .dice, header.top .saver-btn, header.top .avatar { width: 40px; }
 header.top .tab:hover, header.top .tab:focus-visible, header.top .dice:hover, header.top .dice:focus-visible, header.top .saver-btn:hover, header.top .saver-btn:focus-visible, header.top .avatar:hover, header.top .avatar:focus-visible { color: var(--fg); border-color: var(--ink); }
 header.top .avatar:hover, header.top .avatar:focus-visible { color: var(--accent); }
 header.top .tab.on, header.top .tab.on:hover, header.top .saver-btn.on, header.top .avatar[aria-expanded="true"] { background: var(--accent); border-color: var(--ink); color: var(--accent-fg); box-shadow: inset 2px 2px 0 var(--accent-hi), inset -2px -2px 0 var(--accent-lo); }
-header.top .tab { display: grid; grid-auto-flow: column; place-items: center; gap: var(--sp-2); flex: none; min-width: 40px; padding: 0; cursor: pointer; color: var(--muted); text-decoration: none; text-transform: uppercase; letter-spacing: .06em; font-size: var(--fs-sm); }
+header.top .tab { display: grid; grid-auto-flow: column; place-items: center; gap: var(--sp-2); flex: none; min-width: 40px; padding: 0; cursor: pointer; color: var(--muted); text-decoration: none; letter-spacing: .02em; font-size: var(--fs-sm); }
 header.top .tab-label { display: none; }
 header.top .tab:active, header.top .dice:active, header.top .saver-btn:active, header.top .avatar:active { transform: translate(2px, 2px); box-shadow: inset 2px 2px 0 var(--shade); }
 header.top .avatar.has-pic { position: relative; }
