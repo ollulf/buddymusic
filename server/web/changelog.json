@@ -1,6 +1,6 @@
 [
   {
-    "version": "1.0.2210.4",
+    "version": "1.0.2210.5",
     "date": "2026-10-22",
     "en": [
       "On iPhone, music keeps playing when the screen is locked or you switch tabs",
@@ -14,7 +14,8 @@
       "Upload WMA files too: they're converted so every device can play them",
       "Less tracking: the app no longer records how long songs take to start",
       "The song that's playing is highlighted in album and song lists, and shows in the browser tab",
-      "New CD case frame around covers, and a tidier layout on wide screens"
+      "New CD case frame around covers, and a tidier layout on wide screens",
+      "Your queued songs stay when you tap a new song, and the volume control on desktop is now a vertical slider"
     ],
     "de": [
       "Auf dem iPhone läuft die Musik weiter, wenn der Bildschirm gesperrt ist oder du den Tab wechselst",
@@ -28,7 +29,8 @@
       "Lade auch WMA-Dateien hoch: sie werden umgewandelt, damit jedes Gerät sie abspielt",
       "Weniger Tracking: die App speichert nicht mehr, wie lange Songs zum Starten brauchen",
       "Der laufende Song ist in Alben und Songlisten hervorgehoben und steht im Browser-Tab",
-      "Neuer CD-Hüllen-Rahmen um Cover und ein aufgeräumteres Layout auf breiten Bildschirmen"
+      "Neuer CD-Hüllen-Rahmen um Cover und ein aufgeräumteres Layout auf breiten Bildschirmen",
+      "Deine eingereihten Songs bleiben, wenn du einen neuen Song antippst, und die Lautstärke am Desktop ist jetzt ein senkrechter Regler"
     ]
   },
   {
