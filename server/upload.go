@@ -42,6 +42,8 @@ func sniffAudio(head []byte, filename string) string {
 		if strings.HasPrefix(brand, "M4A") || strings.HasPrefix(brand, "M4B") || strings.HasPrefix(brand, "mp4") || strings.HasPrefix(brand, "iso") || strings.HasPrefix(brand, "dash") {
 			return ".m4a"
 		}
+	case isASF(head):
+		return ".wma"
 	case bytes.HasPrefix(head, []byte("OggS")):
 		if bytes.Contains(head, []byte("OpusHead")) || strings.EqualFold(filepath.Ext(filename), ".opus") {
 			return ".opus"
@@ -230,6 +232,18 @@ func (a *App) placeUpload(ctx context.Context, u *Upload, form *uploadForm, stor
 	fail := func(status int, code string) (int, any) {
 		u.Status = "rejected"
 		return status, map[string]string{"error": code}
+	}
+	if form.ext == ".wma" {
+		converted, ext, err := convertWMA(ctx, stored, strings.TrimSuffix(stored, form.ext))
+		if errors.Is(err, errNotAudio) {
+			return fail(http.StatusUnsupportedMediaType, "unsupported-type")
+		}
+		if err != nil {
+			log.Printf("upload %s: wma: %v", u.ID, err)
+			return fail(http.StatusUnprocessableEntity, "convert-failed")
+		}
+		defer os.Remove(converted)
+		stored, form.ext = converted, ext
 	}
 	tags, err := probe(ctx, stored)
 	if errors.Is(err, errNotAudio) {

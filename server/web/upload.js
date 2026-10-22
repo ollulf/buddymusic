@@ -10,6 +10,7 @@ const ERRORS = {
   "unsupported-cover-type": t("upload.err.coverType"),
   "exists": t("upload.err.exists"),
   "probe-failed": t("upload.err.probe"),
+  "convert-failed": t("upload.err.convert"),
   "unauthorized": t("upload.err.unauthorized"),
 };
 
@@ -31,7 +32,7 @@ let ui = {};
 
 function readTags(file) {
   return new Promise((resolve) => {
-    if (!window.jsmediatags || /\.(ogg|opus)$/i.test(file.name)) return resolve({ tags: null, picture: null });
+    if (!window.jsmediatags || /\.(ogg|opus|wma)$/i.test(file.name)) return resolve({ tags: null, picture: null });
     window.jsmediatags.read(file, {
       onSuccess: (r) => resolve({ tags: fromMediaTags(r.tags), picture: r.tags?.picture || null }),
       onError: () => resolve({ tags: null, picture: null }),
@@ -380,7 +381,7 @@ export function renderUpload(container, opts = {}) {
   state = { files: [], cover: null, edited: new Set(), busy: false, nextId: 1 };
   ui = { album: {} };
   if (opts.onUnauthorized) onUnauthorized = opts.onUnauthorized;
-  const picker = h("input", { type: "file", multiple: true, accept: "audio/*,.flac,.mp3,.m4a,.ogg,.opus", hidden: true,
+  const picker = h("input", { type: "file", multiple: true, accept: "audio/*,.flac,.mp3,.m4a,.ogg,.opus,.wma", hidden: true,
     onchange: (e) => { addFiles(e.target.files); e.target.value = ""; } });
   const drop = h("div", { class: "drop", tabindex: "0", role: "button",
     onclick: () => picker.click(),
