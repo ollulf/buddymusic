@@ -148,13 +148,17 @@ func (a *App) handleFeedback(w http.ResponseWriter, r *http.Request, user string
 		Category:  body.Category,
 		Text:      text,
 	}
-	if err := writeFeedbackFile(a.cfg.FeedbackDir(), f); err != nil {
-		log.Printf("feedback file: %v", err)
+	dbErr := a.store.SaveFeedback(f)
+	if dbErr != nil {
+		log.Printf("feedback db: %v", dbErr)
+	}
+	fileErr := writeFeedbackFile(a.cfg.FeedbackDir(), f)
+	if fileErr != nil {
+		log.Printf("feedback file: %v", fileErr)
+	}
+	if dbErr != nil && fileErr != nil {
 		writeError(w, http.StatusInternalServerError, "save-failed")
 		return
-	}
-	if err := a.store.SaveFeedback(f); err != nil {
-		log.Printf("feedback db: %v", err)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

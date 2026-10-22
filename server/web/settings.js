@@ -234,7 +234,7 @@ function feedbackRow() {
       status.dataset.ok = "1";
       status.textContent = t("feedback.thanks");
     } catch (err) {
-      status.textContent = err instanceof Unauthorized ? t("feedback.login") : err.message === "rate-limited" ? t("feedback.tooMany") : t("feedback.failed");
+      status.textContent = err instanceof Unauthorized ? t("feedback.login") : err.message === "rate-limited" ? t("feedback.tooMany") : err.message === "save-failed" ? t("feedback.saveFailed") : t("feedback.failed");
     } finally {
       text.disabled = false;
       sync();
