@@ -18,7 +18,6 @@ type App struct {
 	admins   adminCache
 	seen     seenThrottle
 	jumps    jumpLimiter
-	starts   jumpLimiter
 	feedback jumpLimiter
 }
 
@@ -65,7 +64,6 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("POST /api/music/scrobble/{id}", a.requireUser(a.handleScrobble))
 	mux.Handle("POST /api/music/progress/{id}", a.requireUser(a.handleProgress))
 	mux.Handle("POST /api/music/jumplog", a.requireUser(a.handleJumpLog))
-	mux.Handle("POST /api/music/startlog", a.requireUser(a.handleStartLog))
 	mux.Handle("POST /api/feedback", a.requireUser(a.handleFeedback))
 	mux.Handle("GET /api/admin/stats", a.requireUser(a.handleAdminStats))
 	mux.Handle("GET /api/admin/feedback", a.requireUser(a.handleAdminFeedback))

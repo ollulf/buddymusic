@@ -1,6 +1,6 @@
 [
   {
-    "version": "1.0.2210.2",
+    "version": "1.0.2210.3",
     "date": "2026-10-22",
     "en": [
       "On iPhone, music keeps playing when the screen is locked or you switch tabs",
@@ -9,7 +9,10 @@
       "Bigger play and skip buttons",
       "The visualizer reaches the left edge, and the spinning CD is a bit smaller",
       "No volume button on phones: use your phone's buttons",
-      "Send feedback again: it's now in the profile menu next to Settings"
+      "Send feedback again: it's now in the profile menu next to Settings",
+      "New colour: Violet, a bright purple base in Settings",
+      "Upload WMA files too: they're converted so every device can play them",
+      "Less tracking: the app no longer records how long songs take to start"
     ],
     "de": [
       "Auf dem iPhone läuft die Musik weiter, wenn der Bildschirm gesperrt ist oder du den Tab wechselst",
@@ -18,7 +21,10 @@
       "Größere Play- und Skip-Tasten",
       "Der Visualizer reicht bis zum linken Rand, und die drehende CD ist etwas kleiner",
       "Kein Lautstärke-Knopf auf dem Handy: nutze die Tasten deines Handys",
-      "Feedback senden funktioniert wieder: jetzt im Profilmenü neben den Einstellungen"
+      "Feedback senden funktioniert wieder: jetzt im Profilmenü neben den Einstellungen",
+      "Neue Farbe: Violett, eine kräftige lila Grundfarbe in den Einstellungen",
+      "Lade auch WMA-Dateien hoch: sie werden umgewandelt, damit jedes Gerät sie abspielt",
+      "Weniger Tracking: die App speichert nicht mehr, wie lange Songs zum Starten brauchen"
     ]
   },
   {

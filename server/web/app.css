@@ -108,6 +108,21 @@
   --rail: #6b655c;
   --ink: #0e0d0c;
 }
+:root[data-base="violet"] {
+  --bg: #221a2e;
+  --card: #4a2a74;
+  --fg: #ffffff;
+  --muted: #d0b8de;
+  --line: #100b16;
+  --ph: #9472a8;
+  --hi: #7a3bd0;
+  --shade: #1f0f33;
+  --steel: #45335c;
+  --screen: #100b16;
+  --screen-rim: #2b1040;
+  --rail: #845da4;
+  --ink: #100b16;
+}
 :root[data-base="dusk"] {
   --bg: #1b1824;
   --card: #2a2538;

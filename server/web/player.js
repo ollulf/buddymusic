@@ -118,7 +118,7 @@ const STALL_MS = 15000;
 const stall = { t: 0, b: 0, at: 0 };
 const watch = { t: -1, at: 0, stalled: false, sent: 0 };
 const pre = { url: "", blob: "", ctrl: null, speed: 0 };
-const startT = { at: 0, gen: 0, waits: 0, preload: false, auto: false, live: false };
+const startT = { at: 0, gen: 0, live: false };
 let autoAdvance = false;
 const adv = { gen: 0, stuck: false, retried: false, logged: false, fails: 0 };
 
@@ -245,11 +245,10 @@ function load(i, autoplay = true) {
   const song = current();
   if (!song) { audio.removeAttribute("src"); audio.load(); emit(); return; }
   startStream(song, pickTier(song, true));
-  const preloaded = !!play.blob || (!!preloader.src && preloader.src === audio.src);
   dropPreload(audio.src);
   startT.live = false;
   if (autoplay) {
-    Object.assign(startT, { at: performance.now(), gen: play.gen, waits: 0, preload: preloaded, auto: autoAdvance, live: true });
+    Object.assign(startT, { at: performance.now(), gen: play.gen, live: true });
     adv.stuck = false;
     adv.retried = false;
     adv.gen = autoAdvance ? play.gen : 0;
@@ -573,20 +572,10 @@ function reportJump(from, to, expected, event = "", detail = "") {
   fetch("/api/music/jumplog", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
 }
 
-function reportStart(ms) {
-  const spec = meter.playing || {};
-  const body = JSON.stringify({
-    ms: Math.round(ms), waits: startT.waits, tier: spec.tier || "", format: spec.format || spec.suffix || "",
-    kbps: spec.kbps || 0, quality: state.quality, preload: startT.preload, auto: startT.auto,
-  });
-  fetch("/api/music/startlog", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
-}
-
-audio.addEventListener("waiting", () => { if (startT.live) startT.waits += 1; });
 audio.addEventListener("playing", () => {
   if (!startT.live) return;
   startT.live = false;
-  if (startT.gen === play.gen) { const ms = performance.now() - startT.at; net.noteStart(ms); reportStart(ms); }
+  if (startT.gen === play.gen) { const ms = performance.now() - startT.at; net.noteStart(ms); }
 });
 
 function checkJump() {
