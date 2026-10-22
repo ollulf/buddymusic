@@ -126,7 +126,7 @@ function profileHeader({ user, avatar, onAvatar, onLogin }) {
   return h("div", { class: "settings-profile" }, pic, picker, h("div", { class: "settings-user" }, user), reset, status);
 }
 
-const BASES = { classic: ["#1a1c2c", "#29366f"], slate: ["#171b22", "#262c37"], graphite: ["#1c1b19", "#2b2926"], dusk: ["#1b1824", "#2a2538"], moss: ["#151c16", "#223024"], night: ["#0e0f12", "#1a1c21"] };
+const BASES = { classic: ["#1a1c2c", "#29366f"], violet: ["#221a2e", "#4a2a74"], slate: ["#171b22", "#262c37"], graphite: ["#1c1b19", "#2b2926"], dusk: ["#1b1824", "#2a2538"], moss: ["#151c16", "#223024"], night: ["#0e0f12", "#1a1c21"] };
 const KEYS = { yellow: ["#ffcd75", "#ef7d57"], coral: ["#ff8a6b", "#ffcd75"], pink: ["#ff6fc8", "#4fe0f0"], purple: ["#b98cff", "#ff8ad8"], blue: ["#6fa8ff", "#ff9e6b"], cyan: ["#4fe0f0", "#ff6fc8"], green: ["#5ee08a", "#c39bff"], lime: ["#c8f54a", "#6fa8ff"] };
 
 function colourGetter(attr, all, def) {
