@@ -274,7 +274,15 @@ function load(i, autoplay = true) {
 }
 
 export function playList(songs, start = 0) {
-  state.queue = songs.slice();
+  const list = songs.slice();
+  let manual = state.queue.filter((s, i) => i > state.index && tags.has(s));
+  const first = list[start];
+  if (manual.length && first) {
+    const dup = manual.findIndex((s) => s.id === first.id);
+    if (dup >= 0) manual = manual.filter((_, i) => i !== dup);
+    list.splice(start + 1, 0, ...manual);
+  }
+  state.queue = list;
   state.index = start;
   rebuildOrder();
   load(start);
