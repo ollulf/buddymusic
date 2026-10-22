@@ -210,7 +210,7 @@ window.addEventListener("hashchange", (e) => {
   if (!old.startsWith("#/settings")) lastPage = old;
 });
 
-function feedbackRow() {
+function feedbackForm(onSent) {
   let kind = "bug";
   const text = h("textarea", { class: "feedback-text", rows: "5", maxlength: String(FEEDBACK_MAX), "aria-label": t("feedback.textLabel"), placeholder: t("feedback.placeholder") });
   const send = h("button", { class: "primary", type: "submit", disabled: true }, t("feedback.send"));
@@ -233,14 +233,33 @@ function feedbackRow() {
       text.value = "";
       status.dataset.ok = "1";
       status.textContent = t("feedback.thanks");
+      onSent?.();
     } catch (err) {
-      status.textContent = err instanceof Unauthorized ? t("feedback.login") : err.message === "rate-limited" ? t("feedback.tooMany") : t("feedback.failed");
+      status.textContent = err instanceof Unauthorized ? t("feedback.login") : err.message === "rate-limited" ? t("feedback.tooMany") : err.message === "save-failed" ? t("feedback.saveFailed") : t("feedback.failed");
     } finally {
       text.disabled = false;
       sync();
     }
   });
   return form;
+}
+
+export function openFeedback(returnTo) {
+  const closeBtn = h("button", { class: "ghost news-close", type: "button", "aria-label": t("news.close"), title: t("news.close"), onclick: () => dlg.close() }, "✕");
+  let timer = 0;
+  const form = feedbackForm(() => { timer = setTimeout(() => dlg.close(), 1500); });
+  const dlg = h("dialog", { class: "sheet card news feedback-dialog", "aria-labelledby": "feedback-title" },
+    h("div", { class: "news-head" }, h("h2", { id: "feedback-title" }, t("settings.feedback")), closeBtn),
+    form);
+  dlg.addEventListener("click", (e) => {
+    if (e.target !== dlg) return;
+    const r = dlg.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dlg.close();
+  });
+  dlg.addEventListener("close", () => { clearTimeout(timer); dlg.remove(); returnTo?.focus(); });
+  document.body.append(dlg);
+  dlg.showModal();
+  form.querySelector("textarea").focus();
 }
 
 const ITEMS = [
@@ -250,7 +269,6 @@ const ITEMS = [
   { id: "quality", label: () => t("settings.quality"), render: qualityRow },
   { id: "format", label: () => t("settings.format"), render: formatRow },
   { id: "preload", label: () => t("settings.preload"), render: preloadRow },
-  { id: "feedback", label: () => t("settings.feedback"), render: feedbackRow },
 ];
 
 export function renderSettings(el, { onClose, ...profile }) {

@@ -9,7 +9,7 @@ import { api, Unauthorized } from "./dom.js";
 import { renderPlaylists, setPlaylistUser } from "./playlists.js";
 import { renderAdmin } from "./admin.js";
 import { t, relTime, lang } from "./i18n.js";
-import { renderSettings, GEAR, AVATAR, paintAvatar } from "./settings.js";
+import { renderSettings, GEAR, AVATAR, paintAvatar, openFeedback } from "./settings.js";
 
 const root = document.getElementById("app");
 
@@ -257,6 +257,7 @@ function profileMenu(user, admin, avatar, version) {
   const menu = h("div", { class: "profile-menu", role: "menu", hidden: true },
     h("div", { class: "profile-name" }, user, admin ? h("span", { class: "tag" }, "admin") : null),
     friends.el, settingsItem,
+    h("button", { class: "ghost", type: "button", role: "menuitem", "aria-haspopup": "dialog", onclick: () => { close(); openFeedback(btn); } }, t("settings.feedback")),
     h("button", { class: "ghost", type: "button", role: "menuitem", onclick: logout }, t("profile.logout")),
     h("p", { class: "powered" }, t("app.powered")),
     h("p", { class: "version" }, t("app.version", { v: version || "dev" }), " ",

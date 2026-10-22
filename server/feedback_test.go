@@ -102,6 +102,28 @@ func TestFeedbackRateLimit(t *testing.T) {
 	}
 }
 
+func TestFeedbackDirUnwritable(t *testing.T) {
+	a := newTestApp(t)
+	a.cfg.Feedback = filepath.Join(t.TempDir(), "blocked")
+	if err := os.WriteFile(a.cfg.Feedback, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	c := login(t, a)
+	if code := postFeedback(t, a, c, `{"category":"bug","text":"still saved"}`, nil); code != http.StatusNoContent {
+		t.Fatalf("post: %d", code)
+	}
+	list, err := a.store.RecentFeedback(10)
+	if err != nil || len(list) != 1 || list[0].Text != "still saved" {
+		t.Fatalf("db: %+v %v", list, err)
+	}
+	if _, err := a.store.db.Exec(`DROP TABLE feedback`); err != nil {
+		t.Fatal(err)
+	}
+	if code := postFeedback(t, a, c, `{"category":"bug","text":"lost"}`, nil); code != http.StatusInternalServerError {
+		t.Fatalf("both failing: %d", code)
+	}
+}
+
 func TestAdminFeedback(t *testing.T) {
 	a := newTestApp(t)
 	if code := postFeedback(t, a, login(t, a), `{"category":"bug","text":"broken"}`, nil); code != http.StatusNoContent {
