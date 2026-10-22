@@ -269,6 +269,7 @@ function load(i, autoplay = true) {
   }
   fetch(`/api/music/scrobble/${encodeURIComponent(song.id)}?submission=false`, { method: "POST" }).catch(() => {});
   updateSession();
+  bindSession();
   syncSession();
   emit();
 }
@@ -473,15 +474,22 @@ function updateSession() {
   });
 }
 
-if ("mediaSession" in navigator) {
+const sessionActions = {
+  play: () => audio.play().catch(() => {}),
+  pause: () => { startT.live = false; audio.pause(); },
+  stop: null,
+  previoustrack: () => prev(),
+  nexttrack: () => next(),
+  seekto: (d) => { if (d && isFinite(d.seekTime)) seek(d.seekTime); },
+  seekbackward: null,
+  seekforward: null,
+};
+function bindSession() {
+  if (!("mediaSession" in navigator)) return;
   const ms = navigator.mediaSession;
-  const set = (a, fn) => { try { ms.setActionHandler(a, fn); } catch {} };
-  set("play", () => audio.play().catch(() => {}));
-  set("pause", () => { startT.live = false; audio.pause(); });
-  set("previoustrack", prev);
-  set("nexttrack", next);
-  set("seekto", (d) => seek(d.seekTime));
+  for (const [a, fn] of Object.entries(sessionActions)) { try { ms.setActionHandler(a, fn); } catch {} }
 }
+bindSession();
 
 function retryStream(song, at) {
   const delay = RETRY_DELAYS[play.tries] || 0;
@@ -627,6 +635,11 @@ audio.addEventListener("seeking", () => { listen.last = -1; });
 audio.addEventListener("seeked", () => { play.heard = audio.currentTime; play.heardAt = Date.now(); });
 audio.addEventListener("progress", measure);
 audio.addEventListener("playing", () => { meter.started = true; });
+audio.addEventListener("playing", () => {
+  if (!("mediaSession" in navigator) || !current()) return;
+  if (!navigator.mediaSession.metadata) updateSession();
+  bindSession();
+});
 audio.addEventListener("waiting", () => {
   watch.stalled = true;
   if (!meter.started || audio.seeking || state.quality !== "auto") return;
@@ -655,7 +668,14 @@ function shutdown(e) {
   }
 }
 window.addEventListener("pagehide", shutdown);
-window.addEventListener("pageshow", (e) => { if (e.persisted) life.closing = false; });
+window.addEventListener("pageshow", (e) => {
+  if (!e.persisted) return;
+  life.closing = false;
+  if (!current()) return;
+  updateSession();
+  bindSession();
+  syncSession();
+});
 audio.addEventListener("play", () => { if (life.closing) audio.pause(); });
 audio.addEventListener("timeupdate", () => {
   const song = current();
