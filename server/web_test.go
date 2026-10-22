@@ -10,6 +10,24 @@ import (
 	"testing"
 )
 
+func TestFaviconServed(t *testing.T) {
+	h := newTestApp(t).Routes()
+	for p, want := range map[string]string{"/icon.svg": "image/svg+xml", "/icon-32.png": "image/png", "/apple-touch-icon.png": "image/png"} {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest("GET", p, nil))
+		if rec.Code != 200 || rec.Header().Get("Content-Type") != want {
+			t.Fatalf("%s: got %d %q", p, rec.Code, rec.Header().Get("Content-Type"))
+		}
+	}
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
+	for _, s := range []string{`href="/icon.svg"`, `href="/icon-32.png"`, `rel="apple-touch-icon"`} {
+		if !strings.Contains(rec.Body.String(), s) {
+			t.Fatalf("shell missing %s", s)
+		}
+	}
+}
+
 func TestStaticGzipAndETag(t *testing.T) {
 	h := newTestApp(t).Routes()
 	req := httptest.NewRequest("GET", "/app.css", nil)

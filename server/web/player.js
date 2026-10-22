@@ -43,6 +43,13 @@ const state = {
 const listeners = new Set();
 const emit = () => listeners.forEach((fn) => fn());
 export const onChange = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
+const syncTitle = () => {
+  const s = state.queue[state.index];
+  const name = s ? [s.title, s.artist].filter(Boolean).join(" - ") : "";
+  const next = name ? `buddymusic: ${name}` : "buddymusic";
+  if (document.title !== next) document.title = next;
+};
+listeners.add(syncTitle);
 export const nowAlbum = () => (state.queue[state.index] || {}).albumId || "";
 const syncNow = () => {
   const id = nowAlbum();
