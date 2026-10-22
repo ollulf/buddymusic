@@ -761,3 +761,10 @@ button.news-close { padding: 2px var(--sp-2); border: 2px solid var(--ink); box-
   main:has(> .album-head) .songs { padding: var(--sp-1) 2px; }
   main:has(> .album-head) .song-main { padding-left: var(--sp-1); padding-right: var(--sp-1); }
 }
+@media (min-width: 861px) {
+  header.top { padding-left: max(var(--sp-4), calc((100% - 820px) / 2 + var(--sp-4))); padding-right: max(var(--sp-4), calc((100% - 820px) / 2 + var(--sp-4))); }
+  footer.player.pb, .qpanel { left: max(0px, calc(50% - 410px + var(--sp-4))); right: max(0px, calc(50% - 410px + var(--sp-4))); }
+  footer.player.pb::before { left: -100vw; right: -100vw; }
+  .pb-main, .qpanel { border-left: 2px solid var(--ink); border-right: 2px solid var(--ink); }
+  .vz-house { border-left: 2px solid var(--ink); }
+}
