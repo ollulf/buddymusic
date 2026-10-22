@@ -721,8 +721,7 @@ function volumeControl() {
   const btn = h("button", { type: "button", class: "pb-b sm vol", "aria-haspopup": "true", "aria-expanded": "false" });
   const range = h("input", { type: "range", min: 0, max: 100, step: 1, "aria-label": t("player.volumeLabel") });
   const mute = h("button", { type: "button", class: "pb-b sm vol mute" });
-  const val = h("span", { class: "pb-vol-val" });
-  const pop = h("div", { class: "pb-vol-pop", hidden: true }, mute, range, val);
+  const pop = h("div", { class: "pb-vol-pop", hidden: true }, range, mute);
   const wrap = h("div", { class: "pb-vol" }, btn, pop);
   const level = () => (vol.m || vol.v === 0 ? "mute" : vol.v < 50 ? "low" : "high");
   const paint = () => {
@@ -737,8 +736,8 @@ function volumeControl() {
     mute.setAttribute("aria-pressed", String(vol.m));
     range.value = String(vol.m ? 0 : vol.v);
     range.setAttribute("aria-valuenow", range.value);
+    range.setAttribute("aria-valuetext", vol.m ? t("player.volumeMuted") : vol.v + "%");
     range.style.setProperty("--p", String(+range.value / 100));
-    val.textContent = vol.m ? "MUTE" : String(vol.v);
   };
   const toggleMute = () => {
     if (vol.m || vol.v > 0 || !volumeSettable) vol.m = !vol.m; else { vol.v = 50; vol.m = false; }
