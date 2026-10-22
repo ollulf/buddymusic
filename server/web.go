@@ -24,6 +24,9 @@ const shellHead = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
 <title>buddymusic</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/icon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/app.css">
 <script src="/vendor/jsmediatags.min.js" defer></script>

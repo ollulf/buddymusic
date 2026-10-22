@@ -264,6 +264,11 @@ button.icon.row-more { flex: none; min-width: 44px; min-height: 44px; padding: 0
 .row-menu-item.danger { color: var(--bad); }
 .row-menu-item:disabled { opacity: .45; }
 .rm-ico { width: 1.2em; text-align: center; }
+.song-row.now-playing .row-fg { background: color-mix(in srgb, var(--accent) 14%, var(--card)); }
+.song-row.now-playing .s-title { color: var(--accent); }
+.song-row.now-playing .s-no { color: var(--accent); font-size: 0; }
+.song-row.now-playing .s-no::before { content: "\25B6"; font-size: var(--fs-md); }
+.song-row.now-playing .s-no .art { display: none; }
 .song-row:last-child { border-bottom: 0; }
 .song-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--sp-3); border: 0; background: none; text-align: left; padding: var(--sp-2) var(--sp-2); border-radius: 0; color: var(--fg); font-size: var(--fs-md); box-shadow: none; }
 .song-main:hover { background: var(--shade); }
@@ -516,11 +521,11 @@ body.settings-open { overflow: hidden; }
 .swatch[aria-checked="true"]::after { content: ""; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; background: var(--fg); box-shadow: 0 0 0 2px var(--line); }
 .swatch:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
-.art.jc { --jc: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='30' viewBox='0 0 32 30' shape-rendering='crispEdges'%3E%3Cpath fill='%23333c57' d='M2 2h3v26H2z'/%3E%3Cpath fill='%2394b0c2' d='M2 1h28v1H2zM2 28h28v1H2zM1 2h1v26H1zM30 2h1v26h-1zM5 2h2v26H5z'/%3E%3C/svg%3E"); --jc-hot: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='30' viewBox='0 0 32 30' shape-rendering='crispEdges'%3E%3Cpath fill='%23333c57' d='M2 2h3v26H2z'/%3E%3Cpath fill='%23ffcd75' d='M2 1h28v1H2zM2 28h28v1H2zM1 2h1v26H1zM30 2h1v26h-1zM5 2h2v26H5z'/%3E%3C/svg%3E"); position: relative; aspect-ratio: auto; height: auto; padding: 0; border-style: solid; border-width: 4px 4px 4px 14px; border-image: var(--jc) 2 2 2 7 / 4px 4px 4px 14px stretch; background-clip: padding-box; box-shadow: none; filter: drop-shadow(4px 4px 0 var(--ink)); }
+.art.jc { --jc: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' shape-rendering='crispEdges'%3E%3Cpath fill='%2394b0c2' d='M2 2h28v1H2zM2 29h28v1H2zM1 3h4v26H1zM6 3h1v26H6zM30 3h1v26h-1z'/%3E%3C/svg%3E"); --jc-hot: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' shape-rendering='crispEdges'%3E%3Cpath fill='%23ffcd75' d='M2 2h28v1H2zM2 29h28v1H2zM1 3h4v26H1zM6 3h1v26H6zM30 3h1v26h-1z'/%3E%3C/svg%3E"); position: relative; aspect-ratio: auto; height: auto; padding: 0; border-style: solid; border-width: 6px 4px 6px 14px; border-image: var(--jc) 3 2 3 7 / 6px 4px 6px 14px stretch; background-clip: padding-box; box-shadow: none; filter: drop-shadow(4px 4px 0 var(--ink)); }
 .art.jc::before { content: ""; display: block; width: 100%; aspect-ratio: 1; }
 .art.jc img { position: absolute; inset: 0; }
 .art.jc::after { content: ""; position: absolute; z-index: var(--z-glare); inset: 0; background: linear-gradient(135deg, transparent 0 42%, rgb(244 244 244 / .28) 42% 48%, transparent 48% 52%, rgb(244 244 244 / .14) 52% 55%, transparent 55%) 0 0 / 300% 300% no-repeat; pointer-events: none; }
-.art.small.jc { border-width: 2px 2px 2px 7px; border-image-width: 2px 2px 2px 7px; filter: none; }
+.art.small.jc { border-width: 3px 2px 3px 7px; border-image-width: 3px 2px 3px 7px; filter: none; }
 .album:hover .art.jc, .album:focus-visible .art.jc { border-image-source: var(--jc-hot); }
 .album:hover .jc::after, .album:focus-visible .jc::after, .art.jc:hover::after { background-position: 100% 100%; transition: background-position .3s steps(4); }
 .is-playing .jc.now::after { animation: jc-glare 4s steps(8) infinite; }
@@ -755,4 +760,11 @@ button.news-close { padding: 2px var(--sp-2); border: 2px solid var(--ink); box-
   main:has(> .album-head) { padding-left: var(--sp-2); padding-right: var(--sp-2); }
   main:has(> .album-head) .songs { padding: var(--sp-1) 2px; }
   main:has(> .album-head) .song-main { padding-left: var(--sp-1); padding-right: var(--sp-1); }
+}
+@media (min-width: 861px) {
+  header.top { padding-left: max(var(--sp-4), calc((100% - 820px) / 2 + var(--sp-4))); padding-right: max(var(--sp-4), calc((100% - 820px) / 2 + var(--sp-4))); }
+  footer.player.pb, .qpanel { left: max(0px, calc(50% - 410px + var(--sp-4))); right: max(0px, calc(50% - 410px + var(--sp-4))); }
+  footer.player.pb::before { left: -100vw; right: -100vw; }
+  .pb-main, .qpanel { border-left: 2px solid var(--ink); border-right: 2px solid var(--ink); }
+  .vz-house { border-left: 2px solid var(--ink); }
 }
