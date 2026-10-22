@@ -75,34 +75,6 @@ function loginLog(d) {
       : h("p", { class: "muted" }, t("admin.noLogins")));
 }
 
-const fmtMs = (ms) => (ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${ms} ms`);
-const tierName = (tier, format) => [tier ? t(`quality.${tier}`) : "", (format || "").toUpperCase()].filter(Boolean).join(" ");
-
-function startTimes(d) {
-  const st = d.starts || { groups: [], recent: [] };
-  const head = h("tr", {}, ["device", "quality", "starts", "median", "slow"].map((k) => h("th", { scope: "col" }, t(`admin.col.${k}`))));
-  const rows = st.groups.map((g) => h("tr", {},
-    h("th", { scope: "row" }, g.device || "–"),
-    h("td", {}, tierName(g.tier, "") || "–"),
-    h("td", { class: "num" }, String(g.count)),
-    h("td", { class: "num" }, fmtMs(g.median)),
-    h("td", { class: "num" }, fmtMs(g.slow))));
-  const recent = st.recent.map((e) => h("li", {},
-    h("strong", {}, e.user),
-    h("span", {}, `${fmtMs(e.ms)} · ${tierName(e.tier, e.format) || "–"}`),
-    h("span", { class: "muted" }, [fmtWhen(e.at), e.device, e.preload ? t("admin.preloaded") : "", e.auto ? t("admin.autoNext") : "", e.waits ? t("admin.stalls", { n: e.waits }) : ""].filter(Boolean).join(" · "))));
-  return h("section", { class: "card" },
-    h("h2", {}, t("admin.starts")),
-    h("p", { class: "muted" }, t("admin.startsIntro")),
-    st.recent.length
-      ? [
-          st.groups.length ? h("div", { class: "table-wrap" }, h("table", { class: "admin-table" }, h("thead", {}, head), h("tbody", {}, rows))) : null,
-          h("h3", { class: "admin-sub" }, t("admin.recentStarts")),
-          h("ul", { class: "admin-list" }, recent),
-        ]
-      : h("p", { class: "muted" }, t("admin.noStarts")));
-}
-
 const fmtStamp = (ms) => new Date(ms).toLocaleString(lang, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
 function feedbackList(list) {
@@ -143,7 +115,6 @@ export async function renderAdmin(container, opts = {}) {
       nowPlaying(d),
       chart(d, color),
       userTable(d, color),
-      startTimes(d),
       feedbackList(fb),
       loginLog(d));
     timer = setInterval(() => {

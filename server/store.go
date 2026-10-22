@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS avatars (
 	mime TEXT NOT NULL,
 	data BLOB NOT NULL,
 	updated_at INTEGER NOT NULL
-);` + uploadsLibraryIndex + statsSchema + startsSchema + friendsSchema + feedbackSchema)
+);` + uploadsLibraryIndex + statsSchema + friendsSchema + "\nDROP TABLE IF EXISTS start_events;" + feedbackSchema)
 	if err == nil {
 		err = migrateUserSeen(db)
 	}
