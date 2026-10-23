@@ -849,7 +849,7 @@ export function renderBar(opts = {}) {
       h("div", { class: "bar-seek" }, pos, range, dur),
       h("div", { class: "pb-left" },
         h("div", { class: "pb-screen" }, h("div", { class: "pb-chips" }, netChip(net), rateB), info),
-        h("div", { class: "pb-btns" }, h("i", { class: "pb-grille" }), heartB, repeatB, shuffleB, mobileVolume ? null : volumeControl()))));
+        h("div", { class: "pb-btns" }, h("i", { class: "pb-grille" }), heartB, repeatB, shuffleB, mobileVolume ? null : volumeControl(), h("i", { class: "pb-grille" })))));
 
   bar.append(renderViz(audio, bar));
 
