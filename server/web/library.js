@@ -17,54 +17,12 @@ const EAGER_COVERS = 12;
 
 function caseCover(al, size, cls, eager = false) {
   const box = cover(al.coverArt || al.id, size, `${cls} jc`, eager);
-  box.append(...["l", "t", "r", "b"].map((side) => h("i", { class: `jc-edge jc-${side}` })));
   if (al.id) {
     box.dataset.album = al.id;
     if (player.nowAlbum() === al.id) box.classList.add("now");
   }
   return box;
 }
-
-const tiltOK = matchMedia("(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)");
-let tilted = null;
-let tiltFrame = 0;
-let tiltEvent = null;
-
-function untilt() {
-  if (!tilted) return;
-  tilted.classList.remove("tilt");
-  for (const p of ["--rx", "--ry", "--sx", "--sy"]) tilted.style.removeProperty(p);
-  tilted = null;
-}
-
-function applyTilt() {
-  tiltFrame = 0;
-  const e = tiltEvent;
-  const box = e.target instanceof Element ? e.target.closest(".album")?.querySelector(".art.jc") || e.target.closest(".art.jc") : null;
-  if (box !== tilted) untilt();
-  if (!box) return;
-  const r = box.getBoundingClientRect();
-  const px = Math.max(-0.5, Math.min(0.5, (e.clientX - r.left) / r.width - 0.5));
-  const py = Math.max(-0.5, Math.min(0.5, (e.clientY - r.top) / r.height - 0.5));
-  const k = box.classList.contains("big") ? 30 : 44;
-  tilted = box;
-  box.classList.add("tilt");
-  box.style.setProperty("--ry", `${(px * k).toFixed(1)}deg`);
-  box.style.setProperty("--rx", `${(-py * k).toFixed(1)}deg`);
-  box.style.setProperty("--sx", `${Math.round(-px * 8 + 4)}px`);
-  box.style.setProperty("--sy", `${Math.round(py * 8 + 4)}px`);
-}
-
-document.addEventListener("pointermove", (e) => {
-  if (e.pointerType !== "mouse" || !tiltOK.matches) return untilt();
-  tiltEvent = e;
-  if (!tiltFrame) tiltFrame = requestAnimationFrame(applyTilt);
-}, { passive: true });
-document.documentElement.addEventListener("pointerleave", () => {
-  cancelAnimationFrame(tiltFrame);
-  tiltFrame = 0;
-  untilt();
-});
 
 let newSince = Infinity;
 let ownAlbums = new Set();
