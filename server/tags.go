@@ -32,6 +32,10 @@ var tagAliases = map[string]string{
 
 const maxTagLen = 300
 
+const maxArtists = 8
+
+const artistSep = "; "
+
 type Tags struct {
 	Fields map[string]string
 	Cover  bool
@@ -146,7 +150,46 @@ func parseTyped(raw []byte) (map[string]string, error) {
 			out[k] = s
 		}
 	}
+	artists := artistList(in["artists"])
+	if len(artists) > 0 {
+		out["artist"] = artists[0]
+	}
+	if len(artists) > 1 {
+		out["artists"] = strings.Join(artists, artistSep)
+	}
+	albumArtists := artistList(in["albumArtists"])
+	if len(albumArtists) == 0 && out["artist"] != "" {
+		albumArtists = []string{out["artist"]}
+	}
+	if len(albumArtists) > 1 || len(artists) > 1 {
+		out["albumartist"] = strings.Join(albumArtists, artistSep)
+	}
 	return out, nil
+}
+
+func artistList(v any) []string {
+	list, ok := v.([]any)
+	if !ok {
+		return nil
+	}
+	out := []string{}
+	seen := map[string]bool{}
+	for _, item := range list {
+		s, ok := item.(string)
+		if !ok {
+			continue
+		}
+		s = strings.TrimSpace(strings.ReplaceAll(cleanTag(s), ";", ","))
+		if s == "" || seen[strings.ToLower(s)] {
+			continue
+		}
+		seen[strings.ToLower(s)] = true
+		out = append(out, s)
+		if len(out) == maxArtists {
+			break
+		}
+	}
+	return out
 }
 
 func number(v string) int {
@@ -207,10 +250,18 @@ func writeTags(ctx context.Context, in, out, ext string, typed map[string]string
 			continue
 		}
 		key := k
-		if k == "year" {
+		switch k {
+		case "year":
 			key = "date"
+		case "artist":
+			if all, ok := typed["artists"]; ok {
+				v = all
+			}
 		}
 		args = append(args, flag, key+"="+v)
+	}
+	if v, ok := typed["albumartist"]; ok {
+		args = append(args, flag, "album_artist="+v)
 	}
 	args = append(args, "-f", ffmpegFormat(ext), "-y", out)
 	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
