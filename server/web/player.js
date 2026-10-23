@@ -849,7 +849,7 @@ export function renderBar(opts = {}) {
       h("div", { class: "bar-seek" }, pos, range, dur),
       h("div", { class: "pb-left" },
         h("div", { class: "pb-screen" }, h("div", { class: "pb-chips" }, netChip(net), rateB), info),
-        h("div", { class: "pb-btns" }, h("i", { class: "pb-grille" }), heartB, repeatB, shuffleB, mobileVolume ? null : volumeControl()))));
+        h("div", { class: "pb-btns" }, h("i", { class: "pb-grille" }), heartB, repeatB, shuffleB, mobileVolume ? null : volumeControl(), h("i", { class: "pb-grille" })))));
 
   bar.append(renderViz(audio, bar));
 
@@ -892,7 +892,7 @@ export function renderBar(opts = {}) {
     const what = bar.classList.contains("tucked") ? t("player.showDisc") : isPlaying() ? t("player.pause") : t("player.play");
     disc.setAttribute("aria-label", `${what}: ${name}${song.artist ? `, ${song.artist}` : ""}`);
     if (heartB.dataset.id !== song.id) retarget(heartB, song);
-    const ids = [...new Set([song.coverArt, song.albumId].filter(Boolean))];
+    const ids = [...new Set((song.albumId ? [song.albumId] : [song.coverArt]).filter(Boolean))];
     const key = ids.join("|");
     if (lastCover !== key) {
       lastCover = key;
