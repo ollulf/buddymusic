@@ -361,6 +361,14 @@ button.icon.danger:hover, button.icon.danger:focus-visible { color: var(--bad); 
 .song:has(.disc) { grid-template-columns: 1fr 90px 70px; }
 .song:empty { display: none; }
 .field input.need { border-color: var(--bad); }
+.field.artists { grid-column: 1 / -1; align-items: flex-start; }
+.field.artists.empty > span { display: none; }
+.artist-inputs { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-2); }
+.artist-inputs:empty { display: none; }
+.artist-item { display: flex; align-items: center; }
+.artist-item input { width: 160px; max-width: 60vw; }
+.row.blocked .field.artists input:placeholder-shown { border-color: var(--ink); }
+button.add-artist { font-size: var(--fs-xs); padding: 2px var(--sp-2); }
 @media (max-width: 520px) {
   .grid { grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); }
   .album-head { flex-direction: column; align-items: flex-start; }

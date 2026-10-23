@@ -3,6 +3,7 @@ import { LABELS, fieldList, fromMediaTags, fromFileName, mostCommon, present, tr
 
 const ALBUM_FIELDS = ["artist", "album", "year"];
 const ROW_FIELDS = ["title", "track"];
+const MAX_ARTISTS = 8;
 const ERRORS = {
   "unsupported-type": t("upload.err.type"),
   "too-large": t("upload.err.tooLarge"),
@@ -14,7 +15,7 @@ const ERRORS = {
   "unauthorized": t("upload.err.unauthorized"),
 };
 
-let state = { files: [], cover: null, edited: new Set(), busy: false, nextId: 1 };
+let state = { files: [], cover: null, edited: new Set(), busy: false, nextId: 1, albumArtists: [] };
 
 const h = (tag, attrs = {}, ...kids) => {
   const el = document.createElement(tag);
@@ -107,6 +108,8 @@ function prefillAlbum() {
 function resetAlbum() {
   state.edited = new Set();
   state.cover = null;
+  state.albumArtists.length = 0;
+  ui.renderAlbumArtists();
   for (const k of ALBUM_FIELDS) ui.album[k].value = "";
   ui.coverInput.value = "";
 }
@@ -117,7 +120,7 @@ function addFiles(list) {
   for (const file of list) {
     const guess = fromFileName(file.name);
     const entry = { id: state.nextId++, file, fileTags: undefined, picture: null, title: guess.title, track: guess.track, disc: guess.disc,
-      serverMissing: [], status: "reading" };
+      artists: [], serverMissing: [], status: "reading" };
     state.files.push(entry);
     entry.el = buildRow(entry);
     ui.list.append(entry.el.row);
@@ -174,7 +177,46 @@ function rowInput(entry, key) {
 
 function buildFields(entry) {
   const keys = present("track", entry.disc) ? [...ROW_FIELDS, "disc"] : ROW_FIELDS;
-  entry.el.fields.replaceChildren(...keys.map((k) => rowInput(entry, k)));
+  const extra = artistEditor(entry.artists, () => MAX_ARTISTS - 1 - state.albumArtists.length, t("upload.songArtists"),
+    (el) => { entry.el.artistInputs = el; });
+  entry.el.fields.replaceChildren(...keys.map((k) => rowInput(entry, k)), extra.box);
+  entry.el.renderArtists = extra.render;
+}
+
+function artistEditor(list, room, label, track, changed = () => {}) {
+  const items = h("div", { class: "artist-inputs" });
+  const add = h("button", { type: "button", class: "ghost add-artist", onclick: () => {
+    list.push("");
+    render();
+    changed();
+    items.lastElementChild?.querySelector("input")?.focus();
+  } }, t("upload.addArtist"));
+  const box = h("div", { class: "field artists" }, h("span", {}, label), items, add);
+  function render() {
+    items.replaceChildren(...list.map((v, i) => h("div", { class: "artist-item" },
+      h("input", { type: "text", value: v, maxlength: "300", placeholder: t("upload.optional"),
+        "aria-label": t("upload.extraArtist", { n: i + 2 }),
+        oninput: (e) => { list[i] = e.target.value; } }),
+      h("button", { type: "button", class: "icon", title: t("upload.remove"),
+        onclick: () => { list.splice(i, 1); render(); changed(); } }, "×"))));
+    add.hidden = list.length >= room();
+    box.classList.toggle("empty", list.length === 0);
+    if (track) track([...items.querySelectorAll("input, button"), add]);
+  }
+  render();
+  return { box, render };
+}
+
+function artistNames(list) {
+  const out = [];
+  const seen = new Set();
+  for (const raw of list) {
+    const v = String(raw ?? "").trim();
+    if (!v || seen.has(v.toLowerCase())) continue;
+    seen.add(v.toLowerCase());
+    out.push(v);
+  }
+  return out.slice(0, MAX_ARTISTS);
 }
 
 function sortKey(e) {
@@ -287,6 +329,10 @@ function tagPayload(entry) {
   const disc = String(entry.disc ?? "").trim();
   if (disc) out.disc = disc;
   for (const k of ALBUM_FIELDS) if (a[k]) out[k] = a[k];
+  if (a.artist && (state.albumArtists.length || entry.artists.length)) {
+    out.albumArtists = artistNames([a.artist, ...state.albumArtists]);
+    out.artists = artistNames([...out.albumArtists, ...entry.artists]);
+  }
   return out;
 }
 
@@ -311,13 +357,19 @@ function send(entry) {
 
 function setRowEnabled(entry, on) {
   for (const el of Object.values(entry.el.inputs)) el.disabled = !on;
+  for (const el of entry.el.artistInputs || []) el.disabled = !on;
+}
+
+function setAlbumEnabled(on) {
+  for (const k of ALBUM_FIELDS) ui.album[k].disabled = !on;
+  for (const el of ui.albumArtistInputs || []) el.disabled = !on;
+  ui.coverInput.disabled = !on;
 }
 
 async function uploadAll() {
   if (state.busy) return;
   state.busy = true;
-  for (const k of ALBUM_FIELDS) ui.album[k].disabled = true;
-  ui.coverInput.disabled = true;
+  setAlbumEnabled(false);
   refresh();
   const order = [...state.files].sort((x, y) => (y.fileTags?.cover ? 1 : 0) - (x.fileTags?.cover ? 1 : 0));
   for (const e of order) {
@@ -334,6 +386,8 @@ async function uploadAll() {
       e.el.msg.textContent = t("upload.added", { path: body.libraryPath || body.filename });
       e.el.fields.replaceChildren();
       e.el.inputs = {};
+      e.el.artistInputs = [];
+      e.el.renderArtists = null;
       const key = albumKey(album());
       if (key) folderCovers.set(key, true);
     } else if (status === 422 && body.missing) {
@@ -360,8 +414,7 @@ async function uploadAll() {
 
 function unlockAlbum() {
   state.busy = false;
-  for (const k of ALBUM_FIELDS) ui.album[k].disabled = false;
-  ui.coverInput.disabled = false;
+  setAlbumEnabled(true);
 }
 
 let onUnauthorized = () => {};
@@ -374,12 +427,20 @@ function albumInput(key) {
     oninput: () => { state.edited.add(key); refresh(); },
   });
   ui.album[key] = el;
-  return h("label", { class: "field" }, h("span", {}, LABELS[key]), el);
+  const field = h("label", { class: "field" }, h("span", {}, LABELS[key]), el);
+  if (key !== "artist") return field;
+  const extra = artistEditor(state.albumArtists, () => MAX_ARTISTS - 1, t("upload.moreArtists"), (els) => { ui.albumArtistInputs = els; },
+    () => { for (const e of state.files) e.el.renderArtists?.(); });
+  ui.renderAlbumArtists = () => {
+    extra.render();
+    for (const e of state.files) e.el.renderArtists?.();
+  };
+  return [field, extra.box];
 }
 
 export function renderUpload(container, opts = {}) {
-  state = { files: [], cover: null, edited: new Set(), busy: false, nextId: 1 };
-  ui = { album: {} };
+  state = { files: [], cover: null, edited: new Set(), busy: false, nextId: 1, albumArtists: [] };
+  ui = { album: {}, renderAlbumArtists: () => {} };
   if (opts.onUnauthorized) onUnauthorized = opts.onUnauthorized;
   const picker = h("input", { type: "file", multiple: true, accept: "audio/*,.flac,.mp3,.m4a,.ogg,.opus,.wma", hidden: true,
     onchange: (e) => { addFiles(e.target.files); e.target.value = ""; } });
