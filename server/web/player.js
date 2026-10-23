@@ -862,7 +862,7 @@ export function renderBar(opts = {}) {
   const disc = h("button", { type: "button", class: "pb-disc" }, h("div", { class: "pb-spin" }, rim, label));
 
   const expandB = btn(t("player.expand"), "sm expand", () => setFull(true));
-  const artistB = h("a", { class: "pb-artist" }, t("player.artist"));
+  const artistB = h("a", { class: "pb-artist" });
   const collapseB = h("button", { type: "button", class: "pb-collapse", "aria-label": t("player.collapse"), title: t("player.collapse"), onclick: () => setFull(false) });
   const head = h("div", { class: "pb-head" }, artistB, collapseB, h("span", { class: "pb-esc", "aria-hidden": "true" }, "Esc"));
 
@@ -1058,7 +1058,9 @@ export function renderBar(opts = {}) {
     }
     if (song.artistId) { artistB.href = `#/library/artist/${encodeURIComponent(song.artistId)}`; artistB.hidden = false; }
     else { artistB.removeAttribute("href"); artistB.hidden = true; }
+    artistB.textContent = song.artist || "";
     artistB.title = song.artist || "";
+    artistB.setAttribute("aria-label", t("player.goArtist", { name: song.artist || "" }));
     if (song.albumId) info.href = `#/library/album/${encodeURIComponent(song.albumId)}`;
     else info.removeAttribute("href");
     const si = streamInfo();
