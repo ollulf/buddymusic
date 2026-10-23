@@ -544,6 +544,14 @@ body.settings-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { .song-row.flash .row-fg { animation-duration: .6s; } }
 @media (prefers-reduced-motion: reduce) { .art.jc::after { transition: none !important; animation: none !important; } .art.jc { transition: none; } }
 .album .jc ~ .new-ribbon { top: 4px; right: 4px; }
+.art.jc .holo { --p: .5; position: absolute; z-index: var(--z-glare); inset: 0; overflow: hidden; pointer-events: none; background: linear-gradient(180deg, transparent 0 44%, rgb(255 255 255 / .18) 44% 46%, rgb(255 255 255 / .5) 46% 50%, rgb(255 255 255 / .18) 50% 52%, transparent 52%) 0 calc((1 - var(--p)) * 100%) / 100% 300% no-repeat, repeating-linear-gradient(45deg, rgb(255 111 200 / .16) 0 4px, rgb(255 205 117 / .16) 4px 8px, rgb(115 239 247 / .16) 8px 12px, rgb(65 166 246 / .14) 12px 16px) calc(var(--p) * 90px) 0; }
+.album.is-new .sparkles { position: absolute; z-index: var(--z-ribbon); top: 0; left: 0; width: 100%; aspect-ratio: 1; pointer-events: none; }
+.sparkles .sp { position: absolute; width: 14px; height: 14px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7' shape-rendering='crispEdges'%3E%3Cpath fill='%23fff3c9' d='M3 0h1v7H3zM0 3h7v1H0z'/%3E%3Cpath fill='%23ffffff' d='M2 2h3v3H2z'/%3E%3Cpath fill='%2373eff7' d='M3 3h1v1H3z'/%3E%3C/svg%3E") 0 0 / 100% 100%; image-rendering: pixelated; opacity: 0; animation: holo-twinkle 2.4s steps(1, end) infinite; }
+.sparkles .s1 { top: -8px; left: -8px; }
+.sparkles .s2 { top: 34%; right: -9px; animation-delay: .8s; }
+.sparkles .s3 { bottom: -7px; left: 44%; animation-delay: 1.6s; }
+@keyframes holo-twinkle { 0% { opacity: 0; transform: scale(.4); } 8% { opacity: 1; transform: scale(.7); } 16% { opacity: 1; transform: scale(1); } 26% { opacity: 1; transform: scale(.6); } 34%, 100% { opacity: 0; transform: scale(.4); } }
+@media (prefers-reduced-motion: reduce) { .art.jc .holo { --p: .5 !important; } .sparkles .sp { animation: none; opacity: 1; } }
 
 footer.player.pb { --tw: 180px; --tl: calc(50% - var(--tw) / 2); --cream: #fff3c9; position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-player); height: calc(var(--bh) + var(--sb)); padding: 0; background: none; border: 0; box-shadow: none; }
 .pb-bay { position: absolute; left: calc(25% - 65px); bottom: calc(var(--bh) + var(--sb) + var(--th) - 6px); width: 220px; height: 172px; overflow: hidden; pointer-events: none; }
