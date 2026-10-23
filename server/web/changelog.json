@@ -1,27 +1,29 @@
 [
   {
-    "version": "1.0.2310.3",
+    "version": "1.0.2310.4",
     "date": "2026-10-23",
     "en": [
+      "Full-screen player: drag the player bar up on your phone, or press the expand button on a computer",
       "New albums shine: a rainbow foil that moves as you scroll, with little sparkles",
       "The spinning CD always shows the album's own cover",
       "The friends tab shows everyone who was on in the last 7 days",
-      "The player buttons are centered in the bottom bar",
+      "The player bar is tidier: song title above the progress bar, buttons centered",
       "Admins can mark an album as new for everyone again",
       "AirPlay button in the player on iPhone, iPad and Mac (Safari)",
       "Upload songs and albums with several artists",
-      "Albums stay together when only one song has a guest artist, shown as feat.",
+      "Albums stay together with guest artists, who are also listed at the top of the album",
       "Admins can delete albums again"
     ],
     "de": [
+      "Vollbild-Player: zieh die Player-Leiste am Handy nach oben oder drück am Computer die Vergrößern-Taste",
       "Neue Alben glänzen: eine Regenbogenfolie, die sich beim Scrollen bewegt, mit kleinen Funkeln",
       "Die drehende CD zeigt immer das eigene Cover des Albums",
       "Der Freunde-Tab zeigt alle, die in den letzten 7 Tagen da waren",
-      "Die Player-Tasten sitzen mittig in der unteren Leiste",
+      "Aufgeräumtere Player-Leiste: Songtitel über dem Fortschrittsbalken, Tasten mittig",
       "Admins können ein Album wieder für alle als neu markieren",
       "AirPlay-Taste im Player auf iPhone, iPad und Mac (Safari)",
       "Lade Songs und Alben mit mehreren Künstlern hoch",
-      "Alben bleiben zusammen, wenn nur ein Song einen Gastkünstler hat, angezeigt als feat.",
+      "Alben bleiben mit Gastkünstlern zusammen, die auch oben im Album stehen",
       "Admins können Alben wieder löschen"
     ]
   },

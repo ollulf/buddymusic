@@ -850,7 +850,7 @@ export function renderBar(opts = {}) {
   const repeatB = btn(t("player.repeat"), "sm repeat", cycleRepeat);
   const heartB = heartButton(null, "song", { cls: "pb-b sm bar-heart", get: current, onUnauthorized: opts.onUnauthorized });
   const rateB = h("button", { type: "button", class: "pb-rate", "aria-haspopup": "true" });
-  rateB.addEventListener("click", (e) => { e.stopPropagation(); if (opts.onQuality) opts.onQuality(); });
+  rateB.addEventListener("click", (e) => { e.stopPropagation(); if (full) setFull(false); if (opts.onQuality) opts.onQuality(); });
 
   const labelImg = h("img", { alt: "", decoding: "async", draggable: "false" });
   const rim = svgEl("svg", { viewBox: "0 0 40 40", "aria-hidden": "true" });
@@ -861,19 +861,152 @@ export function renderBar(opts = {}) {
   const label = h("div", { class: "pb-label" }, labelImg, h("span", { class: "hole" }));
   const disc = h("button", { type: "button", class: "pb-disc" }, h("div", { class: "pb-spin" }, rim, label));
 
+  const expandB = btn(t("player.expand"), "sm expand", () => setFull(true));
+  const artistB = h("a", { class: "pb-artist" }, t("player.artist"));
+  const collapseB = h("button", { type: "button", class: "pb-collapse", "aria-label": t("player.collapse"), title: t("player.collapse"), onclick: () => setFull(false) });
+  const head = h("div", { class: "pb-head" }, artistB, collapseB, h("span", { class: "pb-esc", "aria-hidden": "true" }, "Esc"));
+
   const bar = h("footer", { class: "player pb", hidden: true },
+    head,
     h("div", { class: "pb-bay" }, disc),
     h("div", { class: "pb-tab" }, prevB, playB, nextB),
     h("div", { class: "pb-main" },
+      h("div", { class: "pb-screen" }, info, h("div", { class: "pb-chips" }, netChip(net), rateB)),
       h("div", { class: "bar-seek" }, pos, range, dur),
-      h("div", { class: "pb-left" },
-        h("div", { class: "pb-screen" }, h("div", { class: "pb-chips" }, netChip(net), rateB), info),
-        h("div", { class: "pb-btns" }, h("i", { class: "pb-grille" }), heartB, repeatB, shuffleB, castButton(), mobileVolume ? null : volumeControl(), h("i", { class: "pb-grille" })))));
+      h("div", { class: "pb-btns" }, h("i", { class: "pb-grille" }), heartB, repeatB, shuffleB, castButton(), mobileVolume ? null : volumeControl(), expandB, h("i", { class: "pb-grille" }))));
 
   bar.append(renderViz(audio, bar));
 
   const narrow = window.matchMedia ? window.matchMedia("(max-width: 760px)") : { matches: false };
+  const reducedMotion = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  let full = false;
+  let settle = 0;
+  let pendingNav = "";
+  const queueOpen = () => !!bar.querySelector(".qpanel:not([hidden])");
+  const closeQueue = () => { const x = bar.querySelector(".qp-x"); if (x) x.click(); };
+  const slide = (open) => {
+    clearTimeout(settle);
+    bar.classList.remove("dragging");
+    if (open) {
+      if (!bar.classList.contains("full")) { bar.style.setProperty("--y", `${window.innerHeight}px`); bar.classList.add("full"); void bar.offsetHeight; }
+      bar.style.setProperty("--y", "0px");
+      return;
+    }
+    if (!bar.classList.contains("full")) return;
+    bar.style.setProperty("--y", `${window.innerHeight}px`);
+    settle = setTimeout(() => { bar.classList.remove("full"); bar.style.removeProperty("--y"); }, reducedMotion() ? 0 : 320);
+  };
+  const setFull = (on, fromHistory = false) => {
+    if (on && !current()) return;
+    if (full === on) { slide(on); return; }
+    full = on;
+    slide(on);
+    if (on) {
+      bar.setAttribute("role", "dialog");
+      bar.setAttribute("aria-modal", "true");
+      bar.setAttribute("aria-label", t("player.fullView"));
+    } else {
+      bar.removeAttribute("role");
+      bar.removeAttribute("aria-modal");
+      bar.removeAttribute("aria-label");
+    }
+    if (bar.parentElement) for (const el of bar.parentElement.children) if (el !== bar) el.inert = on;
+    if (on) {
+      if (bar.classList.contains("tucked")) { bar.classList.remove("tucked"); paint(); }
+      if (!fromHistory) history.pushState({ bmFull: true }, "");
+      collapseB.focus({ preventScroll: true });
+    } else {
+      if (!fromHistory && history.state && history.state.bmFull) history.back();
+      if (expandB.offsetParent) expandB.focus({ preventScroll: true });
+    }
+  };
+  const navFromFull = (e) => {
+    if (!full) return;
+    const href = e.currentTarget.getAttribute("href");
+    if (!href) return;
+    e.preventDefault();
+    if (history.state && history.state.bmFull) { pendingNav = href; history.back(); }
+    else { setFull(false, true); location.hash = href; }
+  };
+  artistB.addEventListener("click", navFromFull);
+  info.addEventListener("click", navFromFull);
+  window.addEventListener("popstate", () => {
+    if (!full || (history.state && history.state.bmFull)) return;
+    if (queueOpen()) { closeQueue(); history.pushState({ bmFull: true }, ""); return; }
+    setFull(false, true);
+    if (pendingNav) { const to = pendingNav; pendingNav = ""; location.hash = to; }
+  });
+  window.addEventListener("hashchange", () => { if (full) setFull(false, true); });
+  document.addEventListener("keydown", (e) => {
+    if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (full && e.key === "Escape") {
+      if (queueOpen() || bar.querySelector(".pb-vol-pop:not([hidden]), .pb-net-pop:not([hidden])")) return;
+      setFull(false);
+      return;
+    }
+    if (full && e.key === "Tab") {
+      const items = [...bar.querySelectorAll("a[href], button, input, [tabindex='0']")].filter((el) => !el.disabled && el.offsetParent && !el.closest("[hidden]"));
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      return;
+    }
+    if ((e.key === "f" || e.key === "F") && !e.shiftKey && !bar.hidden) {
+      const tg = e.target;
+      if (tg && (tg.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName))) return;
+      e.preventDefault();
+      setFull(!full);
+    }
+  });
+
+  let drag = null;
+  let swallow = false;
+  bar.addEventListener("pointerdown", (e) => {
+    if (!e.isPrimary || e.button !== 0) return;
+    if (e.target.closest("input, .qpanel, .pb-vol-pop, .pb-net-pop, .pb-chips")) return;
+    if (full && !e.target.closest(".pb-head, .pb-bay")) return;
+    if (!full && !narrow.matches) return;
+    drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, t: e.timeStamp, y: e.clientY, on: false, from: full };
+  });
+  window.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dy = e.clientY - drag.y0;
+    if (!drag.on) {
+      if (Math.abs(dy) < 10 || Math.abs(dy) < Math.abs(e.clientX - drag.x0)) return;
+      if (drag.from ? dy < 0 : dy > 0) { drag = null; return; }
+      drag.on = true;
+      swallow = true;
+      clearTimeout(settle);
+      bar.classList.add("full", "dragging");
+    }
+    const vh = window.innerHeight;
+    const y = drag.from ? Math.max(0, dy) : Math.min(vh, Math.max(0, e.clientY));
+    bar.style.setProperty("--y", `${y}px`);
+    drag.v = (e.clientY - drag.y) / Math.max(1, e.timeStamp - drag.t);
+    drag.y = e.clientY;
+    drag.t = e.timeStamp;
+    drag.p = 1 - y / vh;
+  });
+  const endDrag = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const d = drag;
+    drag = null;
+    if (!d.on) return;
+    const v = d.v || 0;
+    const open = d.from ? !(v > 0.5 || d.p < 0.7) : (v < -0.5 || d.p > 0.3);
+    if (e.type === "pointercancel") setFull(d.from, false);
+    else if (open === full) slide(open);
+    else setFull(open);
+    setTimeout(() => { swallow = false; }, 0);
+  };
+  window.addEventListener("pointerup", endDrag);
+  window.addEventListener("pointercancel", endDrag);
+  bar.addEventListener("click", (e) => { if (swallow) { swallow = false; e.preventDefault(); e.stopPropagation(); } }, true);
+
   const setTucked = (on) => {
+    if (full && on) return;
     if (bar.classList.contains("tucked") === on) return;
     bar.classList.toggle("tucked", on);
     paint();
@@ -904,7 +1037,7 @@ export function renderBar(opts = {}) {
     const song = current();
     bar.hidden = !song;
     paintSpin();
-    if (!song) return;
+    if (!song) { if (full) setFull(false); return; }
     const name = song.title || t("player.unknownTitle");
     setMarquee(title, titleText, name);
     sub.textContent = [song.artist, song.album].filter(Boolean).join(" · ");
@@ -923,6 +1056,9 @@ export function renderBar(opts = {}) {
       };
       tryNext(0);
     }
+    if (song.artistId) { artistB.href = `#/library/artist/${encodeURIComponent(song.artistId)}`; artistB.hidden = false; }
+    else { artistB.removeAttribute("href"); artistB.hidden = true; }
+    artistB.title = song.artist || "";
     if (song.albumId) info.href = `#/library/album/${encodeURIComponent(song.albumId)}`;
     else info.removeAttribute("href");
     const si = streamInfo();
