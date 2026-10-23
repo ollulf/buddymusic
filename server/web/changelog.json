@@ -1,13 +1,13 @@
 [
   {
-    "version": "1.0.2310.4",
+    "version": "1.0.2310.5",
     "date": "2026-10-23",
     "en": [
-      "Full-screen player: drag the player bar up on your phone, or press the expand button on a computer",
+      "Full-screen player: drag the player bar up on your phone, or press the expand button on a computer. It shows the artist's name and a crisp title",
       "New albums shine: a rainbow foil that moves as you scroll, with little sparkles",
       "The spinning CD always shows the album's own cover",
       "The friends tab shows everyone who was on in the last 7 days",
-      "The player bar is tidier: song title above the progress bar, buttons centered",
+      "The player bar is tidier: song title above the progress bar, buttons centered, more space at the bottom",
       "Admins can mark an album as new for everyone again",
       "AirPlay button in the player on iPhone, iPad and Mac (Safari)",
       "Upload songs and albums with several artists",
@@ -15,11 +15,11 @@
       "Admins can delete albums again"
     ],
     "de": [
-      "Vollbild-Player: zieh die Player-Leiste am Handy nach oben oder drück am Computer die Vergrößern-Taste",
+      "Vollbild-Player: zieh die Player-Leiste am Handy nach oben oder drück am Computer die Vergrößern-Taste. Er zeigt den Künstlernamen und einen scharfen Titel",
       "Neue Alben glänzen: eine Regenbogenfolie, die sich beim Scrollen bewegt, mit kleinen Funkeln",
       "Die drehende CD zeigt immer das eigene Cover des Albums",
       "Der Freunde-Tab zeigt alle, die in den letzten 7 Tagen da waren",
-      "Aufgeräumtere Player-Leiste: Songtitel über dem Fortschrittsbalken, Tasten mittig",
+      "Aufgeräumtere Player-Leiste: Songtitel über dem Fortschrittsbalken, Tasten mittig, mehr Platz unten",
       "Admins können ein Album wieder für alle als neu markieren",
       "AirPlay-Taste im Player auf iPhone, iPad und Mac (Safari)",
       "Lade Songs und Alben mit mehreren Künstlern hoch",

@@ -805,15 +805,19 @@ function fitMarquee(box, span) {
   span.style.removeProperty("--mq-gap");
   if (!span.textContent) return;
   void box.offsetWidth;
-  const gap = Math.max(40, box.clientWidth - span.scrollWidth);
+  const px = Math.max(1, Math.round(parseFloat(getComputedStyle(box).fontSize) / 10));
+  const unit = px * Math.max(1, Math.round(6 / px));
+  const textW = span.getBoundingClientRect().width;
+  const total = Math.ceil((textW + Math.max(40, box.clientWidth - textW)) / unit) * unit;
+  const gap = total - textW;
   span.style.setProperty("--mq-gap", `${gap}px`);
   const copy = h("span", { class: "mq-t", "aria-hidden": "true" }, span.textContent);
   copy.style.setProperty("--mq-gap", `${gap}px`);
   box.append(copy);
   box.classList.add("run");
-  const w = span.offsetWidth;
+  const w = total;
   box.style.setProperty("--mq-w", `${w}px`);
-  box.style.setProperty("--mq-steps", String(Math.max(8, Math.round(w / 6))));
+  box.style.setProperty("--mq-steps", String(Math.max(1, w / unit)));
   box.style.setProperty("--mq-dur", `${Math.max(4, w / 40).toFixed(1)}s`);
 }
 
@@ -862,7 +866,7 @@ export function renderBar(opts = {}) {
   const disc = h("button", { type: "button", class: "pb-disc" }, h("div", { class: "pb-spin" }, rim, label));
 
   const expandB = btn(t("player.expand"), "sm expand", () => setFull(true));
-  const artistB = h("a", { class: "pb-artist" }, t("player.artist"));
+  const artistB = h("a", { class: "pb-artist" });
   const collapseB = h("button", { type: "button", class: "pb-collapse", "aria-label": t("player.collapse"), title: t("player.collapse"), onclick: () => setFull(false) });
   const head = h("div", { class: "pb-head" }, artistB, collapseB, h("span", { class: "pb-esc", "aria-hidden": "true" }, "Esc"));
 
@@ -1058,7 +1062,9 @@ export function renderBar(opts = {}) {
     }
     if (song.artistId) { artistB.href = `#/library/artist/${encodeURIComponent(song.artistId)}`; artistB.hidden = false; }
     else { artistB.removeAttribute("href"); artistB.hidden = true; }
+    artistB.textContent = song.artist || "";
     artistB.title = song.artist || "";
+    artistB.setAttribute("aria-label", t("player.goArtist", { name: song.artist || "" }));
     if (song.albumId) info.href = `#/library/album/${encodeURIComponent(song.albumId)}`;
     else info.removeAttribute("href");
     const si = streamInfo();
