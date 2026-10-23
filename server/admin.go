@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -13,8 +14,11 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
+
+var renameFile = os.Rename
 
 const adminCacheTTL = 5 * time.Minute
 
@@ -148,10 +152,64 @@ func (a *App) resolveSongPath(p string) (string, error) {
 		}
 		found = append(found, real)
 	}
+	if len(found) == 0 && !filepath.IsAbs(p) {
+		var err error
+		found, err = findByAlbumFile(lib, filepath.Clean(filepath.FromSlash(p)))
+		if err != nil {
+			return "", err
+		}
+	}
 	if len(found) != 1 {
 		return "", fmt.Errorf("%w: %d files match %q", ErrNotFound, len(found), p)
 	}
 	return found[0], nil
+}
+
+func findByAlbumFile(lib, rel string) ([]string, error) {
+	file := filepath.Base(rel)
+	album := filepath.Base(filepath.Dir(rel))
+	if album == "." || album == ".." || album == string(filepath.Separator) || file == "." || file == ".." {
+		return nil, nil
+	}
+	var found []string
+	users, err := os.ReadDir(lib)
+	if err != nil {
+		return nil, nil
+	}
+	for _, u := range users {
+		if !u.IsDir() || strings.HasPrefix(u.Name(), ".") {
+			continue
+		}
+		artists, err := os.ReadDir(filepath.Join(lib, u.Name()))
+		if err != nil {
+			continue
+		}
+		for _, ar := range artists {
+			if !ar.IsDir() {
+				continue
+			}
+			c := filepath.Join(lib, u.Name(), ar.Name(), album, file)
+			st, err := os.Lstat(c)
+			if err != nil {
+				continue
+			}
+			if !st.Mode().IsRegular() {
+				if st.Mode()&os.ModeSymlink != 0 {
+					return nil, errOutside
+				}
+				continue
+			}
+			real, err := filepath.EvalSymlinks(c)
+			if err != nil {
+				continue
+			}
+			if !inside(lib, real) {
+				return nil, errOutside
+			}
+			found = append(found, real)
+		}
+	}
+	return found, nil
 }
 
 func inside(root, p string) bool {
@@ -175,10 +233,64 @@ func (a *App) moveToTrash(lib, trash, src string) (string, error) {
 	if _, err := os.Lstat(dst); err == nil {
 		return "", errExists
 	}
-	if err := os.Rename(src, dst); err != nil {
+	if err := moveFile(src, dst); err != nil {
 		return "", err
 	}
 	return filepath.ToSlash(rel), nil
+}
+
+func moveFile(src, dst string) error {
+	err := renameFile(src, dst)
+	if err == nil || !errors.Is(err, syscall.EXDEV) {
+		return err
+	}
+	if err := copyFile(src, dst); err != nil {
+		return err
+	}
+	if err := os.Remove(src); err != nil {
+		os.Remove(dst)
+		return err
+	}
+	return nil
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	st, err := in.Stat()
+	if err != nil {
+		return err
+	}
+	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, st.Mode().Perm())
+	if err != nil {
+		return err
+	}
+	if err := writeCopy(out, in, dst, st); err != nil {
+		os.Remove(dst)
+		return err
+	}
+	return nil
+}
+
+func writeCopy(out *os.File, in io.Reader, dst string, st os.FileInfo) error {
+	if _, err := io.Copy(out, in); err != nil {
+		out.Close()
+		return err
+	}
+	if err := out.Sync(); err != nil {
+		out.Close()
+		return err
+	}
+	if err := out.Close(); err != nil {
+		return err
+	}
+	if err := os.Chmod(dst, st.Mode().Perm()); err != nil {
+		return err
+	}
+	return os.Chtimes(dst, st.ModTime(), st.ModTime())
 }
 
 func hasAudio(dir string) bool {

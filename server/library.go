@@ -143,6 +143,10 @@ func (s *Scanner) run() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err := s.nav.StartScan(ctx, NewCreds(s.user, s.pass)); err != nil {
+		if errors.Is(err, ErrBadLogin) {
+			log.Printf("scan: Navidrome rejected the login of scan user %q: set that user's password in Navidrome to SCAN_PASSWORD from /etc/buddymusic/api.env (or fix SCAN_USER/SCAN_PASSWORD there) and restart buddymusic", s.user)
+			return
+		}
 		log.Printf("scan: %v", err)
 		return
 	}
