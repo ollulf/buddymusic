@@ -27,7 +27,7 @@ ProtectHostname=yes
 RestrictNamespaces=yes
 LockPersonality=yes
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
-ReadWritePaths=/srv/music/_incoming /srv/music/library /srv/music/_feedback
+ReadWritePaths=/srv/music/_incoming /srv/music/library /srv/music/_feedback /srv/music/_trash
 
 [Install]
 WantedBy=multi-user.target
