@@ -5,6 +5,7 @@ import { heartButton, isStarred, toggleStar } from "./favs.js";
 import { addToPlaylistButton, openAddSheet, toast } from "./playlists.js";
 import { rowMenuButton, swipeRow } from "./rowactions.js";
 import { flyFrom } from "./fly.js";
+import { holo, sparkles, unholo } from "./holo.js";
 
 const deletedSongs = new Set();
 const deletedAlbums = new Set();
@@ -41,6 +42,8 @@ function markAlbumOpened(al) {
     if (card.getAttribute("href") !== `#/library/album/${encodeURIComponent(al.id)}`) continue;
     card.classList.remove("is-new");
     card.querySelector(".new-ribbon")?.remove();
+    card.querySelector(".sparkles")?.remove();
+    unholo(card.querySelector(".holo"));
   }
   fetch(`/api/music/album/${encodeURIComponent(al.id)}/opened`, { method: "POST" }).catch(() => {});
 }
@@ -52,8 +55,11 @@ function isNewAlbum(al) {
 
 export function albumCard(al, i = EAGER_COVERS) {
   const fresh = isNewAlbum(al);
+  const art = caseCover(al, 300, "art", i < EAGER_COVERS);
+  if (fresh) art.append(holo());
   return h("a", { class: fresh ? "album is-new" : "album", href: `#/library/album/${encodeURIComponent(al.id)}` },
-    caseCover(al, 300, "art", i < EAGER_COVERS),
+    art,
+    fresh ? sparkles() : null,
     fresh ? h("span", { class: "new-ribbon", "aria-label": t("library.newSince") }, h("span", {}, t("library.newBadge"))) : null,
     h("span", { class: "a-name" }, al.name || al.title || t("library.unknownAlbum")),
     h("span", { class: "a-sub" }, [al.artist, al.year].filter(Boolean).join(" · ")));
