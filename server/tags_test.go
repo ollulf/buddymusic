@@ -25,7 +25,7 @@ func TestParseProbe(t *testing.T) {
 		err   error
 	}{
 		{"flac upper keys", `{"format":{"format_name":"flac","tags":{"TITLE":"A","ARTIST":"B","ALBUM":"C","TRACKNUMBER":"3/12","ALBUMARTIST":"D","DATE":"2020"}},"streams":[{"codec_type":"audio"}]}`,
-			map[string]string{"title": "A", "artist": "B", "album": "C", "track": "3/12", "year": "2020"}, false, nil},
+			map[string]string{"title": "A", "artist": "B", "album": "C", "track": "3/12", "albumartist": "D", "year": "2020"}, false, nil},
 		{"ogg stream tags", `{"format":{"format_name":"ogg"},"streams":[{"codec_type":"audio","tags":{"title":"T","artist":"A","album":"B","track":"1"}}]}`,
 			map[string]string{"title": "T", "artist": "A", "album": "B", "track": "1"}, false, nil},
 		{"mp3 cover", `{"format":{"format_name":"mp3","tags":{"title":"  x\ty  "}},"streams":[{"codec_type":"audio"},{"codec_type":"video","disposition":{"attached_pic":1}}]}`,

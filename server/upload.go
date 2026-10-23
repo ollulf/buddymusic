@@ -265,6 +265,12 @@ func (a *App) placeUpload(ctx context.Context, u *Upload, form *uploadForm, stor
 		u.Status, u.Missing = "rejected", missing
 		return http.StatusUnprocessableEntity, map[string]any{"error": "missing-tags", "missing": missing, "tags": fields}
 	}
+	if albumArtist := chooseAlbumArtist(typed, fields, existingAlbumArtist(ctx, dir)); albumArtist != "" {
+		if albumArtist != tags.Fields["albumartist"] {
+			typed["albumartist"] = albumArtist
+		}
+		fields["albumartist"] = albumArtist
+	}
 	src := stored
 	if len(typed) > 0 {
 		tagged := strings.TrimSuffix(stored, form.ext) + ".tagged" + form.ext
