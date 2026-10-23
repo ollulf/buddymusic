@@ -19,15 +19,18 @@ var requiredFields = []string{"title", "artist", "album", "track", "cover"}
 var textFields = []string{"title", "artist", "album", "track", "year", "disc"}
 
 var tagAliases = map[string]string{
-	"title":       "title",
-	"artist":      "artist",
-	"album":       "album",
-	"track":       "track",
-	"tracknumber": "track",
-	"date":        "year",
-	"year":        "year",
-	"disc":        "disc",
-	"discnumber":  "disc",
+	"title":        "title",
+	"artist":       "artist",
+	"album":        "album",
+	"track":        "track",
+	"tracknumber":  "track",
+	"date":         "year",
+	"year":         "year",
+	"disc":         "disc",
+	"discnumber":   "disc",
+	"album_artist": "albumartist",
+	"albumartist":  "albumartist",
+	"album artist": "albumartist",
 }
 
 const maxTagLen = 300
@@ -190,6 +193,47 @@ func artistList(v any) []string {
 		}
 	}
 	return out
+}
+
+func audioExt(name string) bool {
+	switch strings.ToLower(filepath.Ext(name)) {
+	case ".flac", ".mp3", ".ogg", ".opus", ".m4a", ".mp4":
+		return true
+	}
+	return false
+}
+
+func existingAlbumArtist(ctx context.Context, dir string) string {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return ""
+	}
+	for _, e := range entries {
+		if !e.Type().IsRegular() || !audioExt(e.Name()) {
+			continue
+		}
+		t, err := probe(ctx, filepath.Join(dir, e.Name()))
+		if err != nil {
+			continue
+		}
+		if v := t.Fields["albumartist"]; v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+func chooseAlbumArtist(typed, fields map[string]string, existing string) string {
+	if v := typed["albumartist"]; strings.Contains(v, artistSep) {
+		return v
+	}
+	if existing != "" {
+		return existing
+	}
+	if v := typed["albumartist"]; v != "" {
+		return v
+	}
+	return fields["artist"]
 }
 
 func number(v string) int {

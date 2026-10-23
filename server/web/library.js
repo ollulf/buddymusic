@@ -80,6 +80,27 @@ player.onChange(() => {
   for (const li of document.querySelectorAll("li.song-row[data-song]")) markNow(li);
 });
 
+function artistNames(list, fallback) {
+  const names = Array.isArray(list) ? list.map((a) => (a?.name || "").trim()).filter(Boolean) : [];
+  return names.length ? names : (fallback ? [fallback.trim()] : []);
+}
+
+function guestLine(s, al) {
+  const album = new Set(artistNames(al.artists, al.artist).map((n) => n.toLowerCase()));
+  const own = artistNames(s.artists, s.artist);
+  const extra = own.filter((n) => !album.has(n.toLowerCase()));
+  if (!extra.length) return "";
+  if (Array.isArray(s.artists) && s.artists.length) return "feat. " + extra.join(", ");
+  return s.artist || "";
+}
+
+function albumArtistLinks(al) {
+  const list = Array.isArray(al.artists) && al.artists.length ? al.artists : [{ id: al.artistId, name: al.artist }];
+  const links = list.filter((a) => a?.name).map((a) =>
+    h("a", { class: "muted", href: a.id ? `#/library/artist/${encodeURIComponent(a.id)}` : "#/library/artists" }, a.name));
+  return h("div", { class: "album-artists" }, ...links.flatMap((el, i) => i ? [h("span", { class: "muted" }, ", "), el] : [el]));
+}
+
 export function songRow(songs, i, opts = {}) {
   const s = songs[i];
   const fav = () => isStarred(s, "song");
@@ -109,7 +130,8 @@ export function songRow(songs, i, opts = {}) {
       h("span", { class: "s-no" }, opts.showCover ? cover(s.coverArt, 64, "art tiny") : String(s.track || i + 1)),
       h("span", { class: "s-meta" },
         h("span", { class: "s-title" }, s.title || t("player.unknownTitle")),
-        opts.showArtist ? h("span", { class: "s-sub" }, [s.artist, s.album].filter(Boolean).join(" · ")) : null),
+        opts.showArtist ? h("span", { class: "s-sub" }, [s.artist, s.album].filter(Boolean).join(" · "))
+          : opts.album && guestLine(s, opts.album) ? h("span", { class: "s-sub" }, guestLine(s, opts.album)) : null),
       h("span", { class: "s-dur" }, fmtTime(s.duration))),
     menu);
   const li = h("li", { class: "song-row" }, fg);
@@ -236,7 +258,7 @@ async function renderAlbum(container, id, opts) {
       h("section", { class: "album-head" },
         caseCover(al, 600, "art big"),
         h("div", { class: "album-info" },
-          h("a", { class: "muted", href: al.artistId ? `#/library/artist/${encodeURIComponent(al.artistId)}` : "#/library/artists" }, al.artist || ""),
+          albumArtistLinks(al),
           h("div", { class: "muted" }, [al.year, t("common.songCount", { n: songs.length }), fmtTime(total)].filter(Boolean).join(" · ")),
           Array.isArray(al.uploadedBy) && al.uploadedBy.length
             ? h("div", { class: "uploaded-by" }, t("library.uploadedBy", { names: al.uploadedBy.join(", ") })) : null,
@@ -248,7 +270,7 @@ async function renderAlbum(container, id, opts) {
             heartButton(al, "album", { cls: "album-heart", onUnauthorized: opts.onUnauthorized }),
             opts.admin ? h("button", { onclick: renewAlbum }, t("library.renewAlbum")) : null,
             opts.admin ? h("button", { class: "danger", onclick: deleteAlbum }, t("library.deleteAlbum")) : null))),
-      h("ol", { class: "songs card" }, songs.map((_, i) => songRow(songs, i, { onDelete: deleteTrack, onUnauthorized: opts.onUnauthorized }))));
+      h("ol", { class: "songs card" }, songs.map((_, i) => songRow(songs, i, { album: al, onDelete: deleteTrack, onUnauthorized: opts.onUnauthorized }))));
   } catch (e) {
     container.replaceChildren(h("a", { class: "back", href: "#/library" }, t("library.back")), failBox(e, opts));
   }

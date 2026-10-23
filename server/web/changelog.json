@@ -1,6 +1,6 @@
 [
   {
-    "version": "1.0.2310.2",
+    "version": "1.0.2310.3",
     "date": "2026-10-23",
     "en": [
       "New albums shine: a rainbow foil that moves as you scroll, with little sparkles",
@@ -10,6 +10,7 @@
       "Admins can mark an album as new for everyone again",
       "AirPlay button in the player on iPhone, iPad and Mac (Safari)",
       "Upload songs and albums with several artists",
+      "Albums stay together when only one song has a guest artist, shown as feat.",
       "Admins can delete albums again"
     ],
     "de": [
@@ -20,6 +21,7 @@
       "Admins können ein Album wieder für alle als neu markieren",
       "AirPlay-Taste im Player auf iPhone, iPad und Mac (Safari)",
       "Lade Songs und Alben mit mehreren Künstlern hoch",
+      "Alben bleiben zusammen, wenn nur ein Song einen Gastkünstler hat, angezeigt als feat.",
       "Admins können Alben wieder löschen"
     ]
   },
