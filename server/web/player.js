@@ -865,10 +865,9 @@ export function renderBar(opts = {}) {
     h("div", { class: "pb-bay" }, disc),
     h("div", { class: "pb-tab" }, prevB, playB, nextB),
     h("div", { class: "pb-main" },
+      h("div", { class: "pb-screen" }, info, h("div", { class: "pb-chips" }, netChip(net), rateB)),
       h("div", { class: "bar-seek" }, pos, range, dur),
-      h("div", { class: "pb-left" },
-        h("div", { class: "pb-screen" }, h("div", { class: "pb-chips" }, netChip(net), rateB), info),
-        h("div", { class: "pb-btns" }, h("i", { class: "pb-grille" }), heartB, repeatB, shuffleB, castButton(), mobileVolume ? null : volumeControl(), h("i", { class: "pb-grille" })))));
+      h("div", { class: "pb-btns" }, h("i", { class: "pb-grille" }), heartB, repeatB, shuffleB, castButton(), mobileVolume ? null : volumeControl(), h("i", { class: "pb-grille" }))));
 
   bar.append(renderViz(audio, bar));
 
