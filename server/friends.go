@@ -9,7 +9,7 @@ import (
 
 const (
 	friendOnlineGap = 5 * time.Minute
-	friendRecentGap = time.Hour
+	friendRecentGap = 7 * 24 * time.Hour
 )
 
 const friendsSchema = `

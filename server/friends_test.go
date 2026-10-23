@@ -17,7 +17,8 @@ func TestStoreFriends(t *testing.T) {
 	s.TouchSeen("max", now, "iPhone · Safari")
 	s.TouchSeen("ann", now.Add(-time.Minute), "Android · Chrome")
 	s.TouchSeen("bob", now.Add(-20*time.Minute), "Mac · Firefox")
-	s.TouchSeen("old", now.Add(-3*time.Hour), "Mac · Firefox")
+	s.TouchSeen("old", now.Add(-8*24*time.Hour), "Mac · Firefox")
+	s.TouchSeen("dan", now.Add(-3*24*time.Hour), "Mac · Firefox")
 	s.TouchSeen("cat", now, "Windows · Edge")
 	s.AddStreamBytes("ann", "t1", "Android · Chrome", now, 100, false)
 	s.RecordProgress("ann", "t1", "One", "Blue", now, 30, true)
@@ -34,7 +35,7 @@ func TestStoreFriends(t *testing.T) {
 	for _, f := range list {
 		got[f.User] = f
 	}
-	if len(list) != 3 || got["max"].User != "" || got["old"].User != "" {
+	if len(list) != 4 || got["max"].User != "" || got["old"].User != "" {
 		t.Fatalf("list: %+v", list)
 	}
 	if f := got["ann"]; !f.Online || f.State != "playing" || f.Title != "One" || f.Artist != "Blue" {
@@ -46,7 +47,7 @@ func TestStoreFriends(t *testing.T) {
 	if f := got["bob"]; f.Online || f.State != "idle" || f.LastSeen != now.Add(-20*time.Minute).Unix() {
 		t.Fatalf("bob: %+v", f)
 	}
-	if list[2].User != "bob" {
+	if list[2].User != "bob" || list[3].User != "dan" {
 		t.Fatalf("offline friends last: %+v", list)
 	}
 
