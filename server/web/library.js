@@ -94,11 +94,34 @@ function guestLine(s, al) {
   return s.artist || "";
 }
 
-function albumArtistLinks(al) {
+function albumGuests(al, songs) {
+  const seen = new Set(artistNames(al.artists, al.artist).map((n) => n.toLowerCase()));
+  const out = [];
+  for (const s of songs || []) {
+    const list = Array.isArray(s.artists) && s.artists.length
+      ? s.artists.filter((a) => a?.name).map((a) => ({ id: a.id, name: a.name.trim() }))
+      : (s.artist || "").split(/\s*;\s*/).filter(Boolean).map((name) => ({ name }));
+    for (const a of list) {
+      const key = a.name.toLowerCase();
+      if (!a.name || seen.has(key)) continue;
+      seen.add(key);
+      out.push(a);
+    }
+  }
+  return out;
+}
+
+function artistLink(a) {
+  return h("a", { class: "muted", href: a.id ? `#/library/artist/${encodeURIComponent(a.id)}` : "#/library/artists" }, a.name);
+}
+
+function albumArtistLinks(al, songs) {
   const list = Array.isArray(al.artists) && al.artists.length ? al.artists : [{ id: al.artistId, name: al.artist }];
-  const links = list.filter((a) => a?.name).map((a) =>
-    h("a", { class: "muted", href: a.id ? `#/library/artist/${encodeURIComponent(a.id)}` : "#/library/artists" }, a.name));
-  return h("div", { class: "album-artists" }, ...links.flatMap((el, i) => i ? [h("span", { class: "muted" }, ", "), el] : [el]));
+  const join = (els) => els.flatMap((el, i) => i ? [h("span", { class: "muted" }, ", "), el] : [el]);
+  const links = join(list.filter((a) => a?.name).map(artistLink));
+  const guests = albumGuests(al, songs).map(artistLink);
+  const tail = guests.length ? [h("span", { class: "muted" }, " · feat. "), ...join(guests)] : [];
+  return h("div", { class: "album-artists" }, ...links, ...tail);
 }
 
 export function songRow(songs, i, opts = {}) {
@@ -258,7 +281,7 @@ async function renderAlbum(container, id, opts) {
       h("section", { class: "album-head" },
         caseCover(al, 600, "art big"),
         h("div", { class: "album-info" },
-          albumArtistLinks(al),
+          albumArtistLinks(al, songs),
           h("div", { class: "muted" }, [al.year, t("common.songCount", { n: songs.length }), fmtTime(total)].filter(Boolean).join(" · ")),
           Array.isArray(al.uploadedBy) && al.uploadedBy.length
             ? h("div", { class: "uploaded-by" }, t("library.uploadedBy", { names: al.uploadedBy.join(", ") })) : null,
