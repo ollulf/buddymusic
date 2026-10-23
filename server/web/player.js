@@ -805,15 +805,19 @@ function fitMarquee(box, span) {
   span.style.removeProperty("--mq-gap");
   if (!span.textContent) return;
   void box.offsetWidth;
-  const gap = Math.max(40, box.clientWidth - span.scrollWidth);
+  const px = Math.max(1, Math.round(parseFloat(getComputedStyle(box).fontSize) / 10));
+  const unit = px * Math.max(1, Math.round(6 / px));
+  const textW = span.getBoundingClientRect().width;
+  const total = Math.ceil((textW + Math.max(40, box.clientWidth - textW)) / unit) * unit;
+  const gap = total - textW;
   span.style.setProperty("--mq-gap", `${gap}px`);
   const copy = h("span", { class: "mq-t", "aria-hidden": "true" }, span.textContent);
   copy.style.setProperty("--mq-gap", `${gap}px`);
   box.append(copy);
   box.classList.add("run");
-  const w = span.offsetWidth;
+  const w = total;
   box.style.setProperty("--mq-w", `${w}px`);
-  box.style.setProperty("--mq-steps", String(Math.max(8, Math.round(w / 6))));
+  box.style.setProperty("--mq-steps", String(Math.max(1, w / unit)));
   box.style.setProperty("--mq-dur", `${Math.max(4, w / 40).toFixed(1)}s`);
 }
 
