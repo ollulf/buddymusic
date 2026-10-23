@@ -5,6 +5,7 @@ import { heartButton, isStarred, toggleStar } from "./favs.js";
 import { addToPlaylistButton, openAddSheet, toast } from "./playlists.js";
 import { rowMenuButton, swipeRow } from "./rowactions.js";
 import { flyFrom } from "./fly.js";
+import { holo, sparkles, unholo } from "./holo.js";
 
 const deletedSongs = new Set();
 const deletedAlbums = new Set();
@@ -16,12 +17,54 @@ const EAGER_COVERS = 12;
 
 function caseCover(al, size, cls, eager = false) {
   const box = cover(al.coverArt || al.id, size, `${cls} jc`, eager);
+  box.append(...["l", "t", "r", "b"].map((side) => h("i", { class: `jc-edge jc-${side}` })));
   if (al.id) {
     box.dataset.album = al.id;
     if (player.nowAlbum() === al.id) box.classList.add("now");
   }
   return box;
 }
+
+const tiltOK = matchMedia("(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)");
+let tilted = null;
+let tiltFrame = 0;
+let tiltEvent = null;
+
+function untilt() {
+  if (!tilted) return;
+  tilted.classList.remove("tilt");
+  for (const p of ["--rx", "--ry", "--sx", "--sy"]) tilted.style.removeProperty(p);
+  tilted = null;
+}
+
+function applyTilt() {
+  tiltFrame = 0;
+  const e = tiltEvent;
+  const box = e.target instanceof Element ? e.target.closest(".album")?.querySelector(".art.jc") || e.target.closest(".art.jc") : null;
+  if (box !== tilted) untilt();
+  if (!box) return;
+  const r = box.getBoundingClientRect();
+  const px = Math.max(-0.5, Math.min(0.5, (e.clientX - r.left) / r.width - 0.5));
+  const py = Math.max(-0.5, Math.min(0.5, (e.clientY - r.top) / r.height - 0.5));
+  const k = box.classList.contains("big") ? 30 : 44;
+  tilted = box;
+  box.classList.add("tilt");
+  box.style.setProperty("--ry", `${(px * k).toFixed(1)}deg`);
+  box.style.setProperty("--rx", `${(-py * k).toFixed(1)}deg`);
+  box.style.setProperty("--sx", `${Math.round(-px * 8 + 4)}px`);
+  box.style.setProperty("--sy", `${Math.round(py * 8 + 4)}px`);
+}
+
+document.addEventListener("pointermove", (e) => {
+  if (e.pointerType !== "mouse" || !tiltOK.matches) return untilt();
+  tiltEvent = e;
+  if (!tiltFrame) tiltFrame = requestAnimationFrame(applyTilt);
+}, { passive: true });
+document.documentElement.addEventListener("pointerleave", () => {
+  cancelAnimationFrame(tiltFrame);
+  tiltFrame = 0;
+  untilt();
+});
 
 let newSince = Infinity;
 let ownAlbums = new Set();
@@ -43,6 +86,8 @@ function markAlbumOpened(al) {
     if (card.getAttribute("href") !== `#/library/album/${encodeURIComponent(al.id)}`) continue;
     card.classList.remove("is-new");
     card.querySelector(".new-ribbon")?.remove();
+    card.querySelector(".sparkles")?.remove();
+    unholo(card.querySelector(".holo"));
   }
   fetch(`/api/music/album/${encodeURIComponent(al.id)}/opened`, { method: "POST" }).catch(() => {});
 }
@@ -56,8 +101,11 @@ function isNewAlbum(al) {
 
 export function albumCard(al, i = EAGER_COVERS) {
   const fresh = isNewAlbum(al);
+  const art = caseCover(al, 300, "art", i < EAGER_COVERS);
+  if (fresh) art.append(holo());
   return h("a", { class: fresh ? "album is-new" : "album", href: `#/library/album/${encodeURIComponent(al.id)}` },
-    caseCover(al, 300, "art", i < EAGER_COVERS),
+    art,
+    fresh ? sparkles() : null,
     fresh ? h("span", { class: "new-ribbon", "aria-label": t("library.newSince") }, h("span", {}, t("library.newBadge"))) : null,
     h("span", { class: "a-name" }, al.name || al.title || t("library.unknownAlbum")),
     h("span", { class: "a-sub" }, [al.artist, al.year].filter(Boolean).join(" · ")));
