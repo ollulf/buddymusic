@@ -27,7 +27,7 @@ const calm = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-m
 const touchy = () => !!(window.matchMedia && window.matchMedia("(hover: none)").matches);
 
 export function renderQueue() {
-  const stack = h("button", { type: "button", class: "cdq", "aria-haspopup": "dialog", "aria-expanded": "false" });
+  const stack = h("button", { type: "button", class: "cdq", "aria-haspopup": "dialog", "aria-expanded": "false", "data-upnext": t("queue.upNext") });
   const cases = h("span", { class: "cdq-cases", "aria-hidden": "true" });
   stack.append(cases);
 
