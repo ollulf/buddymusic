@@ -892,7 +892,7 @@ export function renderBar(opts = {}) {
     const what = bar.classList.contains("tucked") ? t("player.showDisc") : isPlaying() ? t("player.pause") : t("player.play");
     disc.setAttribute("aria-label", `${what}: ${name}${song.artist ? `, ${song.artist}` : ""}`);
     if (heartB.dataset.id !== song.id) retarget(heartB, song);
-    const ids = [...new Set([song.coverArt, song.albumId].filter(Boolean))];
+    const ids = [...new Set((song.albumId ? [song.albumId] : [song.coverArt]).filter(Boolean))];
     const key = ids.join("|");
     if (lastCover !== key) {
       lastCover = key;
