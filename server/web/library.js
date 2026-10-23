@@ -1,5 +1,5 @@
 import { t } from "./i18n.js";
-import { h, api, apiSend, cover, fmtTime, Unauthorized, setPageTitle } from "./dom.js";
+import { h, api, apiSend, apiJSON, cover, fmtTime, Unauthorized, setPageTitle } from "./dom.js";
 import * as player from "./player.js";
 import { heartButton, isStarred, toggleStar } from "./favs.js";
 import { addToPlaylistButton, openAddSheet, toast } from "./playlists.js";
@@ -26,12 +26,14 @@ function caseCover(al, size, cls, eager = false) {
 let newSince = Infinity;
 let ownAlbums = new Set();
 let openedAlbums = new Set();
+let renewedAlbums = new Map();
 const albumKey = (artist, name) => `${(artist || "").trim().toLowerCase()}|${(name || "").trim().toLowerCase()}`;
 
-export function setNewAlbums(since, own, opened) {
+export function setNewAlbums(since, own, opened, renewed) {
   newSince = Number(since) > 0 ? Number(since) * 1000 : Infinity;
   ownAlbums = new Set(own || []);
   openedAlbums = new Set(opened || []);
+  renewedAlbums = new Map(Object.entries(renewed || {}).map(([id, at]) => [id, Number(at) * 1000]));
 }
 
 function markAlbumOpened(al) {
@@ -46,8 +48,10 @@ function markAlbumOpened(al) {
 }
 
 function isNewAlbum(al) {
+  if (openedAlbums.has(al.id)) return false;
+  if (renewedAlbums.get(al.id) > newSince) return true;
   const created = Date.parse(al.created || "");
-  return created > newSince && !openedAlbums.has(al.id) && !ownAlbums.has(albumKey(al.artist, al.name || al.title));
+  return created > newSince && !ownAlbums.has(albumKey(al.artist, al.name || al.title));
 }
 
 export function albumCard(al, i = EAGER_COVERS) {
@@ -207,6 +211,17 @@ async function renderAlbum(container, id, opts) {
       player.removeSongs(songs.map((s) => s.id));
       location.hash = "#/library";
     };
+    const renewAlbum = async () => {
+      if (!confirm(t("library.confirmRenew", { name: al.name || t("library.unknownAlbum") }))) return;
+      try {
+        await apiJSON("POST", `/api/admin/album/${encodeURIComponent(al.id)}/renew`);
+        openedAlbums.add(al.id);
+        toast(t("library.renewed"));
+      } catch (e) {
+        if (e instanceof Unauthorized) opts.onUnauthorized?.();
+        else toast(t("library.renewFailed"));
+      }
+    };
     const total = songs.reduce((t, s) => t + (s.duration || 0), 0);
     setPageTitle(al.name || t("library.unknownAlbum"), container);
     container.replaceChildren(
@@ -224,6 +239,7 @@ async function renderAlbum(container, id, opts) {
             h("button", { onclick: () => player.addToQueue(songs), disabled: !songs.length }, t("song.addToQueue")),
             songs.length ? addToPlaylistButton(songs, opts, "") : null,
             heartButton(al, "album", { cls: "album-heart", onUnauthorized: opts.onUnauthorized }),
+            opts.admin ? h("button", { onclick: renewAlbum }, t("library.renewAlbum")) : null,
             opts.admin ? h("button", { class: "danger", onclick: deleteAlbum }, t("library.deleteAlbum")) : null))),
       h("ol", { class: "songs card" }, songs.map((_, i) => songRow(songs, i, { onDelete: deleteTrack, onUnauthorized: opts.onUnauthorized }))));
   } catch (e) {

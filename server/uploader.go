@@ -114,6 +114,24 @@ func (a *App) handleAlbumOpened(w http.ResponseWriter, r *http.Request, user str
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (a *App) handleAlbumRenew(w http.ResponseWriter, r *http.Request, user string) {
+	if !a.cachedAdmin(r) {
+		writeError(w, http.StatusForbidden, "admin-only")
+		return
+	}
+	id := r.PathValue("id")
+	if !validID(id) {
+		writeError(w, http.StatusBadRequest, "bad-request")
+		return
+	}
+	if err := a.store.RenewAlbum(id, time.Now()); err != nil {
+		log.Printf("renew album: %v", err)
+		writeError(w, http.StatusInternalServerError, "store")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (a *App) handleAlbum(w http.ResponseWriter, r *http.Request, user string) {
 	id := r.PathValue("id")
 	if !validID(id) {
