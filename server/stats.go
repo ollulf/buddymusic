@@ -60,6 +60,10 @@ CREATE TABLE IF NOT EXISTS album_opened (
 	album_id TEXT NOT NULL,
 	opened_at INTEGER NOT NULL,
 	PRIMARY KEY (user, album_id)
+);
+CREATE TABLE IF NOT EXISTS album_renewed (
+	album_id TEXT PRIMARY KEY,
+	renewed_at INTEGER NOT NULL
 );`
 
 func (s *Store) RecordLogin(user string, at time.Time, ok bool, device string, remember bool) error {
@@ -133,6 +137,39 @@ func (s *Store) OpenedAlbums(user string) []string {
 		var id string
 		if rows.Scan(&id) == nil {
 			out = append(out, id)
+		}
+	}
+	return out
+}
+
+func (s *Store) RenewAlbum(albumID string, at time.Time) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`INSERT INTO album_renewed (album_id, renewed_at) VALUES (?, ?)
+ON CONFLICT(album_id) DO UPDATE SET renewed_at = excluded.renewed_at`, albumID, at.Unix()); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`DELETE FROM album_opened WHERE album_id = ?`, albumID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (s *Store) RenewedAlbums() map[string]int64 {
+	out := map[string]int64{}
+	rows, err := s.db.Query(`SELECT album_id, renewed_at FROM album_renewed`)
+	if err != nil {
+		return out
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		var at int64
+		if rows.Scan(&id, &at) == nil {
+			out[id] = at
 		}
 	}
 	return out
