@@ -20,6 +20,7 @@ const store = {
 
 const audio = new Audio();
 audio.preload = "auto";
+audio.setAttribute("x-webkit-airplay", "allow");
 const preloader = new Audio();
 preloader.preload = "auto";
 preloader.muted = true;
@@ -780,6 +781,24 @@ function volumeControl() {
   return wrap;
 }
 
+function castButton() {
+  if (!window.WebKitPlaybackTargetAvailabilityEvent || typeof audio.webkitShowPlaybackTargetPicker !== "function") return null;
+  const b = h("button", { type: "button", class: "pb-b sm cast", hidden: true });
+  const paint = () => {
+    const on = !!audio.webkitCurrentPlaybackTargetIsWireless;
+    const label = on ? t("player.castOn") : t("player.cast");
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-pressed", String(on));
+    b.setAttribute("aria-label", label);
+    b.title = label;
+  };
+  audio.addEventListener("webkitplaybacktargetavailabilitychanged", (e) => { b.hidden = e.availability !== "available" && !audio.webkitCurrentPlaybackTargetIsWireless; });
+  audio.addEventListener("webkitcurrentplaybacktargetiswirelesschanged", paint);
+  b.addEventListener("click", () => { try { audio.webkitShowPlaybackTargetPicker(); } catch {} });
+  paint();
+  return b;
+}
+
 function fitMarquee(box, span) {
   box.classList.remove("run");
   if (box.childNodes.length > 1) box.lastChild.remove();
@@ -849,7 +868,7 @@ export function renderBar(opts = {}) {
       h("div", { class: "bar-seek" }, pos, range, dur),
       h("div", { class: "pb-left" },
         h("div", { class: "pb-screen" }, h("div", { class: "pb-chips" }, netChip(net), rateB), info),
-        h("div", { class: "pb-btns" }, h("i", { class: "pb-grille" }), heartB, repeatB, shuffleB, mobileVolume ? null : volumeControl(), h("i", { class: "pb-grille" })))));
+        h("div", { class: "pb-btns" }, h("i", { class: "pb-grille" }), heartB, repeatB, shuffleB, castButton(), mobileVolume ? null : volumeControl(), h("i", { class: "pb-grille" })))));
 
   bar.append(renderViz(audio, bar));
 

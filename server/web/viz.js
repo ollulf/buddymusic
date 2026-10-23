@@ -41,6 +41,7 @@ function ensureGraph(audio) {
   if (graph.analyser) return Promise.resolve(true);
   if (graph.pending) return graph.pending;
   if (vizSimulated || !AC || document.hidden || !vizEnabled()) return Promise.resolve(false);
+  if (audio.webkitCurrentPlaybackTargetIsWireless) return Promise.resolve(false);
   let ctx;
   try { ctx = new AC(); } catch { return Promise.resolve(false); }
   const start = running(ctx) ? Promise.resolve() : Promise.race([ctx.resume().catch(() => {}), new Promise((r) => setTimeout(r, 400))]);
