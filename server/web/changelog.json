@@ -1,22 +1,26 @@
 [
   {
-    "version": "1.0.2310",
+    "version": "1.0.2310.2",
     "date": "2026-10-23",
     "en": [
       "New albums shine: a rainbow foil that moves as you scroll, with little sparkles",
-      "Album covers sit in a new CD case that tilts toward your mouse",
       "The spinning CD always shows the album's own cover",
       "The friends tab shows everyone who was on in the last 7 days",
       "The player buttons are centered in the bottom bar",
-      "Admins can mark an album as new for everyone again"
+      "Admins can mark an album as new for everyone again",
+      "AirPlay button in the player on iPhone, iPad and Mac (Safari)",
+      "Upload songs and albums with several artists",
+      "Admins can delete albums again"
     ],
     "de": [
       "Neue Alben glänzen: eine Regenbogenfolie, die sich beim Scrollen bewegt, mit kleinen Funkeln",
-      "Albumcover stecken in einer neuen CD-Hülle, die sich zur Maus neigt",
       "Die drehende CD zeigt immer das eigene Cover des Albums",
       "Der Freunde-Tab zeigt alle, die in den letzten 7 Tagen da waren",
       "Die Player-Tasten sitzen mittig in der unteren Leiste",
-      "Admins können ein Album wieder für alle als neu markieren"
+      "Admins können ein Album wieder für alle als neu markieren",
+      "AirPlay-Taste im Player auf iPhone, iPad und Mac (Safari)",
+      "Lade Songs und Alben mit mehreren Künstlern hoch",
+      "Admins können Alben wieder löschen"
     ]
   },
   {
