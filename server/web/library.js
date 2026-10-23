@@ -182,6 +182,7 @@ const DELETE_ERRORS = {
   "outside-library": t("delete.outside"),
   "file-not-found": t("delete.fileNotFound"),
   "not-found": t("delete.notFound"),
+  "move-failed": t("delete.moveFailed"),
 };
 
 async function deleteItem(kind, id, opts) {
