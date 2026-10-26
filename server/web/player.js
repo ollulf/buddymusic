@@ -120,7 +120,7 @@ function pickTier(song, commit) {
 }
 
 const meter = { t0: 0, b0: 0, done: false, playing: null, started: false };
-const play = { offset: 0, tries: 0, blob: "", heard: 0, heardAt: 0, gen: 0, okSince: 0, triedAt: 0 };
+const play = { offset: 0, tries: 0, blob: "", heard: 0, heardAt: 0, gen: 0, okSince: 0 };
 const RETRY_DELAYS = [0, 1500, 4000, 8000];
 const STALL_MS = 15000;
 const stall = { t: 0, b: 0, at: 0 };
@@ -240,7 +240,7 @@ function startStream(song, tier, from = 0) {
   audio.src = blob || (off ? `${base}&timeOffset=${off}` : base);
   if (stale) URL.revokeObjectURL(stale);
   const gen = play.gen;
-  if (seekTo > 0.5) audio.addEventListener("loadedmetadata", () => { if (play.gen === gen) audio.currentTime = seekTo; }, { once: true });
+  if (seekTo > 0.05) audio.addEventListener("loadedmetadata", () => { if (play.gen === gen) audio.currentTime = seekTo; }, { once: true });
 }
 
 function load(i, autoplay = true) {
@@ -249,7 +249,6 @@ function load(i, autoplay = true) {
   Object.assign(listen, { song: current(), secs: 0, last: -1, sent: 0 });
   state.scrobbled = false;
   play.tries = 0;
-  play.triedAt = 0;
   const song = current();
   if (!song) { audio.removeAttribute("src"); audio.load(); emit(); return; }
   startStream(song, pickTier(song, true));
@@ -500,9 +499,8 @@ function retryStream(song, at) {
   const go = () => {
     if (done || play.gen !== gen || current() !== song) return;
     done = true;
-    const back = play.okSince >= play.triedAt ? 0.5 : 0;
-    play.triedAt = Date.now();
-    startStream(song, meter.playing.tier, Math.max(0, at - back));
+    logEvent("retry", `at ${at.toFixed(2)} try ${play.tries}`);
+    startStream(song, meter.playing.tier, Math.max(0, at));
     audio.play().catch(() => {});
     emit();
   };
