@@ -700,6 +700,16 @@ button.pb-b.vol[aria-expanded="true"] { color: var(--accent); }
 .qp-list li { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2); background: var(--card); border-bottom: 2px dashed var(--shade); cursor: pointer; }
 .qp-list li:last-child { border-bottom: 0; }
 .qp-list li:hover, .qp-list li:focus-visible { background: var(--shade); outline: none; }
+.qp-list li.qp-row { display: block; position: relative; overflow: hidden; padding: 0; touch-action: pan-y; }
+.qp-fg { position: relative; z-index: 1; display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2); background: var(--card); will-change: transform; }
+.qp-row:hover .qp-fg, .qp-row:focus-visible .qp-fg { background: var(--shade); }
+.qp-row.swiping { user-select: none; -webkit-user-select: none; }
+.qp-row.swiping .qp-fg { box-shadow: 0 0 0 2px var(--ink); }
+.qp-strip { position: absolute; inset: 0; display: none; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-4); font: var(--fs-sm)/1 var(--pix); color: var(--fg); background: var(--shade); }
+.qp-strip.l { justify-content: flex-start; }
+.qp-strip.r { justify-content: flex-end; }
+.qp-row.go-r .qp-strip.l, .qp-row.go-l .qp-strip.r { display: flex; }
+.qp-row.armed .qp-strip { background: var(--bad); color: var(--accent-fg); }
 .qp-list li.qp-sec { display: block; padding: var(--sp-3) var(--sp-2) var(--sp-1); font-family: var(--mys); font-size: var(--fs-lg); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); cursor: default; border-bottom: 0; }
 .qp-list li.qp-sec:hover { background: none; }
 .qp-list li.qp-empty { font: var(--fs-md) var(--pix); text-transform: none; letter-spacing: 0; }

@@ -87,17 +87,104 @@ export function renderQueue() {
 
   const opB = (label, glyph, fn, off = false) => h("button", { type: "button", class: "qp-op", disabled: off, "aria-label": label, title: label, onclick: (e) => { e.stopPropagation(); fn(); } }, glyph);
 
+  const refocus = (k) => {
+    const rows = list.querySelectorAll("li.qp-row");
+    const el = rows[Math.min(k, rows.length - 1)];
+    if (el) el.focus({ preventScroll: true });
+    else closeB.focus({ preventScroll: true });
+  };
+  const drop = (n, li, keys = false) => {
+    const k = [...list.querySelectorAll("li.qp-row")].indexOf(li);
+    removeAt([n]);
+    if (keys) refocus(Math.max(0, k));
+  };
+  const swipe = (li, fg, n) => {
+    let start = null, dx = 0, mode = null, blockClick = false, last = null, v = 0, busy = false;
+    const setX = (x) => { fg.style.transform = x ? `translateX(${x}px)` : ""; };
+    const reset = () => {
+      li.classList.remove("swiping", "go-r", "go-l", "armed");
+      fg.style.transition = "";
+      setX(0);
+      start = null; mode = null; dx = 0; v = 0;
+    };
+    li.addEventListener("pointerdown", (e) => {
+      if (busy || (e.pointerType === "mouse" && e.button !== 0) || e.target.closest("button")) return;
+      start = { x: e.clientX, y: e.clientY, id: e.pointerId };
+      last = { x: e.clientX, t: e.timeStamp };
+      mode = null; dx = 0; v = 0;
+    });
+    li.addEventListener("pointermove", (e) => {
+      if (!start || e.pointerId !== start.id) return;
+      const mx = e.clientX - start.x, my = e.clientY - start.y;
+      if (!mode) {
+        if (Math.abs(mx) < 10 && Math.abs(my) < 10) return;
+        if (Math.abs(mx) > Math.abs(my) * 1.5) {
+          mode = "swipe";
+          try { li.setPointerCapture(e.pointerId); } catch {}
+          li.classList.add("swiping");
+        } else { start = null; return; }
+      }
+      e.preventDefault();
+      const dt = e.timeStamp - last.t;
+      if (dt > 0) v = (e.clientX - last.x) / dt;
+      last = { x: e.clientX, t: e.timeStamp };
+      dx = mx;
+      li.classList.toggle("go-r", dx > 0);
+      li.classList.toggle("go-l", dx < 0);
+      li.classList.toggle("armed", Math.abs(dx) >= li.offsetWidth * 0.35);
+      if (!calm()) setX(dx);
+    });
+    const end = (e) => {
+      if (!start || e.pointerId !== start.id) return;
+      const was = mode, d = dx, w = li.offsetWidth;
+      const flick = Math.abs(v) > 0.6 && Math.abs(d) > 40 && Math.sign(v) === Math.sign(d);
+      if (was === "swipe") { blockClick = true; setTimeout(() => { blockClick = false; }, 0); }
+      if (was !== "swipe" || (Math.abs(d) < w * 0.35 && !flick)) {
+        if (was === "swipe" && !calm()) {
+          fg.style.transition = "transform .15s ease-out";
+          fg.addEventListener("transitionend", () => { fg.style.transition = ""; }, { once: true });
+        }
+        li.classList.remove("swiping", "go-r", "go-l", "armed");
+        setX(0);
+        start = null; mode = null; dx = 0; v = 0;
+        return;
+      }
+      start = null; mode = null;
+      if (calm()) { drop(n, li); return; }
+      busy = true;
+      li.classList.add("armed");
+      fg.style.transition = "transform .16s ease-in";
+      let done = false;
+      const fin = () => { if (done) return; done = true; drop(n, li); };
+      fg.addEventListener("transitionend", fin, { once: true });
+      setTimeout(fin, 260);
+      setX(d > 0 ? w : -w);
+    };
+    li.addEventListener("pointerup", end);
+    li.addEventListener("pointercancel", (e) => { if (start && e.pointerId === start.id) reset(); });
+    li.addEventListener("click", (e) => { if (blockClick) { e.preventDefault(); e.stopPropagation(); blockClick = false; } }, true);
+  };
+
   const row = (q, i, s, n, ops) => {
-    const li = h("li", {},
+    const fg = h("div", { class: "qp-fg" },
       h("span", { class: "s-no" }, String(n - i)),
       h("span", { class: "s-meta" },
         h("span", { class: "s-title" }, s.title || t("player.unknownTitle")),
         s.artist ? h("span", { class: "s-sub" }, s.artist) : null),
       h("span", { class: "s-dur" }, s.duration ? fmtTime(+s.duration) : ""),
       h("span", { class: "ops" }, ops));
+    const li = h("li", { class: "qp-row", "aria-description": t("queue.swipeHint") },
+      h("div", { class: "qp-strip l", "aria-hidden": "true" }, h("span", { class: "sw-ico" }, "✕"), h("span", {}, t("queue.swipe"))),
+      h("div", { class: "qp-strip r", "aria-hidden": "true" }, h("span", {}, t("queue.swipe")), h("span", { class: "sw-ico" }, "✕")),
+      fg);
     li.tabIndex = 0;
     li.addEventListener("click", () => jump(n));
-    li.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target === li) jump(n); });
+    li.addEventListener("keydown", (e) => {
+      if (e.target !== li) return;
+      if (e.key === "Enter") jump(n);
+      else if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); drop(n, li, true); }
+    });
+    swipe(li, fg, n);
     return li;
   };
   const paintList = () => {
@@ -107,13 +194,11 @@ export function renderQueue() {
     count.textContent = t("queue.tracks", { n: up.length });
     clearB.disabled = !up.length;
     const kids = [];
-    const rm = (n) => opB(t("queue.remove"), "✕", () => removeAt([n]));
     q.forEach((s, n) => {
       if (n < first || n > last) return;
       kids.push(row(q, i, s, n, [
         opB(t("queue.up"), "▲", () => move(n, n - 1), n === first),
         opB(t("queue.down"), "▼", () => move(n, n + 1), n === last),
-        rm(n),
       ]));
     });
     if (!up.length) kids.push(h("li", { class: "qp-sec qp-empty" }, t("queue.empty")));

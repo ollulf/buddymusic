@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.0.2610",
+    "date": "2026-10-26",
+    "en": [
+      "Swipe a song left or right in the queue to remove it"
+    ],
+    "de": [
+      "Wisch einen Song in der Warteschlange nach links oder rechts, um ihn zu entfernen"
+    ]
+  },
+  {
     "version": "1.0.2310.5",
     "date": "2026-10-23",
     "en": [

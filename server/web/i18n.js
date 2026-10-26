@@ -361,6 +361,8 @@ const en = {
   "queue.up": "Move up",
   "queue.down": "Move down",
   "queue.remove": "Remove from queue",
+  "queue.swipe": "Remove",
+  "queue.swipeHint": "Swipe left or right, or press Delete, to remove from queue",
 };
 
 const de = {
@@ -722,6 +724,8 @@ const de = {
   "queue.up": "Nach oben",
   "queue.down": "Nach unten",
   "queue.remove": "Aus der Warteschlange entfernen",
+  "queue.swipe": "Entfernen",
+  "queue.swipeHint": "Zum Entfernen nach links oder rechts wischen oder Entf drücken",
 };
 
 const DICTS = { en, de };
