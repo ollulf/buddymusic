@@ -12,6 +12,7 @@ import { t, relTime, lang } from "./i18n.js";
 import { renderSettings, GEAR, AVATAR, paintAvatar, openFeedback } from "./settings.js";
 import { registerWorker, onOpenRecs } from "./push.js";
 import { recsPanel, recBadge, setUnread, refreshUnread, startRecPolling } from "./recs.js";
+import { friendsSnapshot, friendsFailed, onFriends, refreshFriends } from "./friends.js";
 
 const root = document.getElementById("app");
 
@@ -176,27 +177,30 @@ function friendsPanel() {
   const list = h("ul", { class: "friends" });
   const empty = h("p", { class: "muted friends-empty" }, t("friends.none"));
   let timer = null;
+  const paint = () => {
+    const friends = friendsSnapshot();
+    if (!friends) {
+      if (friendsFailed()) {
+        empty.hidden = false;
+        empty.textContent = t("friends.failed");
+      }
+      return;
+    }
+    list.replaceChildren(...friends.map(friendRow));
+    empty.hidden = friends.some((f) => f.online);
+    empty.textContent = friends.length ? t("friends.nobody") : t("friends.none");
+  };
+  onFriends(paint);
   const stop = () => {
     clearInterval(timer);
     timer = null;
   };
-  const load = async () => {
+  const load = () => {
     if (!list.isConnected) return stop();
-    try {
-      const res = await fetch("/api/friends");
-      if (res.status === 401) {
-        stop();
-        return showLogin();
-      }
-      if (!res.ok) throw new Error();
-      const body = await res.json();
-      list.replaceChildren(...body.friends.map(friendRow));
-      empty.hidden = body.friends.some((f) => f.online);
-      empty.textContent = body.friends.length ? t("friends.nobody") : t("friends.none");
-    } catch {
-      empty.hidden = false;
-      empty.textContent = t("friends.failed");
-    }
+    refreshFriends().catch(() => {
+      stop();
+      showLogin();
+    });
   };
   const el = h("section", { class: "friends-panel", "aria-label": t("friends.title") },
     h("h3", {}, t("friends.title")), list, empty);
@@ -204,11 +208,25 @@ function friendsPanel() {
     el,
     start() {
       stop();
+      paint();
       timer = setInterval(load, 30000);
       load();
     },
     stop,
   };
+}
+
+function friendsDot(btn, user) {
+  const dot = h("span", { class: "friends-dot", "aria-hidden": "true", hidden: true });
+  const paint = () => {
+    const n = (friendsSnapshot() || []).filter((f) => f.online).length;
+    dot.hidden = !n;
+    dot.textContent = n > 9 ? "9+" : String(n);
+    btn.title = n ? `${user} · ${t("friends.onlineCount", { n })}` : user;
+  };
+  onFriends(paint);
+  paint();
+  return dot;
 }
 
 let changelog = null;
@@ -287,7 +305,7 @@ function profileMenu(user, admin, avatar, version) {
   });
   openRecsMenu = () => { if (menu.hidden) btn.click(); };
   if (pendingRecs) { pendingRecs = false; setTimeout(openRecsMenu, 0); }
-  return h("div", { class: "profile" }, btn, recBadge(), menu);
+  return h("div", { class: "profile" }, btn, recBadge(), friendsDot(btn, user), menu);
 }
 
 const QUALITY_LETTERS = { auto: "A", original: "O", normal: "N", low: "L" };
