@@ -874,6 +874,6 @@ dialog.sheet.album-edit-dialog { width: min(560px, calc(100vw - 32px)); max-heig
 @media (max-width: 520px) { .edit-grid, .edit-track { grid-template-columns: 1fr; } }
 .art.jc .vinyl-tag { position: absolute; z-index: var(--z-ribbon); left: 6px; bottom: 6px; padding: 1px 5px 0; background: var(--ink); color: #f4f4f4; border: 2px solid #f4f4f4; box-shadow: 2px 2px 0 var(--ink); font-family: var(--pix); font-weight: 700; font-size: var(--fs-xs); line-height: 14px; letter-spacing: 1px; transform: rotate(-4deg); pointer-events: none; -webkit-font-smoothing: none; }
 .art.big.jc .vinyl-tag { left: 10px; bottom: 10px; padding: 2px 8px 1px; font-size: var(--fs-sm); line-height: 18px; }
-.art.small.jc .vinyl-tag { display: none; }
+.art.small.jc .vinyl-tag { left: 1px; bottom: 1px; padding: 0 2px; border-width: 1px; box-shadow: 1px 1px 0 var(--ink); font-size: 7px; line-height: 8px; letter-spacing: 0; transform: none; }
 .field.edit-check { flex-direction: row; align-items: center; gap: var(--sp-2); color: var(--fg); cursor: pointer; }
 .field.edit-check input { width: 18px; height: 18px; padding: 0; margin: 0; accent-color: var(--accent); }

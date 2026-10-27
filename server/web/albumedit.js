@@ -59,7 +59,7 @@ export function openAlbumEdit(al, songs, opts = {}) {
       const res = await apiJSON("PATCH", `/api/admin/album/${encodeURIComponent(al.id)}`, body);
       toast(res.scan === "started" || res.scan === "skipped" ? t("edit.saved") : t("edit.savedNoScan"));
       dlg.close();
-      opts.onSaved?.();
+      opts.onSaved?.(body);
     } catch (err) {
       if (err instanceof Unauthorized) { dlg.close(); opts.onUnauthorized?.(); return; }
       status.textContent = t("edit.failed", { error: ERRORS[err.message] ? t(ERRORS[err.message]) : err.message });

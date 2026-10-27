@@ -302,7 +302,7 @@ async function renderAlbum(container, id, opts) {
             h("button", { onclick: () => player.addToQueue(songs), disabled: !songs.length }, t("song.addToQueue")),
             songs.length ? addToPlaylistButton(songs, opts, "") : null,
             heartButton(al, "album", { cls: "album-heart", onUnauthorized: opts.onUnauthorized }),
-            opts.admin ? h("button", { onclick: (e) => openAlbumEdit(al, songs, { returnTo: e.currentTarget, onUnauthorized: opts.onUnauthorized, onSaved: () => renderAlbum(container, id, opts) }) }, t("library.editAlbum")) : null,
+            opts.admin ? h("button", { onclick: (e) => openAlbumEdit(al, songs, { returnTo: e.currentTarget, onUnauthorized: opts.onUnauthorized, onSaved: (body) => { if (body && "vinyl" in body) { if (body.vinyl) vinylAlbums.add(al.id); else vinylAlbums.delete(al.id); } renderAlbum(container, id, opts); } }) }, t("library.editAlbum")) : null,
             opts.admin ? h("button", { onclick: renewAlbum }, t("library.renewAlbum")) : null,
             opts.admin ? h("button", { class: "danger", onclick: deleteAlbum }, t("library.deleteAlbum")) : null))),
       h("ol", { class: "songs card" }, songs.map((_, i) => songRow(songs, i, { album: al, onDelete: deleteTrack, onUnauthorized: opts.onUnauthorized }))));
