@@ -255,10 +255,19 @@ func (p *pusher) send(sub PushSub, payload []byte) error {
 	return nil
 }
 
-func recPushText(lang, from string, song RecSong) string {
+func recPushText(lang, from, kind string, song RecSong) string {
 	what := song.Title
+	if kind == recKindAlbum {
+		what = song.Album
+	}
 	if song.Artist != "" {
 		what += " – " + song.Artist
+	}
+	if kind == recKindAlbum {
+		if lang == "de" {
+			return from + " empfiehlt das Album " + what
+		}
+		return from + " recommends the album " + what
 	}
 	if lang == "de" {
 		return from + " empfiehlt " + what
@@ -266,7 +275,7 @@ func recPushText(lang, from string, song RecSong) string {
 	return from + " recommends " + what
 }
 
-func (a *App) notifyRecs(from string, to []string, song RecSong, note string) {
+func (a *App) notifyRecs(from string, to []string, kind string, song RecSong, note string) {
 	a.push.wg.Add(1)
 	go func() {
 		defer a.push.wg.Done()
@@ -277,7 +286,7 @@ func (a *App) notifyRecs(from string, to []string, song RecSong, note string) {
 				continue
 			}
 			for _, sub := range subs {
-				payload, _ := json.Marshal(map[string]string{"title": recPushText(sub.Lang, from, song), "body": note, "url": "/?recs=1", "tag": "rec"})
+				payload, _ := json.Marshal(map[string]string{"title": recPushText(sub.Lang, from, kind, song), "body": note, "url": "/?recs=1", "tag": "rec"})
 				err := a.push.send(sub, payload)
 				if errors.Is(err, errPushGone) {
 					a.store.DropPushEndpoint(sub.Endpoint)

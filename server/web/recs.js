@@ -1,5 +1,5 @@
 import { t, relTime } from "./i18n.js";
-import { h, api, apiJSON, Unauthorized } from "./dom.js";
+import { h, api, apiJSON, Unauthorized, cover } from "./dom.js";
 import * as player from "./player.js";
 import { toast } from "./playlists.js";
 import { AVATAR } from "./settings.js";
@@ -44,7 +44,18 @@ function pic(user, avatar) {
 
 const songOf = (s) => ({ id: s.id, title: s.title || "", artist: s.artist || "", album: s.album || "", albumId: s.albumId || "", coverArt: s.coverArt || "", duration: s.duration || 0 });
 
-export async function openRecommendSheet(song, opts = {}) {
+const albumOf = (al) => ({ id: al.id, name: al.name || al.title || "", artist: al.artist || "", coverArt: al.coverArt || "" });
+
+export function openRecommendSheet(song, opts = {}) {
+  return recommendSheet(t("recs.sheetTitle", { title: song.title || t("player.unknownTitle") }), { song: songOf(song) }, opts);
+}
+
+export function openAlbumRecommendSheet(al, opts = {}) {
+  const album = albumOf(al);
+  return recommendSheet(t("recs.sheetTitleAlbum", { title: album.name || t("library.unknownAlbum") }), { kind: "album", album }, opts);
+}
+
+async function recommendSheet(heading, item, opts) {
   const picked = new Set();
   const list = h("ul", { class: "sheet-list rec-pick" }, h("li", { class: "muted" }, t("common.loading")));
   const note = h("textarea", { class: "rec-note", rows: 2, maxlength: NOTE_MAX, placeholder: t("recs.notePlaceholder"), "aria-label": t("recs.notePlaceholder") });
@@ -57,14 +68,14 @@ export async function openRecommendSheet(song, opts = {}) {
     send.textContent = picked.size > 1 ? t("recs.sendMany", { n: picked.size }) : t("recs.send");
   };
   const dlg = h("dialog", { class: "sheet card rec-sheet" },
-    h("h2", {}, t("recs.sheetTitle", { title: song.title || t("player.unknownTitle") })),
+    h("h2", {}, heading),
     list,
     h("form", { class: "rec-form", onsubmit: async (e) => {
       e.preventDefault();
       if (!picked.size) return;
       send.disabled = true;
       try {
-        await apiJSON("POST", "/api/recs", { song: songOf(song), to: [...picked], note: note.value.trim() });
+        await apiJSON("POST", "/api/recs", { ...item, to: [...picked], note: note.value.trim() });
         dlg.close();
         toast(picked.size > 1 ? t("recs.sentMany", { n: picked.size }) : t("recs.sentOne", { user: [...picked][0] }));
       } catch (err) {
@@ -100,7 +111,38 @@ export async function openRecommendSheet(song, opts = {}) {
   }
 }
 
-function recRow(r, onDismiss) {
+async function albumSongs(al) {
+  const body = await api(`/api/music/album/${encodeURIComponent(al.id)}`);
+  return (body.song || []).map((s) => ({ ...s, coverArt: s.coverArt || body.coverArt || al.coverArt }));
+}
+
+function albumRecRow(r, onDismiss, opts) {
+  const al = r.album;
+  const name = al.name || t("library.unknownAlbum");
+  const label = al.artist ? `${name} – ${al.artist}` : name;
+  const href = `#/library/album/${encodeURIComponent(al.id)}`;
+  const open = () => opts.onNavigate?.();
+  const play = async () => {
+    try {
+      const songs = await albumSongs(al);
+      if (songs.length) player.playList(songs, 0);
+      else toast(t("recs.albumGone"));
+    } catch { toast(t("recs.albumGone")); }
+  };
+  return h("li", { class: `rec rec-album${r.seen ? "" : " new"}` },
+    h("a", { class: "rec-cover", href, onclick: open, "aria-hidden": "true", tabindex: "-1" }, cover(al.coverArt, 96, "art tiny")),
+    h("span", { class: "friend-text" },
+      h("span", { class: "tag rec-kind" }, t("recs.album")),
+      h("a", { class: "linkish rec-track", href, title: label, onclick: open }, label),
+      h("span", { class: "friend-what" }, t("recs.from", { user: r.from, when: relTime(r.createdAt) })),
+      r.note ? h("span", { class: "rec-note-text" }, `“${r.note}”`) : null),
+    h("span", { class: "rec-actions" },
+      h("button", { class: "icon", type: "button", title: t("recs.playAlbum"), "aria-label": t("recs.playAlbum"), onclick: play }, "▶"),
+      h("button", { class: "icon", type: "button", title: t("recs.dismiss"), "aria-label": t("recs.dismiss"), onclick: () => onDismiss(r) }, "✕")));
+}
+
+function recRow(r, onDismiss, opts) {
+  if (r.kind === "album" && r.album) return albumRecRow(r, onDismiss, opts);
   const s = r.song;
   const title = s.title || t("player.unknownTitle");
   const track = s.artist ? `${title} – ${s.artist}` : title;
@@ -118,14 +160,14 @@ function recRow(r, onDismiss) {
       h("button", { class: "icon", type: "button", title: t("recs.dismiss"), "aria-label": t("recs.dismiss"), onclick: () => onDismiss(r) }, "✕")));
 }
 
-export function recsPanel() {
+export function recsPanel(opts = {}) {
   const list = h("ul", { class: "friends recs" });
   const el = h("section", { class: "friends-panel recs-panel", "aria-label": t("recs.title"), hidden: true },
     h("h3", {}, t("recs.title")), list);
   let items = [];
   const paint = () => {
     el.hidden = !items.length;
-    list.replaceChildren(...items.map((r) => recRow(r, dismiss)));
+    list.replaceChildren(...items.map((r) => recRow(r, dismiss, opts)));
   };
   const dismiss = async (r) => {
     items = items.filter((x) => x.id !== r.id);

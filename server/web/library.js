@@ -7,7 +7,7 @@ import { rowMenuButton, swipeRow } from "./rowactions.js";
 import { flyFrom } from "./fly.js";
 import { holo, sparkles, unholo } from "./holo.js";
 import { openAlbumEdit } from "./albumedit.js";
-import { openRecommendSheet } from "./recs.js";
+import { openRecommendSheet, openAlbumRecommendSheet } from "./recs.js";
 
 const deletedSongs = new Set();
 const deletedAlbums = new Set();
@@ -368,6 +368,7 @@ async function renderAlbum(container, id, opts) {
             h("button", { onclick: () => player.addToQueue(songs), disabled: !songs.length }, t("song.addToQueue")),
             songs.length ? addToPlaylistButton(songs, opts, "") : null,
             heartButton(al, "album", { cls: "album-heart", onUnauthorized: opts.onUnauthorized }),
+            al.id ? h("button", { onclick: () => openAlbumRecommendSheet(al, opts) }, `${t("recs.recommendTo")}…`) : null,
             opts.admin ? h("button", { onclick: (e) => openAlbumEdit(al, songs, { returnTo: e.currentTarget, onUnauthorized: opts.onUnauthorized, onBackChanged: () => setBackVersion(al.id, Date.now()), onSaved: (body) => { if (body && "vinyl" in body) { if (body.vinyl) vinylAlbums.add(al.id); else vinylAlbums.delete(al.id); } renderAlbum(container, id, opts); } }) }, t("library.editAlbum")) : null,
             opts.admin ? h("button", { onclick: renewAlbum }, t("library.renewAlbum")) : null,
             opts.admin ? h("button", { class: "danger", onclick: deleteAlbum }, t("library.deleteAlbum")) : null))),

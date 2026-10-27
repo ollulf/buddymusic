@@ -500,6 +500,9 @@ button.heart[aria-pressed="true"]::before { content: ""; --i: var(--i-heartfull)
 .rec-track { padding: 0; text-align: left; color: var(--fg); font-size: var(--fs-sm); overflow-wrap: anywhere; box-shadow: none; }
 .rec .friend-what { white-space: normal; }
 .rec.new .rec-track { color: var(--orange); }
+.rec-cover { flex: none; display: block; }
+.rec-kind { justify-self: start; font-size: var(--fs-xs); text-transform: uppercase; color: var(--accent); border: 2px solid var(--accent); padding: 0 var(--sp-1); }
+.rec-album .rec-track { text-decoration: none; }
 .rec-note-text { font-size: var(--fs-xs); color: var(--fg); overflow-wrap: anywhere; }
 .rec-actions { flex: none; display: flex; gap: 2px; }
 .rec-actions .icon { width: 28px; height: 28px; padding: 0; }

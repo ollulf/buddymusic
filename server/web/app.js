@@ -258,7 +258,7 @@ function profileMenu(user, admin, avatar, version) {
   headerAvatar = { version: avatar || 0, paint() { paintAvatar(btn, this.version); } };
   headerAvatar.paint();
   const friends = friendsPanel();
-  const recs = recsPanel();
+  const recs = recsPanel({ onNavigate: () => close() });
   const settingsItem = h("button", { class: "ghost settings-item", type: "button", role: "menuitem", onclick: () => { close(); location.hash = "#/settings"; } });
   settingsItem.innerHTML = GEAR;
   settingsItem.append(t("settings.title"));
