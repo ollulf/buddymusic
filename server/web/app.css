@@ -872,8 +872,3 @@ dialog.sheet.album-edit-dialog { width: min(560px, calc(100vw - 32px)); max-heig
 .edit-track { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); padding-bottom: var(--sp-2); border-bottom: 1px solid var(--shade); }
 .album-edit .actions { display: flex; gap: var(--sp-2); }
 @media (max-width: 520px) { .edit-grid, .edit-track { grid-template-columns: 1fr; } }
-.rec-alert { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + var(--sp-3)); transform: translateX(-50%); z-index: var(--z-toast); width: min(440px, calc(100vw - 32px)); display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); background: var(--card); color: var(--ink); border: 2px solid var(--ink); box-shadow: var(--bevel), 4px 4px 0 var(--ink); cursor: pointer; animation: rec-alert-in .25s ease-out; }
-.rec-alert-text { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: .9rem; overflow-wrap: anywhere; }
-.rec-alert .rec-note-text { font-size: .8rem; opacity: .8; }
-@keyframes rec-alert-in { from { transform: translate(-50%, -120%); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .rec-alert { animation: none; } }

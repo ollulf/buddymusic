@@ -11,7 +11,7 @@ import { renderAdmin } from "./admin.js";
 import { t, relTime, lang } from "./i18n.js";
 import { renderSettings, GEAR, AVATAR, paintAvatar, openFeedback } from "./settings.js";
 import { registerWorker, onOpenRecs } from "./push.js";
-import { recsPanel, recBadge, setUnread, refreshUnread, startRecPolling, setRecsOpener } from "./recs.js";
+import { recsPanel, recBadge, setUnread, refreshUnread, startRecPolling } from "./recs.js";
 
 const root = document.getElementById("app");
 
@@ -249,9 +249,7 @@ function openChangelog(version, returnTo) {
 let openRecsMenu = null;
 let pendingRecs = false;
 registerWorker();
-const openRecs = () => { if (openRecsMenu) openRecsMenu(); else pendingRecs = true; };
-onOpenRecs(openRecs);
-setRecsOpener(openRecs);
+onOpenRecs(() => { if (openRecsMenu) openRecsMenu(); else pendingRecs = true; });
 
 let headerAvatar = { version: 0, paint() {} };
 
@@ -332,7 +330,6 @@ function showApp(user, admin, avatar, me = {}) {
   setNewAlbums(me.newSince, me.ownAlbums, me.openedAlbums, me.renewedAlbums);
   setUnread(me.recsUnread);
   startRecPolling();
-  refreshUnread();
   const TABS = admin === true ? [...BASE_TABS, ["admin", t("tab.admin")]] : BASE_TABS;
   const opts = { onUnauthorized: showLogin, admin: admin === true };
   setPlaylistUser(user);

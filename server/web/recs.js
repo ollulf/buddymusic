@@ -28,87 +28,8 @@ export function recBadge() {
   return b;
 }
 
-const ALERT_KEY = "bm.recAlerts";
-const SEEN_KEY = "bm.recAnnounced";
-const POLL_MS = 25000;
-let opener = null;
-let banner = null;
-let bannerTimer = null;
-let pollTimer = null;
-
-export function recAlertsOn() {
-  try { return localStorage.getItem(ALERT_KEY) !== "0"; } catch { return true; }
-}
-
-export function setRecAlerts(on) {
-  try { localStorage.setItem(ALERT_KEY, on ? "1" : "0"); } catch {}
-}
-
-export function setRecsOpener(fn) { opener = fn; }
-
-function announced() {
-  try { return new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || "[]")); } catch { return new Set(); }
-}
-
-function remember(ids) {
-  try { localStorage.setItem(SEEN_KEY, JSON.stringify(ids.slice(-200))); } catch {}
-}
-
-function hideBanner() {
-  clearTimeout(bannerTimer);
-  if (banner) banner.remove();
-  banner = null;
-}
-
-function showBanner(fresh) {
-  hideBanner();
-  const r = fresh[0];
-  const s = r.song;
-  const title = s.title || t("player.unknownTitle");
-  const track = s.artist ? `${title} – ${s.artist}` : title;
-  const open = () => { hideBanner(); opener?.(); };
-  const text = fresh.length > 1
-    ? h("span", { class: "rec-alert-text" }, t("recs.unread", { n: fresh.length }))
-    : h("span", { class: "rec-alert-text" },
-      t("recs.alert", { user: r.from, track }),
-      r.note ? h("span", { class: "rec-note-text" }, `“${r.note}”`) : null);
-  const play = fresh.length === 1
-    ? h("button", { class: "icon", type: "button", title: t("recs.play"), "aria-label": t("recs.play"), onclick: (e) => { e.stopPropagation(); hideBanner(); player.playList([songOf(s)], 0); } }, "▶")
-    : null;
-  const shut = h("button", { class: "icon", type: "button", title: t("recs.close"), "aria-label": t("recs.close"), onclick: (e) => { e.stopPropagation(); hideBanner(); } }, "✕");
-  banner = h("div", { class: "rec-alert", role: "status", onclick: open },
-    fresh.length > 1 ? null : pic(r.from, r.avatar), text, play, shut);
-  document.body.append(banner);
-  try { navigator.vibrate?.(60); } catch {}
-  bannerTimer = setTimeout(hideBanner, 6000);
-}
-
 export async function refreshUnread() {
-  try {
-    const body = await api("/api/recs");
-    setUnread(body.unread);
-    const known = announced();
-    const fresh = (body.recs || []).filter((r) => !r.seen && !known.has(r.id));
-    if (!fresh.length) return;
-    remember([...known, ...fresh.map((r) => r.id)]);
-    if (recAlertsOn() && document.visibilityState === "visible") showBanner(fresh);
-  } catch {}
-}
-
-function poll() {
-  clearInterval(pollTimer);
-  pollTimer = null;
-  if (document.visibilityState !== "visible") return;
-  refreshUnread();
-  pollTimer = setInterval(refreshUnread, POLL_MS);
-}
-
-export function startRecPolling() {
-  if (startRecPolling.on) return;
-  startRecPolling.on = true;
-  document.addEventListener("visibilitychange", poll);
-  window.addEventListener("focus", () => { if (document.visibilityState === "visible") refreshUnread(); });
-  pollTimer = setInterval(refreshUnread, POLL_MS);
+  try { setUnread((await api("/api/recs")).unread); } catch {}
 }
 
 function pic(user, avatar) {
@@ -223,4 +144,23 @@ export function recsPanel() {
     } catch {}
   };
   return { el, start: load, stop() {} };
+}
+
+const POLL_MS = 60000;
+let pollTimer = null;
+
+function poll() {
+  clearInterval(pollTimer);
+  pollTimer = null;
+  if (document.visibilityState !== "visible") return;
+  refreshUnread();
+  pollTimer = setInterval(refreshUnread, POLL_MS);
+}
+
+export function startRecPolling() {
+  if (startRecPolling.on) return;
+  startRecPolling.on = true;
+  document.addEventListener("visibilitychange", poll);
+  window.addEventListener("focus", () => { if (document.visibilityState === "visible") refreshUnread(); });
+  pollTimer = setInterval(refreshUnread, POLL_MS);
 }
