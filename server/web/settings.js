@@ -2,6 +2,7 @@ import { settings, setQuality, setFormat, setPreload, PRELOADS, onChange, QUALIT
 import { t, lang, LANGS, setLang } from "./i18n.js";
 import { apiJSON, Unauthorized } from "./dom.js";
 import { pushSupported, needsHomeScreen, pushEnabled, enablePush, disablePush } from "./push.js";
+import { recAlertsOn, setRecAlerts } from "./recs.js";
 import { vizEnabled, setVizEnabled, vizRisky, vizRouted } from "./viz.js";
 
 const h = (tag, attrs = {}, ...kids) => {
@@ -199,6 +200,14 @@ function vizRow() {
 }
 
 function pushRow() {
+  const inApp = h("input", { type: "checkbox", onchange: () => setRecAlerts(inApp.checked) });
+  inApp.checked = recAlertsOn();
+  return h("div", {},
+    h("div", { class: "settings-radios" }, h("label", {}, inApp, " ", t("settings.inAppOn"))),
+    phonePushRow());
+}
+
+function phonePushRow() {
   if (needsHomeScreen) return h("p", { class: "muted" }, t("settings.pushHomeScreen"));
   if (!pushSupported) return h("p", { class: "muted" }, t("settings.pushUnsupported"));
   const note = h("p", { class: "muted", hidden: true });

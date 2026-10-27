@@ -11,7 +11,7 @@ import { renderAdmin } from "./admin.js";
 import { t, relTime, lang } from "./i18n.js";
 import { renderSettings, GEAR, AVATAR, paintAvatar, openFeedback } from "./settings.js";
 import { registerWorker, onOpenRecs } from "./push.js";
-import { recsPanel, recBadge, setUnread, refreshUnread } from "./recs.js";
+import { recsPanel, recBadge, setUnread, refreshUnread, startRecPolling, setRecsOpener } from "./recs.js";
 
 const root = document.getElementById("app");
 
@@ -246,11 +246,12 @@ function openChangelog(version, returnTo) {
   }).catch(() => body.replaceChildren(h("p", { class: "muted" }, t("news.failed"))));
 }
 
-let recsTimer = null;
 let openRecsMenu = null;
 let pendingRecs = false;
 registerWorker();
-onOpenRecs(() => { if (openRecsMenu) openRecsMenu(); else pendingRecs = true; });
+const openRecs = () => { if (openRecsMenu) openRecsMenu(); else pendingRecs = true; };
+onOpenRecs(openRecs);
+setRecsOpener(openRecs);
 
 let headerAvatar = { version: 0, paint() {} };
 
@@ -330,7 +331,8 @@ function qualityButton() {
 function showApp(user, admin, avatar, me = {}) {
   setNewAlbums(me.newSince, me.ownAlbums, me.openedAlbums, me.renewedAlbums);
   setUnread(me.recsUnread);
-  if (!recsTimer) recsTimer = setInterval(refreshUnread, 120000);
+  startRecPolling();
+  refreshUnread();
   const TABS = admin === true ? [...BASE_TABS, ["admin", t("tab.admin")]] : BASE_TABS;
   const opts = { onUnauthorized: showLogin, admin: admin === true };
   setPlaylistUser(user);
