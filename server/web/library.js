@@ -6,6 +6,8 @@ import { addToPlaylistButton, openAddSheet, toast } from "./playlists.js";
 import { rowMenuButton, swipeRow } from "./rowactions.js";
 import { flyFrom } from "./fly.js";
 import { holo, sparkles, unholo } from "./holo.js";
+import { openAlbumEdit } from "./albumedit.js";
+import { openRecommendSheet } from "./recs.js";
 
 const deletedSongs = new Set();
 const deletedAlbums = new Set();
@@ -145,6 +147,7 @@ export function songRow(songs, i, opts = {}) {
     { icon: "⤵", label: t("song.playNext"), run: next },
     { icon: "+", label: t("song.addToQueue"), run: queue },
     { icon: "☰", label: `${t("playlists.addTo")}…`, run: () => openAddSheet([s], opts) },
+    s.id ? { icon: "✉", label: `${t("recs.recommendTo")}…`, run: () => openRecommendSheet(s, opts) } : null,
     ...(opts.menu || []),
     opts.onDelete ? { icon: "✕", label: t("library.deleteTrack"), danger: true, run: () => opts.onDelete(s) } : null,
   ]);
@@ -170,7 +173,9 @@ export function artistList(artists) {
   return h("ul", { class: "artist-list" }, artists.map((ar) => h("li", {},
     h("a", { href: `#/library/artist/${encodeURIComponent(ar.id)}` },
       h("span", {}, ar.name),
-      h("span", { class: "muted" }, t("library.albumCount", { n: ar.albumCount || 0 }))))));
+      h("span", { class: "muted" }, ar.featured && !ar.albumCount
+        ? t("library.featuredCount", { n: ar.appearsOnCount || 0 })
+        : t("library.albumCount", { n: ar.albumCount || 0 }))))));
 }
 
 function failBox(e, opts) {
@@ -291,6 +296,7 @@ async function renderAlbum(container, id, opts) {
             h("button", { onclick: () => player.addToQueue(songs), disabled: !songs.length }, t("song.addToQueue")),
             songs.length ? addToPlaylistButton(songs, opts, "") : null,
             heartButton(al, "album", { cls: "album-heart", onUnauthorized: opts.onUnauthorized }),
+            opts.admin ? h("button", { onclick: (e) => openAlbumEdit(al, songs, { returnTo: e.currentTarget, onUnauthorized: opts.onUnauthorized, onSaved: () => renderAlbum(container, id, opts) }) }, t("library.editAlbum")) : null,
             opts.admin ? h("button", { onclick: renewAlbum }, t("library.renewAlbum")) : null,
             opts.admin ? h("button", { class: "danger", onclick: deleteAlbum }, t("library.deleteAlbum")) : null))),
       h("ol", { class: "songs card" }, songs.map((_, i) => songRow(songs, i, { album: al, onDelete: deleteTrack, onUnauthorized: opts.onUnauthorized }))));
@@ -304,9 +310,11 @@ async function renderArtist(container, id, opts) {
   try {
     const ar = await api(`/api/music/artist/${encodeURIComponent(id)}`);
     setPageTitle(ar.name || t("library.unknownArtist"), container);
+    const appears = liveAlbums(ar.appearsOn);
     container.replaceChildren(
       h("a", { class: "back", href: "#/library/artists" }, t("library.backArtists")),
-      h("div", { class: "grid" }, liveAlbums(ar.album).map(albumCard)));
+      h("div", { class: "grid" }, liveAlbums(ar.album).map(albumCard)),
+      ...(appears.length ? [h("h2", { class: "appears-on" }, t("library.appearsOn")), h("div", { class: "grid" }, appears.map(albumCard))] : []));
   } catch (e) {
     container.replaceChildren(h("a", { class: "back", href: "#/library/artists" }, t("library.backArtists")), failBox(e, opts));
   }

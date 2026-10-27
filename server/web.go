@@ -27,6 +27,9 @@ const shellHead = `<!doctype html>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="icon" href="/icon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a1c2c">
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/app.css">
 <script src="/vendor/jsmediatags.min.js" defer></script>
@@ -41,6 +44,7 @@ const shellTail = `</head>
 func init() {
 	mime.AddExtensionType(".ttf", "font/ttf")
 	mime.AddExtensionType(".woff2", "font/woff2")
+	mime.AddExtensionType(".webmanifest", "application/manifest+json")
 }
 
 type staticFile struct {
@@ -101,7 +105,7 @@ func loadStatic() map[string]*staticFile {
 			cache = "public, max-age=604800"
 		}
 		files["/"+p] = newStaticFile(body, ctype, cache)
-		if strings.HasSuffix(p, ".js") && !strings.HasPrefix(p, "vendor/") && p != "app.js" && p != "theme.js" {
+		if strings.HasSuffix(p, ".js") && !strings.HasPrefix(p, "vendor/") && p != "app.js" && p != "theme.js" && p != "sw.js" {
 			modules = append(modules, p)
 		}
 		return nil

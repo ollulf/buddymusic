@@ -1,6 +1,8 @@
 import { settings, setQuality, setFormat, setPreload, PRELOADS, onChange, QUALITIES, FORMATS, opusSupported } from "./player.js";
 import { t, lang, LANGS, setLang } from "./i18n.js";
 import { apiJSON, Unauthorized } from "./dom.js";
+import { pushSupported, needsHomeScreen, pushEnabled, enablePush, disablePush } from "./push.js";
+import { recAlertsOn, setRecAlerts } from "./recs.js";
 import { vizEnabled, setVizEnabled, vizRisky, vizRouted } from "./viz.js";
 
 const h = (tag, attrs = {}, ...kids) => {
@@ -197,6 +199,37 @@ function vizRow() {
     note);
 }
 
+function pushRow() {
+  const inApp = h("input", { type: "checkbox", onchange: () => setRecAlerts(inApp.checked) });
+  inApp.checked = recAlertsOn();
+  return h("div", {},
+    h("div", { class: "settings-radios" }, h("label", {}, inApp, " ", t("settings.inAppOn"))),
+    phonePushRow());
+}
+
+function phonePushRow() {
+  if (needsHomeScreen) return h("p", { class: "muted" }, t("settings.pushHomeScreen"));
+  if (!pushSupported) return h("p", { class: "muted" }, t("settings.pushUnsupported"));
+  const note = h("p", { class: "muted", hidden: true });
+  const box = h("input", { type: "checkbox", disabled: true, onchange: async () => {
+    box.disabled = true;
+    note.hidden = true;
+    try {
+      if (box.checked) await enablePush();
+      else await disablePush();
+    } catch (err) {
+      box.checked = !box.checked;
+      note.textContent = t(err.message === "denied" ? "settings.pushDenied" : "settings.pushFailed");
+      note.hidden = false;
+    }
+    box.disabled = false;
+  } });
+  pushEnabled().then((on) => { box.checked = on; box.disabled = false; }, () => { box.disabled = false; });
+  return h("div", {},
+    h("div", { class: "settings-radios" }, h("label", {}, box, " ", t("settings.pushOn"))),
+    note);
+}
+
 function languageRow() {
   return h("div", {},
     radios("language", Object.keys(LANGS), (k) => LANGS[k], () => lang, setLang));
@@ -264,6 +297,7 @@ export function openFeedback(returnTo) {
 
 const ITEMS = [
   { id: "language", label: () => t("settings.language"), render: languageRow },
+  { id: "push", label: () => t("settings.push"), render: pushRow },
   { id: "theme", label: () => t("settings.theme"), render: themeRow },
   { id: "viz", label: () => t("settings.viz"), render: vizRow },
   { id: "quality", label: () => t("settings.quality"), render: qualityRow },

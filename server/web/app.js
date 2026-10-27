@@ -10,6 +10,8 @@ import { renderPlaylists, setPlaylistUser } from "./playlists.js";
 import { renderAdmin } from "./admin.js";
 import { t, relTime, lang } from "./i18n.js";
 import { renderSettings, GEAR, AVATAR, paintAvatar, openFeedback } from "./settings.js";
+import { registerWorker, onOpenRecs } from "./push.js";
+import { recsPanel, recBadge, setUnread, refreshUnread, startRecPolling, setRecsOpener } from "./recs.js";
 
 const root = document.getElementById("app");
 
@@ -244,6 +246,13 @@ function openChangelog(version, returnTo) {
   }).catch(() => body.replaceChildren(h("p", { class: "muted" }, t("news.failed"))));
 }
 
+let openRecsMenu = null;
+let pendingRecs = false;
+registerWorker();
+const openRecs = () => { if (openRecsMenu) openRecsMenu(); else pendingRecs = true; };
+onOpenRecs(openRecs);
+setRecsOpener(openRecs);
+
 let headerAvatar = { version: 0, paint() {} };
 
 function profileMenu(user, admin, avatar, version) {
@@ -251,12 +260,13 @@ function profileMenu(user, admin, avatar, version) {
   headerAvatar = { version: avatar || 0, paint() { paintAvatar(btn, this.version); } };
   headerAvatar.paint();
   const friends = friendsPanel();
+  const recs = recsPanel();
   const settingsItem = h("button", { class: "ghost settings-item", type: "button", role: "menuitem", onclick: () => { close(); location.hash = "#/settings"; } });
   settingsItem.innerHTML = GEAR;
   settingsItem.append(t("settings.title"));
   const menu = h("div", { class: "profile-menu", role: "menu", hidden: true },
     h("div", { class: "profile-name" }, user, admin ? h("span", { class: "tag" }, "admin") : null),
-    friends.el, settingsItem,
+    recs.el, friends.el, settingsItem,
     h("button", { class: "ghost", type: "button", role: "menuitem", "aria-haspopup": "dialog", onclick: () => { close(); openFeedback(btn); } }, t("settings.feedback")),
     h("button", { class: "ghost", type: "button", role: "menuitem", onclick: logout }, t("profile.logout")),
     h("p", { class: "powered" }, t("app.powered")),
@@ -273,10 +283,13 @@ function profileMenu(user, admin, avatar, version) {
     if (!menu.hidden) return close();
     menu.hidden = false;
     friends.start();
+    recs.start();
     btn.setAttribute("aria-expanded", "true");
     closeProfile = close;
   });
-  return h("div", { class: "profile" }, btn, menu);
+  openRecsMenu = () => { if (menu.hidden) btn.click(); };
+  if (pendingRecs) { pendingRecs = false; setTimeout(openRecsMenu, 0); }
+  return h("div", { class: "profile" }, btn, recBadge(), menu);
 }
 
 const QUALITY_LETTERS = { auto: "A", original: "O", normal: "N", low: "L" };
@@ -317,6 +330,9 @@ function qualityButton() {
 
 function showApp(user, admin, avatar, me = {}) {
   setNewAlbums(me.newSince, me.ownAlbums, me.openedAlbums, me.renewedAlbums);
+  setUnread(me.recsUnread);
+  startRecPolling();
+  refreshUnread();
   const TABS = admin === true ? [...BASE_TABS, ["admin", t("tab.admin")]] : BASE_TABS;
   const opts = { onUnauthorized: showLogin, admin: admin === true };
   setPlaylistUser(user);

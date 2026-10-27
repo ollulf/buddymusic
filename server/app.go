@@ -19,12 +19,14 @@ type App struct {
 	seen     seenThrottle
 	jumps    jumpLimiter
 	feedback jumpLimiter
+	feat     featuredCache
+	push     *pusher
 }
 
 func NewApp(cfg *Config, store *Store) *App {
 	nav := NewNavidrome(cfg.NavidromeURL)
 	return &App{cfg: cfg, store: store, nav: nav, scanner: NewScanner(nav, cfg.ScanUser, cfg.ScanPassword, cfg.ScanDelay),
-		feedback: jumpLimiter{window: 10 * time.Minute, max: 5}}
+		feedback: jumpLimiter{window: 10 * time.Minute, max: 5}, push: newPusher(store)}
 }
 
 func (a *App) Routes() http.Handler {
@@ -38,12 +40,18 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("DELETE /api/avatar", a.requireUser(a.handleDeleteAvatar))
 	mux.Handle("GET /api/avatar/{user}", a.requireUser(a.handleFriendAvatar))
 	mux.Handle("GET /api/friends", a.requireUser(a.handleFriends))
+	mux.Handle("GET /api/recs", a.requireUser(a.handleListRecs))
+	mux.Handle("POST /api/recs", a.requireUser(a.handleSendRec))
+	mux.Handle("POST /api/recs/{id}", a.requireUser(a.handleMarkRec))
+	mux.Handle("GET /api/push/key", a.requireUser(a.handlePushKey))
+	mux.Handle("POST /api/push/subscription", a.requireUser(a.handlePushSubscribe))
+	mux.Handle("DELETE /api/push/subscription", a.requireUser(a.handlePushUnsubscribe))
 	mux.Handle("POST /api/uploads", a.requireUser(a.handleUpload))
 	mux.Handle("GET /api/uploads", a.requireUser(a.handleListUploads))
 	mux.Handle("GET /api/uploads/{id}", a.requireUser(a.handleGetUpload))
 	mux.Handle("GET /api/covers", a.requireUser(a.handleCoverExists))
-	mux.Handle("GET /api/music/artists", a.requireUser(a.musicJSON("getArtists.view", "artists", noParams)))
-	mux.Handle("GET /api/music/artist/{id}", a.requireUser(a.musicJSON("getArtist.view", "artist", idParam)))
+	mux.Handle("GET /api/music/artists", a.requireUser(a.handleArtists))
+	mux.Handle("GET /api/music/artist/{id}", a.requireUser(a.handleArtist))
 	mux.Handle("GET /api/music/albums", a.requireUser(a.musicJSON("getAlbumList2.view", "albumList2", albumListParams)))
 	mux.Handle("GET /api/music/album/{id}", a.requireUser(a.handleAlbum))
 	mux.Handle("POST /api/music/album/{id}/opened", a.requireUser(a.handleAlbumOpened))
@@ -68,6 +76,7 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("GET /api/admin/stats", a.requireUser(a.handleAdminStats))
 	mux.Handle("GET /api/admin/feedback", a.requireUser(a.handleAdminFeedback))
 	mux.Handle("POST /api/admin/album/{id}/renew", a.requireUser(a.handleAlbumRenew))
+	mux.Handle("PATCH /api/admin/album/{id}", a.requireUser(a.handleAlbumEdit))
 	mux.Handle("DELETE /api/music/track/{id}", a.requireUser(a.adminDelete(a.loadTrack)))
 	mux.Handle("DELETE /api/music/album/{id}", a.requireUser(a.adminDelete(a.loadAlbum)))
 	mux.Handle("GET /", a.webHandler())

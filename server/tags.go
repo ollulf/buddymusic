@@ -31,6 +31,7 @@ var tagAliases = map[string]string{
 	"album_artist": "albumartist",
 	"albumartist":  "albumartist",
 	"album artist": "albumartist",
+	"genre":        "genre",
 }
 
 const maxTagLen = 300
@@ -306,6 +307,9 @@ func writeTags(ctx context.Context, in, out, ext string, typed map[string]string
 	}
 	if v, ok := typed["albumartist"]; ok {
 		args = append(args, flag, "album_artist="+v)
+	}
+	if v, ok := typed["genre"]; ok {
+		args = append(args, flag, "genre="+v)
 	}
 	args = append(args, "-f", ffmpegFormat(ext), "-y", out)
 	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
