@@ -871,6 +871,8 @@ dialog.sheet.album-edit-dialog { width: min(560px, calc(100vw - 32px)); max-heig
 .edit-tracks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
 .edit-track { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); padding-bottom: var(--sp-2); border-bottom: 1px solid var(--shade); }
 .album-edit .actions { display: flex; gap: var(--sp-2); }
+.edit-back { display: flex; flex-direction: column; gap: var(--sp-2); }
+.edit-back-preview img { display: block; width: 120px; height: 120px; object-fit: cover; border: 1px solid var(--shade); }
 @media (max-width: 520px) { .edit-grid, .edit-track { grid-template-columns: 1fr; } }
 .art.jc .vinyl-tag { position: absolute; z-index: var(--z-ribbon); left: 6px; bottom: 6px; padding: 1px 5px 0; background: var(--ink); color: #f4f4f4; border: 2px solid #f4f4f4; box-shadow: 2px 2px 0 var(--ink); font-family: var(--pix); font-weight: 700; font-size: var(--fs-xs); line-height: 14px; letter-spacing: 1px; transform: rotate(-4deg); pointer-events: none; -webkit-font-smoothing: none; }
 .art.big.jc .vinyl-tag { left: 10px; bottom: 10px; padding: 2px 8px 1px; font-size: var(--fs-sm); line-height: 18px; }

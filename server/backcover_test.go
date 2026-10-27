@@ -81,3 +81,61 @@ func TestSetBackCoverOutsideLibrary(t *testing.T) {
 		}
 	}
 }
+
+func backReq(t *testing.T, a *App, cookie *http.Cookie, method string, body []byte) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(method, "/api/admin/album/al1/back", bytes.NewReader(body))
+	req.AddCookie(cookie)
+	return do(t, a.Routes(), req)
+}
+
+func TestAlbumBackAdminOnly(t *testing.T) {
+	a := vinylApp(t)
+	cookie := login(t, a)
+	if rec := backReq(t, a, cookie, "PUT", jpeg(t)); rec.Code != http.StatusForbidden {
+		t.Fatalf("non-admin put: %d %s", rec.Code, rec.Body)
+	}
+	if f := backCoverFile(filepath.Join(a.cfg.LibraryDir(), "max/Old/Disc")); f != "" {
+		t.Fatalf("non-admin wrote %s", f)
+	}
+	if rec := backReq(t, a, cookie, "DELETE", nil); rec.Code != http.StatusForbidden {
+		t.Fatalf("non-admin delete: %d %s", rec.Code, rec.Body)
+	}
+}
+
+func TestAlbumBackReplaceAndRemove(t *testing.T) {
+	a := vinylApp(t)
+	boss := loginAs(t, a, "boss", "bosspw")
+	dir := filepath.Join(a.cfg.LibraryDir(), "max/Old/Disc")
+	back := jpeg(t)
+	if rec := backReq(t, a, boss, "PUT", back); rec.Code != http.StatusNoContent {
+		t.Fatalf("put: %d %s", rec.Code, rec.Body)
+	}
+	got, err := os.ReadFile(filepath.Join(dir, "back.jpg"))
+	if err != nil || !bytes.Equal(got, back) {
+		t.Fatalf("back not written: %v", err)
+	}
+	if !strings.Contains(authed(t, a, httptest.NewRequest("GET", "/api/music/album/al1", nil)).Body.String(), `"backV":`) {
+		t.Fatal("album lacks backV")
+	}
+	if rec := backReq(t, a, boss, "DELETE", nil); rec.Code != http.StatusNoContent {
+		t.Fatalf("delete: %d %s", rec.Code, rec.Body)
+	}
+	if f := backCoverFile(dir); f != "" {
+		t.Fatalf("back still there: %s", f)
+	}
+	if strings.Contains(authed(t, a, httptest.NewRequest("GET", "/api/music/album/al1", nil)).Body.String(), `"hasBack"`) {
+		t.Fatal("hasBack after delete")
+	}
+}
+
+func TestAlbumBackRejectsNonImage(t *testing.T) {
+	a := vinylApp(t)
+	boss := loginAs(t, a, "boss", "bosspw")
+	if rec := backReq(t, a, boss, "PUT", []byte("hello")); rec.Code != http.StatusUnsupportedMediaType {
+		t.Fatalf("non-image: %d %s", rec.Code, rec.Body)
+	}
+	if f := backCoverFile(filepath.Join(a.cfg.LibraryDir(), "max/Old/Disc")); f != "" {
+		t.Fatalf("non-image wrote %s", f)
+	}
+}

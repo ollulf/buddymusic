@@ -28,6 +28,18 @@ func backCoverFile(dir string) string {
 	return ""
 }
 
+func backCoverVersion(dir string) int64 {
+	f := backCoverFile(dir)
+	if f == "" {
+		return 0
+	}
+	st, err := os.Stat(f)
+	if err != nil {
+		return 0
+	}
+	return max(st.ModTime().UnixMilli(), 1)
+}
+
 func saveBackCover(ctx context.Context, dir string, data []byte) error {
 	if sniffImage(data) == "" {
 		return errors.New("unsupported back cover type")
@@ -112,4 +124,90 @@ func (a *App) handleBackCover(w http.ResponseWriter, r *http.Request, user strin
 	}
 	w.Header().Set("Cache-Control", "private, max-age=3600")
 	http.ServeContent(w, r, "", st.ModTime(), f)
+}
+
+func removeBackCover(dir string) error {
+	for _, n := range backCoverNames {
+		if err := os.Remove(filepath.Join(dir, n)); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+	}
+	return nil
+}
+
+func (a *App) adminAlbumDir(w http.ResponseWriter, r *http.Request) (string, string, bool) {
+	id := r.PathValue("id")
+	if !validID(id) {
+		writeError(w, http.StatusBadRequest, "bad-request")
+		return "", "", false
+	}
+	creds, err := a.sessionCreds(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return "", "", false
+	}
+	admin, err := a.checkAdmin(r.Context(), creds)
+	if err == nil && !admin {
+		writeError(w, http.StatusForbidden, "admin-only")
+		return "", "", false
+	}
+	var songs []navSong
+	if err == nil {
+		songs, err = a.loadAlbum(r.Context(), creds, id)
+	}
+	switch {
+	case errors.Is(err, ErrBadLogin):
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return "", "", false
+	case errors.Is(err, ErrNotFound):
+		writeError(w, http.StatusNotFound, "not-found")
+		return "", "", false
+	case err != nil:
+		log.Printf("album back %s: %v", id, err)
+		writeError(w, http.StatusBadGateway, "navidrome-unreachable")
+		return "", "", false
+	}
+	dir := a.libraryFolderDir(a.albumFolder(songs))
+	if len(songs) == 0 || dir == "" {
+		writeError(w, http.StatusConflict, "file-not-found")
+		return "", "", false
+	}
+	return id, dir, true
+}
+
+func (a *App) handleAlbumBackPut(w http.ResponseWriter, r *http.Request, user string) {
+	id, dir, ok := a.adminAlbumDir(w, r)
+	if !ok {
+		return
+	}
+	data, err := readLimited(http.MaxBytesReader(w, r.Body, maxCoverSize+1), maxCoverSize)
+	if err != nil {
+		writeError(w, http.StatusRequestEntityTooLarge, "too-large")
+		return
+	}
+	if sniffImage(data) == "" {
+		writeError(w, http.StatusUnsupportedMediaType, "unsupported-cover-type")
+		return
+	}
+	if err := saveBackCover(r.Context(), dir, data); err != nil {
+		log.Printf("album back %s: %v", id, err)
+		writeError(w, http.StatusInternalServerError, "write-failed")
+		return
+	}
+	log.Printf("album back %s by %s: replaced", id, user)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (a *App) handleAlbumBackDelete(w http.ResponseWriter, r *http.Request, user string) {
+	id, dir, ok := a.adminAlbumDir(w, r)
+	if !ok {
+		return
+	}
+	if err := removeBackCover(dir); err != nil {
+		log.Printf("album back %s: %v", id, err)
+		writeError(w, http.StatusInternalServerError, "write-failed")
+		return
+	}
+	log.Printf("album back %s by %s: removed", id, user)
+	w.WriteHeader(http.StatusNoContent)
 }
