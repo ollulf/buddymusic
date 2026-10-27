@@ -492,6 +492,24 @@ button.heart[aria-pressed="true"]::before { content: ""; --i: var(--i-heartfull)
 .friend-what { font-size: var(--fs-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .friend.playing .friend-what { color: var(--orange); }
 .friends-empty { margin: 0; font-size: var(--fs-xs); }
+.rec-badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; display: grid; place-items: center; font-family: var(--num); font-size: 11px; line-height: 1; color: var(--accent-fg); background: var(--orange); border: 2px solid var(--ink); pointer-events: none; z-index: 1; }
+.rec-badge[hidden] { display: none; }
+.recs-panel[hidden] { display: none; }
+.rec { display: flex; gap: var(--sp-2); align-items: flex-start; min-width: 0; color: var(--muted); }
+.rec .friend-text { flex: 1; }
+.rec-track { padding: 0; text-align: left; color: var(--fg); font-size: var(--fs-sm); overflow-wrap: anywhere; box-shadow: none; }
+.rec .friend-what { white-space: normal; }
+.rec.new .rec-track { color: var(--orange); }
+.rec-note-text { font-size: var(--fs-xs); color: var(--fg); overflow-wrap: anywhere; }
+.rec-actions { flex: none; display: flex; gap: 2px; }
+.rec-actions .icon { width: 28px; height: 28px; padding: 0; }
+.rec-pick { max-height: 40vh; overflow-y: auto; }
+.rec-who { display: flex; gap: var(--sp-2); align-items: center; min-width: 0; }
+.rec-friend[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.rec-check { flex: none; width: 1.2em; text-align: center; }
+.rec-form { display: grid; grid-template-columns: 1fr auto; gap: var(--sp-2); align-items: center; }
+.rec-note { grid-column: 1 / -1; resize: vertical; min-height: 3em; font: inherit; padding: var(--sp-2); background: var(--bg); color: var(--fg); border: 2px solid var(--ink); }
+.rec-count { font-size: var(--fs-xs); }
 .view-settings { position: fixed; inset: 0; z-index: var(--z-view); overflow-y: auto; overflow-x: hidden; background: var(--bg); padding: 16px 16px 150px; }
 body.settings-open { overflow: hidden; }
 .settings-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); max-width: 720px; margin: 0 auto var(--sp-4); padding-bottom: var(--sp-3); border-bottom: 2px solid var(--ink); }

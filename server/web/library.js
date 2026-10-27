@@ -7,6 +7,7 @@ import { rowMenuButton, swipeRow } from "./rowactions.js";
 import { flyFrom } from "./fly.js";
 import { holo, sparkles, unholo } from "./holo.js";
 import { openAlbumEdit } from "./albumedit.js";
+import { openRecommendSheet } from "./recs.js";
 
 const deletedSongs = new Set();
 const deletedAlbums = new Set();
@@ -146,6 +147,7 @@ export function songRow(songs, i, opts = {}) {
     { icon: "⤵", label: t("song.playNext"), run: next },
     { icon: "+", label: t("song.addToQueue"), run: queue },
     { icon: "☰", label: `${t("playlists.addTo")}…`, run: () => openAddSheet([s], opts) },
+    s.id ? { icon: "✉", label: `${t("recs.recommendTo")}…`, run: () => openRecommendSheet(s, opts) } : null,
     ...(opts.menu || []),
     opts.onDelete ? { icon: "✕", label: t("library.deleteTrack"), danger: true, run: () => opts.onDelete(s) } : null,
   ]);
