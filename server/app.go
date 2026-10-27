@@ -19,6 +19,7 @@ type App struct {
 	seen     seenThrottle
 	jumps    jumpLimiter
 	feedback jumpLimiter
+	feat     featuredCache
 }
 
 func NewApp(cfg *Config, store *Store) *App {
@@ -42,8 +43,8 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("GET /api/uploads", a.requireUser(a.handleListUploads))
 	mux.Handle("GET /api/uploads/{id}", a.requireUser(a.handleGetUpload))
 	mux.Handle("GET /api/covers", a.requireUser(a.handleCoverExists))
-	mux.Handle("GET /api/music/artists", a.requireUser(a.musicJSON("getArtists.view", "artists", noParams)))
-	mux.Handle("GET /api/music/artist/{id}", a.requireUser(a.musicJSON("getArtist.view", "artist", idParam)))
+	mux.Handle("GET /api/music/artists", a.requireUser(a.handleArtists))
+	mux.Handle("GET /api/music/artist/{id}", a.requireUser(a.handleArtist))
 	mux.Handle("GET /api/music/albums", a.requireUser(a.musicJSON("getAlbumList2.view", "albumList2", albumListParams)))
 	mux.Handle("GET /api/music/album/{id}", a.requireUser(a.handleAlbum))
 	mux.Handle("POST /api/music/album/{id}/opened", a.requireUser(a.handleAlbumOpened))

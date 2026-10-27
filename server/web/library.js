@@ -171,7 +171,9 @@ export function artistList(artists) {
   return h("ul", { class: "artist-list" }, artists.map((ar) => h("li", {},
     h("a", { href: `#/library/artist/${encodeURIComponent(ar.id)}` },
       h("span", {}, ar.name),
-      h("span", { class: "muted" }, t("library.albumCount", { n: ar.albumCount || 0 }))))));
+      h("span", { class: "muted" }, ar.featured && !ar.albumCount
+        ? t("library.featuredCount", { n: ar.appearsOnCount || 0 })
+        : t("library.albumCount", { n: ar.albumCount || 0 }))))));
 }
 
 function failBox(e, opts) {
@@ -306,9 +308,11 @@ async function renderArtist(container, id, opts) {
   try {
     const ar = await api(`/api/music/artist/${encodeURIComponent(id)}`);
     setPageTitle(ar.name || t("library.unknownArtist"), container);
+    const appears = liveAlbums(ar.appearsOn);
     container.replaceChildren(
       h("a", { class: "back", href: "#/library/artists" }, t("library.backArtists")),
-      h("div", { class: "grid" }, liveAlbums(ar.album).map(albumCard)));
+      h("div", { class: "grid" }, liveAlbums(ar.album).map(albumCard)),
+      ...(appears.length ? [h("h2", { class: "appears-on" }, t("library.appearsOn")), h("div", { class: "grid" }, appears.map(albumCard))] : []));
   } catch (e) {
     container.replaceChildren(h("a", { class: "back", href: "#/library/artists" }, t("library.backArtists")), failBox(e, opts));
   }
