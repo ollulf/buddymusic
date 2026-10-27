@@ -69,18 +69,18 @@ func (s *Store) userKnown(user string) bool {
 	return n > 0
 }
 
-func (s *Store) SendRecs(from string, to []string, song RecSong, note string, now time.Time) (int, error) {
+func (s *Store) SendRecs(from string, to []string, song RecSong, note string, now time.Time) ([]string, error) {
 	seen := map[string]bool{}
 	list := []string{}
 	for _, u := range to {
 		if u == from {
-			return 0, errRecSelf
+			return nil, errRecSelf
 		}
 		if seen[u] {
 			continue
 		}
 		if !s.userKnown(u) {
-			return 0, errRecUnknown
+			return nil, errRecUnknown
 		}
 		seen[u] = true
 		list = append(list, u)
@@ -88,20 +88,23 @@ func (s *Store) SendRecs(from string, to []string, song RecSong, note string, no
 	var sent int
 	s.db.QueryRow(`SELECT COUNT(*) FROM recommendations WHERE sender = ? AND created_at > ?`, from, now.Add(-time.Hour).Unix()).Scan(&sent)
 	if sent+len(list) > recPerHour {
-		return 0, errRecLimit
+		return nil, errRecLimit
 	}
 	tx, err := s.db.Begin()
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	defer tx.Rollback()
 	for _, u := range list {
 		if _, err := tx.Exec(`INSERT INTO recommendations (id, sender, recipient, song_id, title, artist, album, album_id, cover_art, duration, note, created_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, newID(), from, u, song.ID, song.Title, song.Artist, song.Album, song.AlbumID, song.CoverArt, song.Duration, note, now.Unix()); err != nil {
-			return 0, err
+			return nil, err
 		}
 	}
-	return len(list), tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return list, nil
 }
 
 func (s *Store) Recs(user string, limit int) ([]Rec, error) {
@@ -170,7 +173,7 @@ func (a *App) handleSendRec(w http.ResponseWriter, r *http.Request, user string)
 	}
 	song := RecSong{ID: body.Song.ID, Title: clipField(body.Song.Title), Artist: clipField(body.Song.Artist), Album: clipField(body.Song.Album),
 		AlbumID: clipField(body.Song.AlbumID), CoverArt: clipField(body.Song.CoverArt), Duration: max(0, body.Song.Duration)}
-	n, err := a.store.SendRecs(user, body.To, song, note, time.Now())
+	list, err := a.store.SendRecs(user, body.To, song, note, time.Now())
 	switch {
 	case errors.Is(err, errRecSelf), errors.Is(err, errRecUnknown):
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -179,7 +182,8 @@ func (a *App) handleSendRec(w http.ResponseWriter, r *http.Request, user string)
 	case err != nil:
 		writeError(w, http.StatusInternalServerError, "store")
 	default:
-		writeJSON(w, http.StatusOK, map[string]any{"sent": n})
+		a.notifyRecs(user, list, song, note)
+		writeJSON(w, http.StatusOK, map[string]any{"sent": len(list)})
 	}
 }
 

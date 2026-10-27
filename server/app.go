@@ -20,12 +20,13 @@ type App struct {
 	jumps    jumpLimiter
 	feedback jumpLimiter
 	feat     featuredCache
+	push     *pusher
 }
 
 func NewApp(cfg *Config, store *Store) *App {
 	nav := NewNavidrome(cfg.NavidromeURL)
 	return &App{cfg: cfg, store: store, nav: nav, scanner: NewScanner(nav, cfg.ScanUser, cfg.ScanPassword, cfg.ScanDelay),
-		feedback: jumpLimiter{window: 10 * time.Minute, max: 5}}
+		feedback: jumpLimiter{window: 10 * time.Minute, max: 5}, push: newPusher(store)}
 }
 
 func (a *App) Routes() http.Handler {
@@ -42,6 +43,9 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("GET /api/recs", a.requireUser(a.handleListRecs))
 	mux.Handle("POST /api/recs", a.requireUser(a.handleSendRec))
 	mux.Handle("POST /api/recs/{id}", a.requireUser(a.handleMarkRec))
+	mux.Handle("GET /api/push/key", a.requireUser(a.handlePushKey))
+	mux.Handle("POST /api/push/subscription", a.requireUser(a.handlePushSubscribe))
+	mux.Handle("DELETE /api/push/subscription", a.requireUser(a.handlePushUnsubscribe))
 	mux.Handle("POST /api/uploads", a.requireUser(a.handleUpload))
 	mux.Handle("GET /api/uploads", a.requireUser(a.handleListUploads))
 	mux.Handle("GET /api/uploads/{id}", a.requireUser(a.handleGetUpload))
