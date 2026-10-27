@@ -88,4 +88,11 @@ done
 systemctl is-active buddymusic-api
 curl -fsS http://127.0.0.1:4534/api/health && echo
 grep -q '^SCAN_PASSWORD=$' "$ENV_FILE" && echo "Note: SCAN_PASSWORD is empty, Navidrome finds new uploads on its own watcher or schedule."
-echo "Open: http://$(tailscale status --self --json 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["Self"]["DNSName"].split(".")[0])' 2>/dev/null || echo musicbox):4534"
+TS_HOST=$(tailscale status --self --json 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))' 2>/dev/null || true)
+TS_HTTPS=$(tailscale serve status --json 2>/dev/null | python3 -c 'import json,sys;d=json.load(sys.stdin);print(any(h.get("Proxy","").rstrip("/").endswith("127.0.0.1:4534") for w in (d.get("Web") or {}).values() for h in (w.get("Handlers") or {}).values()))' 2>/dev/null || echo False)
+if [ -n "$TS_HOST" ] && { [ "$TS_HTTPS" = True ] || grep -qiE '^SECURE_COOKIE="?(true|1)' "$ENV_FILE"; }; then
+    echo "Open: https://$TS_HOST/"
+else
+    TS_SHORT=${TS_HOST%%.*}
+    echo "Open: http://${TS_SHORT:-musicbox}:4534"
+fi
