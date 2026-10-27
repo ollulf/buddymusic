@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -92,6 +93,13 @@ func (a *App) albumDirs(songs []navSong) (exact, suffix []string) {
 		if s.Path == "" || filepath.IsAbs(s.Path) {
 			continue
 		}
+		if d := a.safeAlbumDir(lib, s.Path); d != "" {
+			if !seenE[d] {
+				seenE[d] = true
+				exact = append(exact, d)
+			}
+			continue
+		}
 		d := path.Dir(strings.TrimPrefix(path.Clean("/"+filepath.ToSlash(s.Path)), "/"))
 		if d == "." || seenS[d] {
 			continue
@@ -100,6 +108,52 @@ func (a *App) albumDirs(songs []navSong) (exact, suffix []string) {
 		suffix = append(suffix, d)
 	}
 	return exact, suffix
+}
+
+func (a *App) safeAlbumDir(lib, songPath string) string {
+	if lib == "" {
+		return ""
+	}
+	dir := path.Dir(path.Clean("/" + filepath.ToSlash(songPath)))
+	var segs []string
+	for _, seg := range strings.Split(strings.TrimPrefix(dir, "/"), "/") {
+		if seg == "" || seg == "." || seg == ".." {
+			return ""
+		}
+		segs = append(segs, safeSegment(seg))
+	}
+	if len(segs) == 0 {
+		return ""
+	}
+	rel := path.Join(segs...)
+	cands := []string{rel}
+	if users, err := os.ReadDir(lib); err == nil {
+		for _, u := range users {
+			if u.IsDir() && !strings.HasPrefix(u.Name(), ".") {
+				cands = append(cands, path.Join(u.Name(), rel))
+			}
+		}
+	}
+	found := ""
+	for _, c := range cands {
+		real, err := filepath.EvalSymlinks(filepath.Join(lib, filepath.FromSlash(c)))
+		if err != nil || !inside(lib, real) {
+			continue
+		}
+		if st, err := os.Stat(real); err != nil || !st.IsDir() {
+			continue
+		}
+		r, err := filepath.Rel(lib, real)
+		if err != nil {
+			continue
+		}
+		r = filepath.ToSlash(r)
+		if found != "" && found != r {
+			return ""
+		}
+		found = r
+	}
+	return found
 }
 
 func (a *App) albumFolder(songs []navSong) string {
