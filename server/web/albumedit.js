@@ -1,5 +1,5 @@
 import { t } from "./i18n.js";
-import { h, apiJSON, Unauthorized } from "./dom.js";
+import { h, api, apiJSON, Unauthorized } from "./dom.js";
 import { toast } from "./playlists.js";
 
 const ERRORS = {
@@ -32,7 +32,13 @@ export function openAlbumEdit(al, songs, opts = {}) {
   const [nameF, name] = field(t("edit.album"), al.name, { required: true, maxlength: 300 });
   const [artistF, artist] = field(t("edit.albumArtist"), albumArtist(al), { required: true, maxlength: 300, placeholder: "Artist; Other Artist" });
   const [yearF, year] = field(t("edit.year"), al.year ? String(al.year) : "", { inputmode: "numeric", pattern: "[0-9]{4}", maxlength: 4 });
-  const [genreF, genre] = field(t("edit.genre"), al.genre, { maxlength: 300 });
+  const [genreF, genre] = field(t("edit.genre"), al.genre, { maxlength: 300, list: "edit-genre-list", autocomplete: "off" });
+  const genreOptions = h("datalist", { id: "edit-genre-list" });
+  genreF.append(genreOptions);
+  api("/api/music/genres").then((d) => {
+    const names = [...new Set([...(d.list || []), ...(d.genres || []).map((g) => g.name)])];
+    genreOptions.replaceChildren(...names.map((n) => h("option", { value: n })));
+  }).catch(() => {});
   const vinyl = h("input", { type: "checkbox", checked: !!al.vinyl });
   const vinylF = h("label", { class: "field edit-check" }, vinyl, h("span", {}, t("edit.vinyl")));
   const rows = songs.map((s, i) => {

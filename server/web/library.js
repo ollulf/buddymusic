@@ -254,14 +254,67 @@ function failBox(e, opts) {
 
 let prefetched = null;
 
-const albumsPath = (kind) => `/api/music/albums?type=${kind}&size=60`;
+const genreSel = new Set();
+let genresPromise = null;
+const genreQuery = () => [...genreSel].map((g) => `&genre=${encodeURIComponent(g)}`).join("");
+const albumsPath = (kind) => `/api/music/albums?type=${kind}&size=60${genreQuery()}`;
+
+function loadGenres() {
+  if (!genresPromise) {
+    genresPromise = api("/api/music/genres");
+    genresPromise.catch(() => { genresPromise = null; });
+  }
+  return genresPromise;
+}
+
+export function filterByGenre(name) {
+  genreSel.clear();
+  genreSel.add(name);
+}
+
+function genreChip(name, on, onclick) {
+  return h("button", { type: "button", class: `pill genre-chip${on ? " on" : ""}`, "aria-pressed": String(on), onclick }, name);
+}
+
+function genreRow(onChange) {
+  const row = h("div", { class: "genre-row", role: "group", "aria-label": t("genre.filter") });
+  const draw = (genres) => {
+    const names = genres.map((g) => g.name);
+    for (const g of genreSel) if (!names.includes(g)) names.unshift(g);
+    if (!names.length) { row.hidden = true; return; }
+    const toggle = (n) => () => {
+      if (genreSel.has(n)) genreSel.delete(n); else genreSel.add(n);
+      onChange();
+    };
+    row.replaceChildren(
+      genreSel.size ? h("button", { type: "button", class: "pill genre-clear", onclick: () => { genreSel.clear(); onChange(); } }, `✕ ${t("genre.clear")}`) : null,
+      ...names.map((n) => genreChip(n, genreSel.has(n), toggle(n))));
+  };
+  draw([]);
+  loadGenres().then((d) => draw(d.genres || [])).catch(() => draw([]));
+  return row;
+}
+
+async function genreArtists() {
+  const data = await api(`/api/music/albums?type=alphabeticalByName&size=500${genreQuery()}`);
+  const byId = new Map();
+  for (const al of liveAlbums(data.album)) {
+    const key = al.artistId || al.artist;
+    if (!key) continue;
+    const ar = byId.get(key) || { id: al.artistId || "", name: al.artist, albumCount: 0 };
+    ar.albumCount++;
+    byId.set(key, ar);
+  }
+  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
 
 export function prefetchLibrary(parts) {
   const kind = parts[0] || "newest";
   if (kind === "artists" || !LISTS.some(([k]) => k === kind)) return;
-  const promise = api(albumsPath(kind));
+  const path = albumsPath(kind);
+  const promise = api(path);
   promise.catch(() => {});
-  prefetched = { kind, promise };
+  prefetched = { path, promise };
 }
 
 export function dropLibraryPrefetch() {
@@ -271,15 +324,21 @@ export function dropLibraryPrefetch() {
 function albumsFor(kind) {
   const p = prefetched;
   prefetched = null;
-  return p && p.kind === kind ? p.promise : api(albumsPath(kind));
+  const path = albumsPath(kind);
+  return p && p.path === path ? p.promise : api(path);
 }
 
 async function renderLists(container, kind, opts) {
   const chips = h("nav", { class: "chips-nav" },
     LISTS.map(([k, label]) => h("a", { class: `pill${k === kind ? " on" : ""}`, href: `#/library/${k}` }, label)));
   const body = h("div", { class: "muted" }, t("common.loading"));
-  container.replaceChildren(chips, body);
+  container.replaceChildren(genreRow(() => renderLists(container, kind, opts)), chips, body);
   try {
+    if (kind === "artists" && genreSel.size) {
+      const artists = await genreArtists();
+      body.replaceWith(artists.length ? h("div", { class: "artists" }, artistList(artists)) : h("div", { class: "card muted" }, t("genre.noArtists")));
+      return;
+    }
     if (kind === "artists") {
       const data = await api("/api/music/artists");
       const groups = data.index || [];
@@ -290,7 +349,7 @@ async function renderLists(container, kind, opts) {
     const data = await albumsFor(kind);
     const albums = liveAlbums(data.album);
     body.replaceWith(albums.length ? h("div", { class: "grid" }, albums.map(albumCard))
-      : h("div", { class: "card muted" }, t("library.noAlbums")));
+      : h("div", { class: "card muted" }, t(genreSel.size ? "genre.noAlbums" : "library.noAlbums")));
   } catch (e) {
     body.replaceWith(failBox(e, opts));
   }
@@ -360,6 +419,8 @@ async function renderAlbum(container, id, opts) {
         h("div", { class: "album-info" },
           albumArtistLinks(al, songs),
           h("div", { class: "muted" }, [al.year, t("common.songCount", { n: songs.length }), fmtTime(total)].filter(Boolean).join(" · ")),
+          Array.isArray(al.genreTags) && al.genreTags.length
+            ? h("div", { class: "album-genres", role: "group", "aria-label": t("genre.album") }, al.genreTags.map((g) => h("a", { class: "pill genre-chip", href: "#/library/newest", title: t("genre.showAll", { name: g }), onclick: () => filterByGenre(g) }, g))) : null,
           Array.isArray(al.uploadedBy) && al.uploadedBy.length
             ? h("div", { class: "uploaded-by" }, t("library.uploadedBy", { names: al.uploadedBy.join(", ") })) : null,
           h("div", { class: "actions" },
