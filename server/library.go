@@ -84,6 +84,10 @@ func writeNew(path string, data []byte) error {
 }
 
 func replaceCover(ctx context.Context, dir string, data []byte) error {
+	return replaceImage(ctx, dir, "cover", data)
+}
+
+func replaceImage(ctx context.Context, dir, base string, data []byte) error {
 	data = shrinkCover(ctx, dir, data)
 	ext := sniffImage(data)
 	if ext == "" {
@@ -102,11 +106,11 @@ func replaceCover(ctx context.Context, dir string, data []byte) error {
 		return err
 	}
 	os.Chmod(tmp.Name(), 0o664)
-	if err := os.Rename(tmp.Name(), filepath.Join(dir, "cover"+ext)); err != nil {
+	if err := os.Rename(tmp.Name(), filepath.Join(dir, base+ext)); err != nil {
 		return err
 	}
-	for _, other := range []string{"cover.jpg", "cover.png"} {
-		if other != "cover"+ext {
+	for _, other := range []string{base + ".jpg", base + ".png"} {
+		if other != base+ext {
 			os.Remove(filepath.Join(dir, other))
 		}
 	}

@@ -69,6 +69,7 @@ type uploadForm struct {
 	ext      string
 	tagsJSON []byte
 	cover    []byte
+	back     []byte
 	vinyl    bool
 }
 
@@ -149,6 +150,20 @@ func (a *App) readPart(part *multipart.Part, f *uploadForm, dir, id string) (int
 		case "1", "true", "on", "yes":
 			f.vinyl = true
 		}
+	case "back":
+		b, err := readLimited(part, maxCoverSize)
+		if errors.Is(err, errTooLarge) {
+			return http.StatusRequestEntityTooLarge, "cover-too-large"
+		}
+		if err != nil {
+			return http.StatusBadRequest, "bad-cover"
+		}
+		if len(b) > 0 {
+			if sniffImage(b) == "" {
+				return http.StatusUnsupportedMediaType, "unsupported-cover-type"
+			}
+			f.back = b
+		}
 	case "cover":
 		b, err := readLimited(part, maxCoverSize)
 		if errors.Is(err, errTooLarge) {
@@ -209,7 +224,7 @@ func saveLimited(r io.Reader, path string, limit int64) ([]byte, error) {
 }
 
 func (a *App) handleUpload(w http.ResponseWriter, r *http.Request, user string) {
-	r.Body = http.MaxBytesReader(w, r.Body, a.cfg.MaxUpload+maxCoverSize+maxTagsJSON+(1<<20))
+	r.Body = http.MaxBytesReader(w, r.Body, a.cfg.MaxUpload+2*maxCoverSize+maxTagsJSON+(1<<20))
 	dir := filepath.Join(a.cfg.IncomingDir(), safeSegment(user))
 	if err := os.MkdirAll(dir, 0o2775); err != nil {
 		log.Printf("upload: mkdir: %v", err)
@@ -312,6 +327,11 @@ func (a *App) placeUpload(ctx context.Context, u *Upload, form *uploadForm, stor
 	}
 	if coverErr != nil && !errors.Is(coverErr, os.ErrExist) {
 		log.Printf("upload %s: cover: %v", u.ID, coverErr)
+	}
+	if form.back != nil {
+		if err := saveBackCover(ctx, dir, form.back); err != nil {
+			log.Printf("upload %s: back cover: %v", u.ID, err)
+		}
 	}
 	rel, _ := filepath.Rel(a.cfg.LibraryDir(), dst)
 	u.Status, u.LibraryPath = "in-library", rel

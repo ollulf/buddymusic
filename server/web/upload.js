@@ -15,7 +15,7 @@ const ERRORS = {
   "unauthorized": t("upload.err.unauthorized"),
 };
 
-let state = { files: [], cover: null, edited: new Set(), busy: false, nextId: 1, albumArtists: [] };
+let state = { files: [], cover: null, back: null, edited: new Set(), busy: false, nextId: 1, albumArtists: [] };
 
 const h = (tag, attrs = {}, ...kids) => {
   const el = document.createElement(tag);
@@ -108,10 +108,13 @@ function prefillAlbum() {
 function resetAlbum() {
   state.edited = new Set();
   state.cover = null;
+  state.back = null;
   state.albumArtists.length = 0;
   ui.renderAlbumArtists();
   for (const k of ALBUM_FIELDS) ui.album[k].value = "";
   ui.coverInput.value = "";
+  ui.backInput.value = "";
+  renderBack();
   ui.vinyl.checked = false;
 }
 
@@ -286,6 +289,15 @@ function renderCover(a) {
   else ui.coverNote.textContent = t("upload.note.pick");
 }
 
+let backUrl = "";
+
+function renderBack() {
+  if (backUrl) URL.revokeObjectURL(backUrl);
+  backUrl = state.back ? URL.createObjectURL(state.back) : "";
+  ui.backPreview.replaceChildren(backUrl ? h("img", { src: backUrl, alt: t("upload.backPreview") }) : h("span", {}, t("upload.noBack")));
+  ui.backPreview.hidden = !backUrl;
+}
+
 function refresh() {
   let ready = 0, blocked = 0, done = 0;
   const open = pending();
@@ -342,6 +354,7 @@ function send(entry) {
     const fd = new FormData();
     fd.append("tags", JSON.stringify(tagPayload(entry)));
     if (state.cover) fd.append("cover", state.cover, state.cover.name);
+    if (state.back) fd.append("back", state.back, state.back.name);
     if (ui.vinyl.checked) fd.append("vinyl", "1");
     fd.append("file", entry.file, entry.file.name);
     const xhr = new XMLHttpRequest();
@@ -366,6 +379,7 @@ function setAlbumEnabled(on) {
   for (const k of ALBUM_FIELDS) ui.album[k].disabled = !on;
   for (const el of ui.albumArtistInputs || []) el.disabled = !on;
   ui.coverInput.disabled = !on;
+  ui.backInput.disabled = !on;
   ui.vinyl.disabled = !on;
 }
 
@@ -442,7 +456,7 @@ function albumInput(key) {
 }
 
 export function renderUpload(container, opts = {}) {
-  state = { files: [], cover: null, edited: new Set(), busy: false, nextId: 1, albumArtists: [] };
+  state = { files: [], cover: null, back: null, edited: new Set(), busy: false, nextId: 1, albumArtists: [] };
   ui = { album: {}, renderAlbumArtists: () => {} };
   if (opts.onUnauthorized) onUnauthorized = opts.onUnauthorized;
   const picker = h("input", { type: "file", multiple: true, accept: "audio/*,.flac,.mp3,.m4a,.ogg,.opus,.wma", hidden: true,
@@ -461,8 +475,15 @@ export function renderUpload(container, opts = {}) {
   } });
   ui.preview = h("div", { class: "preview" }, h("span", {}, t("upload.noCover")));
   ui.coverNote = h("span", { class: "muted" });
+  ui.backInput = h("input", { type: "file", accept: "image/jpeg,image/png", onchange: (e) => {
+    state.back = e.target.files[0] || null;
+    renderBack();
+  } });
+  ui.backPreview = h("div", { class: "preview back-preview", hidden: true });
   ui.coverBox = h("div", { class: "cover" }, ui.preview,
-    h("label", { class: "field" }, h("span", {}, LABELS.cover), ui.coverInput, ui.coverNote));
+    h("label", { class: "field" }, h("span", {}, LABELS.cover), ui.coverInput, ui.coverNote),
+    h("label", { class: "field back-field" }, h("span", {}, t("upload.back")), ui.backInput, h("span", { class: "muted" }, t("upload.backNote"))),
+    ui.backPreview);
   ui.vinyl = h("input", { type: "checkbox" });
   ui.albumBox = h("section", { class: "card album", hidden: true },
     h("h2", {}, t("tag.album")),
