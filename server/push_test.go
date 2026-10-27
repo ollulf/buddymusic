@@ -224,3 +224,20 @@ func TestPushSentOnRec(t *testing.T) {
 		t.Fatalf("gone sub kept: %+v", subs)
 	}
 }
+
+func TestPushWebFiles(t *testing.T) {
+	a := newTestApp(t)
+	get := func(p string) *httptest.ResponseRecorder {
+		return do(t, a.Routes(), httptest.NewRequest("GET", p, nil))
+	}
+	if rec := get("/manifest.webmanifest"); rec.Code != 200 || rec.Header().Get("Content-Type") != "application/manifest+json" || !strings.Contains(rec.Body.String(), `"standalone"`) {
+		t.Fatalf("manifest: %d %s", rec.Code, rec.Header().Get("Content-Type"))
+	}
+	if rec := get("/sw.js"); rec.Code != 200 || !strings.Contains(rec.Body.String(), "notificationclick") {
+		t.Fatalf("sw: %d", rec.Code)
+	}
+	body := get("/").Body.String()
+	if !strings.Contains(body, `rel="manifest" href="/manifest.webmanifest"`) || strings.Contains(body, `href="/sw.js"`) {
+		t.Fatalf("shell: %s", body)
+	}
+}

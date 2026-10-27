@@ -10,6 +10,7 @@ import { renderPlaylists, setPlaylistUser } from "./playlists.js";
 import { renderAdmin } from "./admin.js";
 import { t, relTime, lang } from "./i18n.js";
 import { renderSettings, GEAR, AVATAR, paintAvatar, openFeedback } from "./settings.js";
+import { registerWorker, onOpenRecs } from "./push.js";
 import { recsPanel, recBadge, setUnread, refreshUnread } from "./recs.js";
 
 const root = document.getElementById("app");
@@ -246,6 +247,10 @@ function openChangelog(version, returnTo) {
 }
 
 let recsTimer = null;
+let openRecsMenu = null;
+let pendingRecs = false;
+registerWorker();
+onOpenRecs(() => { if (openRecsMenu) openRecsMenu(); else pendingRecs = true; });
 
 let headerAvatar = { version: 0, paint() {} };
 
@@ -281,6 +286,8 @@ function profileMenu(user, admin, avatar, version) {
     btn.setAttribute("aria-expanded", "true");
     closeProfile = close;
   });
+  openRecsMenu = () => { if (menu.hidden) btn.click(); };
+  if (pendingRecs) { pendingRecs = false; setTimeout(openRecsMenu, 0); }
   return h("div", { class: "profile" }, btn, recBadge(), menu);
 }
 
