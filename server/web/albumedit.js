@@ -26,6 +26,8 @@ export function openAlbumEdit(al, songs, opts = {}) {
   const [artistF, artist] = field(t("edit.albumArtist"), albumArtist(al), { required: true, maxlength: 300, placeholder: "Artist; Other Artist" });
   const [yearF, year] = field(t("edit.year"), al.year ? String(al.year) : "", { inputmode: "numeric", pattern: "[0-9]{4}", maxlength: 4 });
   const [genreF, genre] = field(t("edit.genre"), al.genre, { maxlength: 300 });
+  const vinyl = h("input", { type: "checkbox", checked: !!al.vinyl });
+  const vinylF = h("label", { class: "field edit-check" }, vinyl, h("span", {}, t("edit.vinyl")));
   const rows = songs.map((s, i) => {
     const [titleF, title] = field(t("edit.trackTitle", { n: s.track || i + 1 }), s.title, { required: true, maxlength: 300 });
     const [tArtistF, tArtist] = field(t("edit.trackArtist"), trackArtist(s), { required: true, maxlength: 300 });
@@ -42,6 +44,7 @@ export function openAlbumEdit(al, songs, opts = {}) {
     if (changed(artist, albumArtist(al))) body.albumArtist = artist.value;
     if (changed(year, al.year ? String(al.year) : "")) body.year = year.value.trim();
     if (changed(genre, al.genre)) body.genre = genre.value;
+    if (vinyl.checked !== !!al.vinyl) body.vinyl = vinyl.checked;
     const tracks = rows.map(({ s, title, tArtist }) => {
       const tr = { id: s.id };
       if (changed(title, s.title)) tr.title = title.value;
@@ -54,7 +57,7 @@ export function openAlbumEdit(al, songs, opts = {}) {
     status.textContent = t("edit.saving");
     try {
       const res = await apiJSON("PATCH", `/api/admin/album/${encodeURIComponent(al.id)}`, body);
-      toast(res.scan === "started" ? t("edit.saved") : t("edit.savedNoScan"));
+      toast(res.scan === "started" || res.scan === "skipped" ? t("edit.saved") : t("edit.savedNoScan"));
       dlg.close();
       opts.onSaved?.();
     } catch (err) {
@@ -65,6 +68,7 @@ export function openAlbumEdit(al, songs, opts = {}) {
   } },
     h("div", { class: "edit-grid" }, nameF, artistF, yearF, genreF),
     h("p", { class: "muted edit-hint" }, t("edit.artistHint")),
+    vinylF,
     h("h3", {}, t("edit.tracks")),
     h("ol", { class: "edit-tracks" }, rows.map((r) => r.el)),
     status,

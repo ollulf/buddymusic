@@ -21,6 +21,7 @@ type App struct {
 	feedback jumpLimiter
 	feat     featuredCache
 	push     *pusher
+	vinylTry vinylThrottle
 }
 
 func NewApp(cfg *Config, store *Store) *App {

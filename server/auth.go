@@ -171,6 +171,9 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleMe(w http.ResponseWriter, r *http.Request, user string) {
+	if creds, err := a.sessionCreds(r); err == nil {
+		a.resolveVinylAlbums(r.Context(), creds)
+	}
 	writeJSON(w, http.StatusOK, a.meInfo(user, a.cachedAdmin(r)))
 }
 
@@ -178,7 +181,7 @@ func (a *App) meInfo(user string, admin any) map[string]any {
 	v, _ := a.store.AvatarVersion(user)
 	return map[string]any{"user": user, "admin": admin, "avatar": v,
 		"newSince": a.store.NewAlbumsFrom(user, time.Now()), "ownAlbums": a.store.OwnAlbums(user),
-		"openedAlbums": a.store.OpenedAlbums(user), "renewedAlbums": a.store.RenewedAlbums(), "recsUnread": a.store.UnreadRecs(user), "version": version}
+		"openedAlbums": a.store.OpenedAlbums(user), "renewedAlbums": a.store.RenewedAlbums(), "vinylAlbums": a.store.VinylAlbums(), "recsUnread": a.store.UnreadRecs(user), "version": version}
 }
 
 func (a *App) sessionUser(r *http.Request) (string, error) {

@@ -1,18 +1,20 @@
 [
   {
-    "version": "1.0.2710",
+    "version": "1.0.2710.2",
     "date": "2026-10-27",
     "en": [
       "Recommend a song to a friend from the song menu, with an optional note",
-      "Recommendations from friends show up under \"For you\" in the profile menu, with a banner when a new one arrives",
+      "Recommendations from friends show up under \"For you\" in the profile menu",
       "Featured artists now appear in the artist list, and artist pages show the albums they appear on",
+      "Vinyl albums get a small VINYL sticker on the cover; tick \"Vinyl recording\" when uploading",
       "Admins can edit an album's title, artist, year, genre and track names",
       "Smoother streaming on a weak connection: no more repeated bits after a dropout, faster recovery and automatic quality drop"
     ],
     "de": [
       "Empfiehl einem Freund einen Song über das Song-Menü, mit einer optionalen Notiz",
-      "Empfehlungen von Freunden erscheinen unter „Für dich“ im Profilmenü, mit einem Banner, wenn eine neue ankommt",
+      "Empfehlungen von Freunden erscheinen unter „Für dich“ im Profilmenü",
       "Gastkünstler stehen jetzt in der Künstlerliste, und Künstlerseiten zeigen die Alben, auf denen sie zu hören sind",
+      "Vinyl-Alben bekommen einen kleinen VINYL-Aufkleber auf dem Cover; beim Hochladen einfach „Vinyl-Aufnahme“ ankreuzen",
       "Admins können Titel, Künstler, Jahr, Genre und Songnamen eines Albums bearbeiten",
       "Stabileres Streaming bei schwacher Verbindung: keine wiederholten Stellen nach einem Aussetzer, schnellere Erholung und automatisch niedrigere Qualität"
     ]

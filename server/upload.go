@@ -69,6 +69,7 @@ type uploadForm struct {
 	ext      string
 	tagsJSON []byte
 	cover    []byte
+	vinyl    bool
 }
 
 func (f *uploadForm) cleanup() {
@@ -139,6 +140,15 @@ func (a *App) readPart(part *multipart.Part, f *uploadForm, dir, id string) (int
 			return http.StatusBadRequest, "bad-tags"
 		}
 		f.tagsJSON = b
+	case "vinyl":
+		b, err := readLimited(part, 16)
+		if err != nil {
+			return http.StatusBadRequest, "bad-request"
+		}
+		switch strings.ToLower(strings.TrimSpace(string(b))) {
+		case "1", "true", "on", "yes":
+			f.vinyl = true
+		}
 	case "cover":
 		b, err := readLimited(part, maxCoverSize)
 		if errors.Is(err, errTooLarge) {
@@ -305,6 +315,11 @@ func (a *App) placeUpload(ctx context.Context, u *Upload, form *uploadForm, stor
 	}
 	rel, _ := filepath.Rel(a.cfg.LibraryDir(), dst)
 	u.Status, u.LibraryPath = "in-library", rel
+	if form.vinyl {
+		if err := a.SetVinylFolder(filepath.Dir(rel), true); err != nil {
+			log.Printf("upload %s: vinyl: %v", u.ID, err)
+		}
+	}
 	a.scanner.Trigger()
 	return http.StatusCreated, u
 }

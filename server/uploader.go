@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -100,6 +102,121 @@ func (a *App) albumDirs(songs []navSong) (exact, suffix []string) {
 	return exact, suffix
 }
 
+func (a *App) albumFolder(songs []navSong) string {
+	exact, suffix := a.albumDirs(songs)
+	dirs := exact
+	if len(dirs) == 0 {
+		dirs = suffix
+	}
+	if len(dirs) == 0 {
+		return ""
+	}
+	common := strings.Split(dirs[0], "/")
+	for _, d := range dirs[1:] {
+		parts := strings.Split(d, "/")
+		n := 0
+		for n < len(common) && n < len(parts) && common[n] == parts[n] {
+			n++
+		}
+		common = common[:n]
+	}
+	return strings.Join(common, "/")
+}
+
+func (a *App) SetVinylFolder(folder string, on bool) error {
+	return a.store.SetVinylFolder(path.Clean(filepath.ToSlash(folder)), "", on, time.Now())
+}
+
+const (
+	vinylRetry     = 2 * time.Minute
+	vinylMaxLookup = 5
+	vinylTimeout   = 3 * time.Second
+)
+
+type vinylThrottle struct {
+	mu    sync.Mutex
+	tried map[string]time.Time
+}
+
+func (v *vinylThrottle) due(folder string, now time.Time) bool {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if at, ok := v.tried[folder]; ok && now.Sub(at) < vinylRetry {
+		return false
+	}
+	if v.tried == nil {
+		v.tried = map[string]time.Time{}
+	}
+	v.tried[folder] = now
+	return true
+}
+
+func (a *App) resolveVinylAlbums(ctx context.Context, creds SubsonicCreds) {
+	folders := a.store.UnresolvedVinyl()
+	if len(folders) == 0 {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, vinylTimeout)
+	defer cancel()
+	now := time.Now()
+	lookups := 0
+	for _, folder := range folders {
+		if lookups >= vinylMaxLookup || ctx.Err() != nil {
+			return
+		}
+		if !a.vinylTry.due(folder, now) {
+			continue
+		}
+		lookups++
+		id, err := a.albumIDForFolder(ctx, creds, folder)
+		if err != nil {
+			log.Printf("vinyl %s: resolve: %v", folder, err)
+			continue
+		}
+		if id != "" {
+			a.store.VinylFolder(folder, id)
+		}
+	}
+}
+
+func (a *App) albumIDForFolder(ctx context.Context, creds SubsonicCreds, folder string) (string, error) {
+	query := a.store.FolderAlbumName(folder)
+	if query == "" {
+		query = path.Base(folder)
+	}
+	q := url.Values{"query": {query}, "artistCount": {"0"}, "albumCount": {"0"}, "songCount": {"50"}}
+	raw, err := a.nav.raw(ctx, "search3.view", "searchResult3", creds, q)
+	if err != nil {
+		return "", err
+	}
+	var res struct {
+		Song []struct {
+			navSong
+			AlbumID string `json:"albumId"`
+		} `json:"song"`
+	}
+	if err := json.Unmarshal(raw, &res); err != nil {
+		return "", err
+	}
+	for _, s := range res.Song {
+		if s.AlbumID == "" {
+			continue
+		}
+		exact, suffix := a.albumDirs([]navSong{s.navSong})
+		for _, d := range exact {
+			if d == folder || strings.HasPrefix(d, folder+"/") {
+				return s.AlbumID, nil
+			}
+		}
+		for _, d := range suffix {
+			if d == folder || strings.HasPrefix(d, folder+"/") || strings.HasSuffix(folder, "/"+d) {
+				return s.AlbumID, nil
+			}
+		}
+	}
+	return "", nil
+}
+
 func (a *App) handleAlbumOpened(w http.ResponseWriter, r *http.Request, user string) {
 	id := r.PathValue("id")
 	if !validID(id) {
@@ -173,6 +290,9 @@ func (a *App) handleAlbum(w http.ResponseWriter, r *http.Request, user string) {
 	}
 	if len(users) > 0 {
 		al["uploadedBy"], _ = json.Marshal(users)
+	}
+	if f := a.albumFolder(songs.Song); f != "" && a.store.VinylFolder(f, id) {
+		al["vinyl"] = json.RawMessage("true")
 	}
 	out, err := json.Marshal(al)
 	if err != nil {
