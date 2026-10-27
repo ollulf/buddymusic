@@ -291,8 +291,12 @@ func (a *App) handleAlbum(w http.ResponseWriter, r *http.Request, user string) {
 	if len(users) > 0 {
 		al["uploadedBy"], _ = json.Marshal(users)
 	}
-	if f := a.albumFolder(songs.Song); f != "" && a.store.VinylFolder(f, id) {
+	folder := a.albumFolder(songs.Song)
+	if folder != "" && a.store.VinylFolder(folder, id) {
 		al["vinyl"] = json.RawMessage("true")
+	}
+	if dir := a.libraryFolderDir(folder); dir != "" && backCoverFile(dir) != "" {
+		al["hasBack"] = json.RawMessage("true")
 	}
 	out, err := json.Marshal(al)
 	if err != nil {

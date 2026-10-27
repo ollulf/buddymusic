@@ -69,6 +69,7 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("PUT /api/music/playlist/{id}/songs", a.requireUser(a.handlePlaylistSongs(true)))
 	mux.Handle("POST /api/music/playlist/{id}/songs", a.requireUser(a.handlePlaylistSongs(false)))
 	mux.Handle("GET /api/music/cover/{id}", a.requireUser(a.handleCover))
+	mux.Handle("GET /api/music/back/{id}", a.requireUser(a.handleBackCover))
 	mux.Handle("GET /api/music/stream/{id}", a.requireUser(a.handleStream))
 	mux.Handle("POST /api/music/scrobble/{id}", a.requireUser(a.handleScrobble))
 	mux.Handle("POST /api/music/progress/{id}", a.requireUser(a.handleProgress))

@@ -27,6 +27,60 @@ function caseCover(al, size, cls, eager = false) {
   return box;
 }
 
+const backCovers = new Map();
+const backURL = (id) => `/api/music/back/${encodeURIComponent(id)}`;
+
+function loadBack(id) {
+  if (!backCovers.has(id)) {
+    backCovers.set(id, new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = backURL(id);
+    }));
+  }
+  return backCovers.get(id);
+}
+
+function showBack(box, id, on) {
+  if (on && !box.querySelector("img.back")) box.append(h("img", { class: "back", src: backURL(id), alt: "", decoding: "async" }));
+  box.classList.toggle("show-back", on);
+}
+
+function hoverBack(target, box, id) {
+  let timer = 0;
+  let inside = false;
+  target.addEventListener("pointerenter", (e) => {
+    if (e.pointerType === "touch") return;
+    inside = true;
+    clearTimeout(timer);
+    timer = setTimeout(() => loadBack(id).then((ok) => { if (ok && inside) showBack(box, id, true); }), 150);
+  });
+  target.addEventListener("pointerleave", (e) => {
+    if (e.pointerType === "touch") return;
+    inside = false;
+    clearTimeout(timer);
+    if (box.classList.contains("show-back")) showBack(box, id, false);
+  });
+}
+
+function flipBack(box, id) {
+  backCovers.set(id, Promise.resolve(true));
+  hoverBack(box, box, id);
+  box.classList.add("flippable");
+  box.setAttribute("role", "button");
+  box.setAttribute("tabindex", "0");
+  box.setAttribute("aria-label", t("library.flipCover"));
+  box.setAttribute("aria-pressed", "false");
+  const toggle = () => {
+    const on = !box.classList.contains("show-back");
+    showBack(box, id, on);
+    box.setAttribute("aria-pressed", String(on));
+  };
+  box.addEventListener("click", (e) => { if (e.pointerType === "touch" || !matchMedia("(hover: hover)").matches) toggle(); });
+  box.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+}
+
 let newSince = Infinity;
 let ownAlbums = new Set();
 let openedAlbums = new Set();
@@ -69,12 +123,14 @@ export function albumCard(al, i = EAGER_COVERS) {
   const fresh = isNewAlbum(al);
   const art = caseCover(al, 300, "art", i < EAGER_COVERS);
   if (fresh) art.append(holo());
-  return h("a", { class: fresh ? "album is-new" : "album", href: `#/library/album/${encodeURIComponent(al.id)}` },
+  const card = h("a", { class: fresh ? "album is-new" : "album", href: `#/library/album/${encodeURIComponent(al.id)}` },
     art,
     fresh ? sparkles() : null,
     fresh ? h("span", { class: "new-ribbon", "aria-label": t("library.newSince") }, h("span", {}, t("library.newBadge"))) : null,
     h("span", { class: "a-name" }, al.name || al.title || t("library.unknownAlbum")),
     h("span", { class: "a-sub" }, [al.artist, al.year].filter(Boolean).join(" · ")));
+  if (al.id) hoverBack(card, art, al.id);
+  return card;
 }
 
 function markNow(li) {
@@ -285,12 +341,14 @@ async function renderAlbum(container, id, opts) {
         else toast(t("library.renewFailed"));
       }
     };
+    const head = caseCover(al, 600, "art big");
+    if (al.hasBack && al.id) flipBack(head, al.id);
     const total = songs.reduce((t, s) => t + (s.duration || 0), 0);
     setPageTitle(al.name || t("library.unknownAlbum"), container);
     container.replaceChildren(
       h("a", { class: "back", href: "#/library" }, t("library.back")),
       h("section", { class: "album-head" },
-        caseCover(al, 600, "art big"),
+        head,
         h("div", { class: "album-info" },
           albumArtistLinks(al, songs),
           h("div", { class: "muted" }, [al.year, t("common.songCount", { n: songs.length }), fmtTime(total)].filter(Boolean).join(" · ")),
