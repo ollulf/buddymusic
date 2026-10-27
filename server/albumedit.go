@@ -19,6 +19,7 @@ type albumEdit struct {
 	AlbumArtist *string     `json:"albumArtist"`
 	Year        *string     `json:"year"`
 	Genre       *string     `json:"genre"`
+	Vinyl       *bool       `json:"vinyl"`
 	Tracks      []trackEdit `json:"tracks"`
 }
 
@@ -241,6 +242,19 @@ func (a *App) handleAlbumEdit(w http.ResponseWriter, r *http.Request, user strin
 			return
 		}
 		jobs = append(jobs, job{f, typed})
+	}
+	if in.Vinyl != nil {
+		folder := a.albumFolder(songs)
+		if folder == "" {
+			writeError(w, http.StatusConflict, "file-not-found")
+			return
+		}
+		if err := a.store.SetVinylFolder(folder, id, *in.Vinyl, time.Now()); err != nil {
+			log.Printf("edit album %s: vinyl: %v", id, err)
+			writeError(w, http.StatusInternalServerError, "store")
+			return
+		}
+		log.Printf("edit album %s by %s: vinyl %v (%s)", id, user, *in.Vinyl, folder)
 	}
 	updated := 0
 	var failed error

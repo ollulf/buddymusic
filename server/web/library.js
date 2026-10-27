@@ -23,6 +23,7 @@ function caseCover(al, size, cls, eager = false) {
     box.dataset.album = al.id;
     if (player.nowAlbum() === al.id) box.classList.add("now");
   }
+  if (al.vinyl || vinylAlbums.has(al.id)) box.append(h("span", { class: "vinyl-tag", title: t("library.vinylTag") }, "VINYL"));
   return box;
 }
 
@@ -30,7 +31,12 @@ let newSince = Infinity;
 let ownAlbums = new Set();
 let openedAlbums = new Set();
 let renewedAlbums = new Map();
+let vinylAlbums = new Set();
 const albumKey = (artist, name) => `${(artist || "").trim().toLowerCase()}|${(name || "").trim().toLowerCase()}`;
+
+export function setVinylAlbums(ids) {
+  vinylAlbums = new Set(ids || []);
+}
 
 export function setNewAlbums(since, own, opened, renewed) {
   newSince = Number(since) > 0 ? Number(since) * 1000 : Infinity;

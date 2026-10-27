@@ -1,5 +1,5 @@
 import { renderUpload } from "./upload.js";
-import { renderLibrary, setNewAlbums, prefetchLibrary, dropLibraryPrefetch } from "./library.js";
+import { renderLibrary, setNewAlbums, setVinylAlbums, prefetchLibrary, dropLibraryPrefetch } from "./library.js";
 import { renderSearch, searchBox } from "./search.js";
 import { renderFavorites } from "./favorites.js";
 import { renderQueue } from "./queue.js";
@@ -328,6 +328,7 @@ function qualityButton() {
 
 function showApp(user, admin, avatar, me = {}) {
   setNewAlbums(me.newSince, me.ownAlbums, me.openedAlbums, me.renewedAlbums);
+  setVinylAlbums(me.vinylAlbums);
   setUnread(me.recsUnread);
   startRecPolling();
   const TABS = admin === true ? [...BASE_TABS, ["admin", t("tab.admin")]] : BASE_TABS;

@@ -64,6 +64,11 @@ CREATE TABLE IF NOT EXISTS album_opened (
 CREATE TABLE IF NOT EXISTS album_renewed (
 	album_id TEXT PRIMARY KEY,
 	renewed_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS album_vinyl (
+	folder TEXT PRIMARY KEY,
+	album_id TEXT NOT NULL DEFAULT '',
+	set_at INTEGER NOT NULL
 );`
 
 func (s *Store) RecordLogin(user string, at time.Time, ok bool, device string, remember bool) error {
@@ -170,6 +175,46 @@ func (s *Store) RenewedAlbums() map[string]int64 {
 		var at int64
 		if rows.Scan(&id, &at) == nil {
 			out[id] = at
+		}
+	}
+	return out
+}
+
+func (s *Store) SetVinylFolder(folder, albumID string, on bool, at time.Time) error {
+	if folder == "" {
+		return errors.New("empty folder")
+	}
+	if !on {
+		_, err := s.db.Exec(`DELETE FROM album_vinyl WHERE folder = ?`, folder)
+		return err
+	}
+	_, err := s.db.Exec(`INSERT INTO album_vinyl (folder, album_id, set_at) VALUES (?, ?, ?)
+ON CONFLICT(folder) DO UPDATE SET album_id = CASE WHEN excluded.album_id != '' THEN excluded.album_id ELSE album_vinyl.album_id END`, folder, albumID, at.Unix())
+	return err
+}
+
+func (s *Store) VinylFolder(folder, albumID string) bool {
+	var id string
+	if s.db.QueryRow(`SELECT album_id FROM album_vinyl WHERE folder = ?`, folder).Scan(&id) != nil {
+		return false
+	}
+	if albumID != "" && id != albumID {
+		s.db.Exec(`UPDATE album_vinyl SET album_id = ? WHERE folder = ?`, albumID, folder)
+	}
+	return true
+}
+
+func (s *Store) VinylAlbums() []string {
+	out := []string{}
+	rows, err := s.db.Query(`SELECT album_id FROM album_vinyl WHERE album_id != '' ORDER BY album_id`)
+	if err != nil {
+		return out
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		if rows.Scan(&id) == nil {
+			out = append(out, id)
 		}
 	}
 	return out

@@ -100,6 +100,31 @@ func (a *App) albumDirs(songs []navSong) (exact, suffix []string) {
 	return exact, suffix
 }
 
+func (a *App) albumFolder(songs []navSong) string {
+	exact, suffix := a.albumDirs(songs)
+	dirs := exact
+	if len(dirs) == 0 {
+		dirs = suffix
+	}
+	if len(dirs) == 0 {
+		return ""
+	}
+	common := strings.Split(dirs[0], "/")
+	for _, d := range dirs[1:] {
+		parts := strings.Split(d, "/")
+		n := 0
+		for n < len(common) && n < len(parts) && common[n] == parts[n] {
+			n++
+		}
+		common = common[:n]
+	}
+	return strings.Join(common, "/")
+}
+
+func (a *App) SetVinylFolder(folder string, on bool) error {
+	return a.store.SetVinylFolder(path.Clean(filepath.ToSlash(folder)), "", on, time.Now())
+}
+
 func (a *App) handleAlbumOpened(w http.ResponseWriter, r *http.Request, user string) {
 	id := r.PathValue("id")
 	if !validID(id) {
@@ -173,6 +198,9 @@ func (a *App) handleAlbum(w http.ResponseWriter, r *http.Request, user string) {
 	}
 	if len(users) > 0 {
 		al["uploadedBy"], _ = json.Marshal(users)
+	}
+	if f := a.albumFolder(songs.Song); f != "" && a.store.VinylFolder(f, id) {
+		al["vinyl"] = json.RawMessage("true")
 	}
 	out, err := json.Marshal(al)
 	if err != nil {
