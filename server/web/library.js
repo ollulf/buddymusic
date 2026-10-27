@@ -6,6 +6,7 @@ import { addToPlaylistButton, openAddSheet, toast } from "./playlists.js";
 import { rowMenuButton, swipeRow } from "./rowactions.js";
 import { flyFrom } from "./fly.js";
 import { holo, sparkles, unholo } from "./holo.js";
+import { openAlbumEdit } from "./albumedit.js";
 
 const deletedSongs = new Set();
 const deletedAlbums = new Set();
@@ -291,6 +292,7 @@ async function renderAlbum(container, id, opts) {
             h("button", { onclick: () => player.addToQueue(songs), disabled: !songs.length }, t("song.addToQueue")),
             songs.length ? addToPlaylistButton(songs, opts, "") : null,
             heartButton(al, "album", { cls: "album-heart", onUnauthorized: opts.onUnauthorized }),
+            opts.admin ? h("button", { onclick: (e) => openAlbumEdit(al, songs, { returnTo: e.currentTarget, onUnauthorized: opts.onUnauthorized, onSaved: () => renderAlbum(container, id, opts) }) }, t("library.editAlbum")) : null,
             opts.admin ? h("button", { onclick: renewAlbum }, t("library.renewAlbum")) : null,
             opts.admin ? h("button", { class: "danger", onclick: deleteAlbum }, t("library.deleteAlbum")) : null))),
       h("ol", { class: "songs card" }, songs.map((_, i) => songRow(songs, i, { album: al, onDelete: deleteTrack, onUnauthorized: opts.onUnauthorized }))));

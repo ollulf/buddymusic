@@ -68,6 +68,7 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("GET /api/admin/stats", a.requireUser(a.handleAdminStats))
 	mux.Handle("GET /api/admin/feedback", a.requireUser(a.handleAdminFeedback))
 	mux.Handle("POST /api/admin/album/{id}/renew", a.requireUser(a.handleAlbumRenew))
+	mux.Handle("PATCH /api/admin/album/{id}", a.requireUser(a.handleAlbumEdit))
 	mux.Handle("DELETE /api/music/track/{id}", a.requireUser(a.adminDelete(a.loadTrack)))
 	mux.Handle("DELETE /api/music/album/{id}", a.requireUser(a.adminDelete(a.loadAlbum)))
 	mux.Handle("GET /", a.webHandler())
