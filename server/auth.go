@@ -171,6 +171,9 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleMe(w http.ResponseWriter, r *http.Request, user string) {
+	if creds, err := a.sessionCreds(r); err == nil {
+		a.resolveVinylAlbums(r.Context(), creds)
+	}
 	writeJSON(w, http.StatusOK, a.meInfo(user, a.cachedAdmin(r)))
 }
 

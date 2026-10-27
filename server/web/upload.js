@@ -112,6 +112,7 @@ function resetAlbum() {
   ui.renderAlbumArtists();
   for (const k of ALBUM_FIELDS) ui.album[k].value = "";
   ui.coverInput.value = "";
+  ui.vinyl.checked = false;
 }
 
 function addFiles(list) {
@@ -341,6 +342,7 @@ function send(entry) {
     const fd = new FormData();
     fd.append("tags", JSON.stringify(tagPayload(entry)));
     if (state.cover) fd.append("cover", state.cover, state.cover.name);
+    if (ui.vinyl.checked) fd.append("vinyl", "1");
     fd.append("file", entry.file, entry.file.name);
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/uploads");
@@ -364,6 +366,7 @@ function setAlbumEnabled(on) {
   for (const k of ALBUM_FIELDS) ui.album[k].disabled = !on;
   for (const el of ui.albumArtistInputs || []) el.disabled = !on;
   ui.coverInput.disabled = !on;
+  ui.vinyl.disabled = !on;
 }
 
 async function uploadAll() {
@@ -460,10 +463,12 @@ export function renderUpload(container, opts = {}) {
   ui.coverNote = h("span", { class: "muted" });
   ui.coverBox = h("div", { class: "cover" }, ui.preview,
     h("label", { class: "field" }, h("span", {}, LABELS.cover), ui.coverInput, ui.coverNote));
+  ui.vinyl = h("input", { type: "checkbox" });
   ui.albumBox = h("section", { class: "card album", hidden: true },
     h("h2", {}, t("tag.album")),
     h("p", { class: "muted" }, t("upload.albumHint")),
-    h("div", { class: "album-grid" }, ui.coverBox, h("div", { class: "fields" }, ...ALBUM_FIELDS.map(albumInput))));
+    h("div", { class: "album-grid" }, ui.coverBox, h("div", { class: "fields" }, ...ALBUM_FIELDS.map(albumInput),
+      h("label", { class: "field edit-check" }, ui.vinyl, h("span", {}, t("upload.vinyl"))))));
 
   ui.list = h("div", { class: "list", "data-empty": t("upload.emptyList") });
   ui.summary = h("span", { class: "muted" });

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -202,6 +203,29 @@ func (s *Store) VinylFolder(folder, albumID string) bool {
 		s.db.Exec(`UPDATE album_vinyl SET album_id = ? WHERE folder = ?`, albumID, folder)
 	}
 	return true
+}
+
+func (s *Store) UnresolvedVinyl() []string {
+	var out []string
+	rows, err := s.db.Query(`SELECT folder FROM album_vinyl WHERE album_id = '' ORDER BY set_at DESC, folder`)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var f string
+		if rows.Scan(&f) == nil {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+func (s *Store) FolderAlbumName(folder string) string {
+	var name string
+	s.db.QueryRow(`SELECT album FROM uploads WHERE status = 'in-library' AND library_path >= ? AND library_path < ? AND album != '' ORDER BY created_at DESC LIMIT 1`,
+		filepath.FromSlash(folder+"/"), filepath.FromSlash(folder)+string([]byte{filepath.Separator + 1})).Scan(&name)
+	return name
 }
 
 func (s *Store) VinylAlbums() []string {

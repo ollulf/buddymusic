@@ -83,3 +83,68 @@ func TestVinylFolderBeforeScan(t *testing.T) {
 		t.Fatalf("album id not learned: %v", got)
 	}
 }
+
+func TestUploadVinylFlag(t *testing.T) {
+	needFFmpeg(t)
+	a := newTestApp(t)
+	cookie := login(t, a)
+	one := makeAudio(t, "a.flac", true, "title", "Intro", "artist", "Test Band", "album", "Wax", "track", "1")
+	rec, _ := postUpload(t, a, cookie, formPart{"vinyl", "", []byte("1")}, formPart{"file", "a.flac", one})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("upload: %d %s", rec.Code, rec.Body)
+	}
+	if got := a.store.UnresolvedVinyl(); len(got) != 1 || got[0] != "max/Test Band/Wax" {
+		t.Fatalf("vinyl folder: %v", got)
+	}
+	if name := a.store.FolderAlbumName("max/Test Band/Wax"); name != "Wax" {
+		t.Fatalf("album name: %q", name)
+	}
+	plain := makeAudio(t, "b.flac", true, "title", "Intro", "artist", "Test Band", "album", "Digital", "track", "1")
+	if rec, _ := postUpload(t, a, cookie, formPart{"vinyl", "", []byte("0")}, formPart{"file", "b.flac", plain}); rec.Code != http.StatusCreated {
+		t.Fatalf("plain upload: %d %s", rec.Code, rec.Body)
+	}
+	if got := a.store.UnresolvedVinyl(); len(got) != 1 {
+		t.Fatalf("unticked upload flagged: %v", got)
+	}
+}
+
+func TestVinylFolderResolvedForMe(t *testing.T) {
+	searchable := false
+	searches := 0
+	a := newTestAppWith(t, func(w http.ResponseWriter, r *http.Request) bool {
+		if !strings.HasSuffix(r.URL.Path, "/search3.view") {
+			return false
+		}
+		searches++
+		if q := r.URL.Query().Get("query"); q != "Wax" {
+			t.Errorf("search query %q", q)
+		}
+		songs := []map[string]string{{"id": "x1", "path": "boi/Wax/01 - Other.flac", "albumId": "other"}}
+		if searchable {
+			songs = append(songs, map[string]string{"id": "s1", "path": "max/Test Band/Wax/01 - Intro.flac", "albumId": "alw"})
+		}
+		b, _ := json.Marshal(map[string]any{"subsonic-response": map[string]any{"status": "ok", "searchResult3": map[string]any{"song": songs}}})
+		w.Write(b)
+		return true
+	})
+	writeFile(t, filepath.Join(a.cfg.LibraryDir(), "max/Test Band/Wax/01 - Intro.flac"))
+	writeFile(t, filepath.Join(a.cfg.LibraryDir(), "boi/Wax/01 - Other.flac"))
+	saveLibUpload(t, a, "u1", "max", "in-library", "max/Test Band/Wax/01 - Intro.flac", 1)
+	if err := a.SetVinylFolder("max/Test Band/Wax", true); err != nil {
+		t.Fatal(err)
+	}
+	if got := meVinyl(t, a); len(got) != 0 {
+		t.Fatalf("not yet scanned: %v", got)
+	}
+	if got := meVinyl(t, a); len(got) != 0 || searches != 1 {
+		t.Fatalf("retry not throttled: %v %d", got, searches)
+	}
+	searchable = true
+	a.vinylTry = vinylThrottle{}
+	if got := meVinyl(t, a); len(got) != 1 || got[0] != "alw" {
+		t.Fatalf("vinylAlbums after scan: %v", got)
+	}
+	if got := meVinyl(t, a); len(got) != 1 || searches != 2 {
+		t.Fatalf("resolved folder searched again: %v %d", got, searches)
+	}
+}
