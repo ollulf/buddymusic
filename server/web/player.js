@@ -64,7 +64,7 @@ export const opusSupported = (() => {
   try { return audio.canPlayType("audio/ogg; codecs=opus") !== ""; } catch { return false; }
 })();
 
-const auto = { tier: 0, speed: 0, measuredKbps: 0, ups: 0, stalls: 0, next: null };
+const auto = { tier: 0, speed: 0, measuredKbps: 0, ups: 0, stalls: 0, next: null, song: null, songStalls: 0 };
 
 function streamSpec(song, tier) {
   if (tier === "normal") return opusSupported ? { format: "opus", kbps: 128 } : { format: "mp3", kbps: 192 };
@@ -120,9 +120,10 @@ function pickTier(song, commit) {
 }
 
 const meter = { t0: 0, b0: 0, done: false, playing: null, started: false };
-const play = { offset: 0, tries: 0, blob: "", heard: 0, heardAt: 0, gen: 0, okSince: 0 };
+const play = { offset: 0, tries: 0, blob: "", heard: 0, heardAt: 0, gen: 0, okSince: 0, pending: false };
 const RETRY_DELAYS = [0, 1500, 4000, 8000];
 const STALL_MS = 15000;
+const STALL_EMPTY_MS = 6000;
 const stall = { t: 0, b: 0, at: 0 };
 const watch = { t: -1, at: 0, stalled: false, sent: 0 };
 const pre = { url: "", blob: "", ctrl: null, speed: 0 };
@@ -232,6 +233,7 @@ function startStream(song, tier, from = 0) {
   play.heard = Math.max(0, from - off);
   play.heardAt = Date.now();
   play.gen += 1;
+  play.pending = false;
   watch.t = -1;
   listen.last = -1;
   const seekTo = from - off;
@@ -412,7 +414,7 @@ export function stopAll() {
   audio.removeAttribute("src");
   audio.load();
   if (play.blob) URL.revokeObjectURL(play.blob);
-  Object.assign(play, { offset: 0, tries: 0, blob: "", heard: 0 });
+  Object.assign(play, { offset: 0, tries: 0, blob: "", heard: 0, pending: false });
   dropPreload();
   Object.assign(state, { queue: [], index: -1, order: [], scrobbled: false });
   if ("mediaSession" in navigator) { navigator.mediaSession.metadata = null; navigator.mediaSession.playbackState = "none"; }
@@ -496,6 +498,7 @@ function retryStream(song, at) {
   play.tries += 1;
   const gen = play.gen;
   let done = false;
+  play.pending = true;
   const go = () => {
     if (done || play.gen !== gen || current() !== song) return;
     done = true;
@@ -551,15 +554,18 @@ document.addEventListener("visibilitychange", () => {
   audio.play().catch(() => {});
 });
 setInterval(() => {
-  if (audio.paused || audio.seeking || play.blob || !current() || !audio.getAttribute("src") || audio.readyState >= 3) {
+  if (audio.paused || audio.seeking || play.blob || play.pending || navigator.onLine === false || !current() || !audio.getAttribute("src") || audio.readyState >= 3) {
     stall.at = 0;
     return;
   }
   const t = audio.currentTime || 0;
   const b = bufferedEnd();
   if (!stall.at || t !== stall.t || b > stall.b + 0.05) { Object.assign(stall, { t, b, at: Date.now() }); return; }
-  if (Date.now() - stall.at < STALL_MS) return;
+  const empty = b - t < 0.5;
+  const waited = Date.now() - stall.at;
+  if (waited < (empty ? STALL_EMPTY_MS : STALL_MS)) return;
   stall.at = 0;
+  logEvent("stall-restart", `waited ${Math.round(waited / 1000)}s ahead ${Math.max(0, b - t).toFixed(1)}s`);
   streamOver(true, "stall");
 }, 2000);
 
@@ -644,6 +650,20 @@ audio.addEventListener("waiting", () => {
   if (!meter.started || audio.seeking || state.quality !== "auto") return;
   auto.stalls += 1;
   auto.next = null;
+  const song = current();
+  if (auto.song !== song) Object.assign(auto, { song, songStalls: 0 });
+  auto.songStalls += 1;
+  const tier = meter.playing ? TIERS.indexOf(meter.playing.tier) : -1;
+  if (auto.songStalls < 2 || tier < 0 || tier >= TIERS.length - 1 || audio.paused || play.pending) return;
+  Object.assign(auto, { songStalls: 0, stalls: 0, ups: 0, tier: tier + 1 });
+  const at = position();
+  logEvent("step-down", `${TIERS[tier]} to ${TIERS[tier + 1]} at ${at.toFixed(2)}`);
+  setTimeout(() => {
+    if (current() !== song || audio.paused || !meter.playing || meter.playing.tier !== TIERS[tier]) return;
+    startStream(song, TIERS[tier + 1], at);
+    audio.play().catch(() => {});
+    emit();
+  }, 0);
 });
 const life = { closing: false };
 function shutdown(e) {
@@ -651,6 +671,7 @@ function shutdown(e) {
   report(false);
   life.closing = true;
   play.gen += 1;
+  play.pending = false;
   autoAdvance = false;
   startT.live = false;
   adv.stuck = false;
