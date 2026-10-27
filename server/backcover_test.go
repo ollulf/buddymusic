@@ -139,3 +139,28 @@ func TestAlbumBackRejectsNonImage(t *testing.T) {
 		t.Fatalf("non-image wrote %s", f)
 	}
 }
+
+func TestBackCoverSanitizedFolder(t *testing.T) {
+	album := "キミハ アオイ スイセイ ヲ ミタカ? = Have You Ever Seen The Blue Comet?"
+	a := newTestAppWith(t, songNav(map[string]string{
+		"s1": "Dr. Shingo/" + album + "/01 - Have You Ever Seen The Blue Comet?.flac",
+		"s2": "Dr. Shingo/" + album + "/02 - Have You Ever Seen The Blue Comet? (Ural 13 Diktators Remix).flac",
+	}, map[string][]string{"al1": {"s1", "s2"}}))
+	dir := filepath.Join(a.cfg.LibraryDir(), "admin/Dr. Shingo/キミハ アオイ スイセイ ヲ ミタカ_ = Have You Ever Seen The Blue Comet_")
+	writeFile(t, filepath.Join(dir, "01 - Have You Ever Seen The Blue Comet_.flac"))
+	writeFile(t, filepath.Join(dir, "02 - Have You Ever Seen The Blue Comet_ (Ural 13 Diktators Remix).flac"))
+	back := jpeg(t)
+	if err := os.WriteFile(filepath.Join(dir, "back.jpg"), back, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if body := authed(t, a, httptest.NewRequest("GET", "/api/music/album/al1", nil)).Body.String(); !strings.Contains(body, `"hasBack":true`) {
+		t.Fatalf("album lacks hasBack: %s", body)
+	}
+	req := httptest.NewRequest("GET", "/api/music/back/al1", nil)
+	req.AddCookie(login(t, a))
+	rec := httptest.NewRecorder()
+	a.Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !bytes.Equal(rec.Body.Bytes(), back) {
+		t.Fatalf("back cover: %d", rec.Code)
+	}
+}
