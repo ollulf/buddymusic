@@ -10,20 +10,20 @@ import (
 
 var genreList = []string{
 	"Rock", "Electronic", "Pop", "Hip Hop", "Jazz", "Funk / Soul", "Classical",
-	"Reggae", "Latin", "Folk, World, & Country", "Blues", "Stage & Screen", "Children's",
+	"Reggae", "Latin", "Folk, World, & Country", "Blues", "Rock & Roll", "Boogie Woogie", "Swing", "Stage & Screen", "Children's",
 }
 
 var genreAliases = map[string]string{
 	"rock": "Rock", "alternative": "Rock", "alternative rock": "Rock", "indie": "Rock", "indie rock": "Rock",
 	"punk": "Rock", "punk rock": "Rock", "metal": "Rock", "heavy metal": "Rock", "hard rock": "Rock",
-	"grunge": "Rock", "classic rock": "Rock", "progressive rock": "Rock", "psychedelic rock": "Rock", "rock & roll": "Rock", "rock and roll": "Rock",
+	"grunge": "Rock", "classic rock": "Rock", "progressive rock": "Rock", "psychedelic rock": "Rock",
 	"electronic": "Electronic", "electronica": "Electronic", "electro": "Electronic", "techno": "Electronic",
 	"house": "Electronic", "deep house": "Electronic", "trance": "Electronic", "ambient": "Electronic",
 	"edm": "Electronic", "dance": "Electronic", "drum and bass": "Electronic", "drum & bass": "Electronic",
 	"dnb": "Electronic", "dubstep": "Electronic", "downtempo": "Electronic", "trip hop": "Electronic", "trip-hop": "Electronic", "idm": "Electronic", "synthwave": "Electronic",
 	"pop": "Pop", "synth-pop": "Pop", "synthpop": "Pop", "indie pop": "Pop", "k-pop": "Pop", "dance-pop": "Pop", "schlager": "Pop", "chanson": "Pop",
 	"hip hop": "Hip Hop", "hip-hop": "Hip Hop", "hiphop": "Hip Hop", "rap": "Hip Hop", "trap": "Hip Hop", "deutschrap": "Hip Hop",
-	"jazz": "Jazz", "smooth jazz": "Jazz", "bebop": "Jazz", "swing": "Jazz", "fusion": "Jazz", "acid jazz": "Jazz",
+	"jazz": "Jazz", "smooth jazz": "Jazz", "bebop": "Jazz", "fusion": "Jazz", "acid jazz": "Jazz",
 	"funk / soul": "Funk / Soul", "funk": "Funk / Soul", "soul": "Funk / Soul", "r&b": "Funk / Soul", "rnb": "Funk / Soul",
 	"r and b": "Funk / Soul", "rhythm & blues": "Funk / Soul", "disco": "Funk / Soul", "neo soul": "Funk / Soul", "gospel": "Funk / Soul",
 	"classical": "Classical", "klassik": "Classical", "opera": "Classical", "baroque": "Classical", "orchestral": "Classical", "contemporary classical": "Classical",
@@ -32,6 +32,9 @@ var genreAliases = map[string]string{
 	"folk, world, & country": "Folk, World, & Country", "folk": "Folk, World, & Country", "country": "Folk, World, & Country",
 	"world": "Folk, World, & Country", "world music": "Folk, World, & Country", "americana": "Folk, World, & Country",
 	"bluegrass": "Folk, World, & Country", "singer-songwriter": "Folk, World, & Country", "celtic": "Folk, World, & Country", "volksmusik": "Folk, World, & Country",
+	"rock & roll": "Rock & Roll", "rock and roll": "Rock & Roll", "rock n roll": "Rock & Roll", "rock 'n' roll": "Rock & Roll", "rock'n'roll": "Rock & Roll", "rock n' roll": "Rock & Roll", "rock 'n roll": "Rock & Roll", "rocknroll": "Rock & Roll", "rockabilly": "Rock & Roll",
+	"boogie woogie": "Boogie Woogie", "boogie-woogie": "Boogie Woogie", "boogiewoogie": "Boogie Woogie",
+	"swing": "Swing", "big band": "Swing", "western swing": "Swing",
 	"blues": "Blues", "delta blues": "Blues", "blues rock": "Blues", "chicago blues": "Blues",
 	"stage & screen": "Stage & Screen", "soundtrack": "Stage & Screen", "score": "Stage & Screen", "film score": "Stage & Screen",
 	"musical": "Stage & Screen", "video game music": "Stage & Screen", "ost": "Stage & Screen", "filmmusik": "Stage & Screen",

@@ -13,6 +13,8 @@ func TestCanonGenre(t *testing.T) {
 		"Hip-Hop": "Hip Hop", "hiphop": "Hip Hop", " Soundtrack ": "Stage & Screen",
 		"TECHNO": "Electronic", "Electronica": "Electronic", "R&B": "Funk / Soul",
 		"Krautrock": "Krautrock", "": "",
+		"Rock N Roll": "Rock & Roll", "Rock 'n' Roll": "Rock & Roll", "Rockabilly": "Rock & Roll", "Rock": "Rock",
+		"Boogie-Woogie": "Boogie Woogie", "boogie woogie": "Boogie Woogie", "Swing": "Swing", "Big Band": "Swing", "Jazz": "Jazz",
 	}
 	for in, want := range cases {
 		if got := canonGenre(in); got != want {
