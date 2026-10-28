@@ -257,7 +257,7 @@ h1 { font-size: var(--fs-xl); margin: 0; line-height: 1.25; color: var(--accent)
 .new-ribbon span { position: absolute; top: 12px; right: -24px; width: 92px; transform: rotate(45deg); background: var(--orange); color: var(--ink); border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); box-shadow: 0 2px 0 var(--shade); font-family: var(--pix); font-weight: 700; font-size: var(--fs-xs); line-height: 16px; letter-spacing: 1px; text-align: center; -webkit-font-smoothing: none; }
 .back { text-decoration: none; color: var(--accent); font-size: var(--fs-md); }
 .album-head { display: flex; gap: var(--sp-4); align-items: flex-end; }
-.album-info { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.album-info { flex: 1 1 auto; display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
 .album-info .actions { margin-top: var(--sp-2); flex-wrap: wrap; }
 .uploaded-by { color: var(--muted); font: var(--fs-sm)/1.4 var(--pix); overflow-wrap: anywhere; }
 .songs { list-style: none; margin: 0; padding: var(--sp-1) var(--sp-2); }
@@ -392,6 +392,7 @@ button.add-artist { font-size: var(--fs-xs); padding: 2px var(--sp-2); }
   .album .a-name { font-size: var(--fs-md); }
   .album .a-sub { font-size: var(--fs-xs); }
   .album-head { flex-direction: column; align-items: flex-start; }
+  .album-info { align-self: stretch; }
   .art.big { width: 100%; max-width: 280px; }
   .album-grid { grid-template-columns: 1fr; }
   .cover { flex-direction: row; align-items: center; }
@@ -473,6 +474,21 @@ button.heart[aria-pressed="true"], button.heart:hover, button.heart:focus-visibl
 button.heart.album-heart::before { width: 24px; height: 24px; -webkit-mask-size: 24px 24px; mask-size: 24px 24px; }
 button.heart::before { content: ""; --i: var(--i-heart); }
 button.heart[aria-pressed="true"]::before { content: ""; --i: var(--i-heartfull); }
+button.icon.album-heart, button.icon.album-rec, button.icon.album-more { min-width: 44px; min-height: 44px; padding: 0; display: inline-grid; place-items: center; }
+button.icon.album-rec::before { content: ""; width: 24px; height: 24px; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' shape-rendering='crispEdges'%3E%3Crect x='10' y='0' width='2' height='1'/%3E%3Crect x='6' y='1' width='6' height='1'/%3E%3Crect x='2' y='2' width='4' height='1'/%3E%3Crect x='9' y='2' width='2' height='1'/%3E%3Crect x='0' y='3' width='2' height='1'/%3E%3Crect x='8' y='3' width='1' height='1'/%3E%3Crect x='10' y='3' width='1' height='1'/%3E%3Crect x='1' y='4' width='1' height='1'/%3E%3Crect x='7' y='4' width='1' height='1'/%3E%3Crect x='10' y='4' width='1' height='1'/%3E%3Crect x='2' y='5' width='1' height='1'/%3E%3Crect x='6' y='5' width='1' height='1'/%3E%3Crect x='10' y='5' width='1' height='1'/%3E%3Crect x='3' y='6' width='1' height='1'/%3E%3Crect x='5' y='6' width='1' height='1'/%3E%3Crect x='9' y='6' width='1' height='1'/%3E%3Crect x='4' y='7' width='1' height='1'/%3E%3Crect x='9' y='7' width='1' height='1'/%3E%3Crect x='5' y='8' width='1' height='1'/%3E%3Crect x='9' y='8' width='1' height='1'/%3E%3Crect x='6' y='9' width='1' height='1'/%3E%3Crect x='9' y='9' width='1' height='1'/%3E%3Crect x='7' y='10' width='2' height='1'/%3E%3Crect x='8' y='11' width='1' height='1'/%3E%3C/svg%3E") center / 24px 24px no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' shape-rendering='crispEdges'%3E%3Crect x='10' y='0' width='2' height='1'/%3E%3Crect x='6' y='1' width='6' height='1'/%3E%3Crect x='2' y='2' width='4' height='1'/%3E%3Crect x='9' y='2' width='2' height='1'/%3E%3Crect x='0' y='3' width='2' height='1'/%3E%3Crect x='8' y='3' width='1' height='1'/%3E%3Crect x='10' y='3' width='1' height='1'/%3E%3Crect x='1' y='4' width='1' height='1'/%3E%3Crect x='7' y='4' width='1' height='1'/%3E%3Crect x='10' y='4' width='1' height='1'/%3E%3Crect x='2' y='5' width='1' height='1'/%3E%3Crect x='6' y='5' width='1' height='1'/%3E%3Crect x='10' y='5' width='1' height='1'/%3E%3Crect x='3' y='6' width='1' height='1'/%3E%3Crect x='5' y='6' width='1' height='1'/%3E%3Crect x='9' y='6' width='1' height='1'/%3E%3Crect x='4' y='7' width='1' height='1'/%3E%3Crect x='9' y='7' width='1' height='1'/%3E%3Crect x='5' y='8' width='1' height='1'/%3E%3Crect x='9' y='8' width='1' height='1'/%3E%3Crect x='6' y='9' width='1' height='1'/%3E%3Crect x='9' y='9' width='1' height='1'/%3E%3Crect x='7' y='10' width='2' height='1'/%3E%3Crect x='8' y='11' width='1' height='1'/%3E%3C/svg%3E") center / 24px 24px no-repeat; }
+button.icon.album-rec:hover, button.icon.album-rec:focus-visible, button.icon.album-more:hover, button.icon.album-more:focus-visible, button.icon.album-more[aria-expanded="true"] { color: var(--accent); }
+.album-actions { align-items: center; flex-wrap: nowrap; width: 100%; }
+.album-actions .album-heart { margin-left: auto; }
+.play-split { display: inline-flex; margin-right: var(--sp-2); }
+.play-split button { min-height: 44px; }
+button.play-main { display: inline-flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-5) 0 var(--sp-4); }
+button.play-main::before { content: ""; width: 16px; height: 16px; background: currentColor; -webkit-mask: var(--i-play) center / 16px 16px no-repeat; mask: var(--i-play) center / 16px 16px no-repeat; }
+button.play-shuf { width: 44px; padding: 0; border-left-width: 0; display: grid; place-items: center; color: var(--muted); }
+button.icon.album-more { display: inline-flex; align-items: center; justify-content: center; font-size: 0; line-height: 0; color: var(--muted); }
+button.icon.album-more::before { content: ""; width: 24px; height: 24px; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Crect x='0' y='3' width='2' height='1'/%3E%3Crect x='3' y='3' width='2' height='1'/%3E%3Crect x='6' y='3' width='2' height='1'/%3E%3Crect x='0' y='4' width='2' height='1'/%3E%3Crect x='3' y='4' width='2' height='1'/%3E%3Crect x='6' y='4' width='2' height='1'/%3E%3C/svg%3E") center / 24px 24px no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Crect x='0' y='3' width='2' height='1'/%3E%3Crect x='3' y='3' width='2' height='1'/%3E%3Crect x='6' y='3' width='2' height='1'/%3E%3Crect x='0' y='4' width='2' height='1'/%3E%3Crect x='3' y='4' width='2' height='1'/%3E%3Crect x='6' y='4' width='2' height='1'/%3E%3C/svg%3E") center / 24px 24px no-repeat; }
+button.play-shuf::before { content: ""; width: 16px; height: 16px; background: currentColor; -webkit-mask: var(--i-shuffle) center / 16px 16px no-repeat; mask: var(--i-shuffle) center / 16px 16px no-repeat; }
+button.play-shuf:hover:not(:disabled), button.play-shuf:focus-visible { color: var(--fg); }
+button.play-shuf[aria-pressed="true"] { color: var(--accent); background: var(--shade); }
 
 .login .privacy { margin: 0; font-size: var(--fs-xs); }
 .view-admin > * { min-width: 0; }
