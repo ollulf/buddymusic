@@ -228,6 +228,17 @@ h1 { font-size: var(--fs-xl); margin: 0; line-height: 1.25; color: var(--accent)
 .genre-row::-webkit-scrollbar { display: none; }
 .genre-row .pill { flex: none; white-space: nowrap; cursor: pointer; font: inherit; font-size: var(--fs-sm); }
 .genre-clear { color: var(--ink); }
+.genre-pill { cursor: pointer; font: inherit; font-size: var(--fs-sm); }
+.genre-pick { max-height: 55vh; overflow-y: auto; }
+.genre-item[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.genre-item.empty:not([aria-pressed="true"]) { opacity: .55; }
+.genre-name { display: flex; gap: var(--sp-2); align-items: center; }
+.genre-check { width: 1em; display: inline-block; }
+.genre-sheet-actions { display: flex; justify-content: space-between; gap: var(--sp-2); }
+.genre-hint { margin-top: var(--sp-2); font-size: var(--fs-sm); }
+@media (max-width: 600px) {
+  dialog.sheet.genre-sheet { margin: auto auto 0; width: 100vw; max-width: 100vw; max-height: 85vh; }
+}
 .album-genres { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
 .album-genres .pill { white-space: nowrap; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--sp-4); }
