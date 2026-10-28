@@ -277,22 +277,71 @@ function genreChip(name, on, onclick) {
 }
 
 function genreRow(onChange) {
-  const row = h("div", { class: "genre-row", role: "group", "aria-label": t("genre.filter") });
-  const draw = (genres) => {
-    const names = genres.map((g) => g.name);
-    for (const g of genreSel) if (!names.includes(g)) names.unshift(g);
-    if (!names.length) { row.hidden = true; return; }
-    const toggle = (n) => () => {
-      if (genreSel.has(n)) genreSel.delete(n); else genreSel.add(n);
-      onChange();
-    };
-    row.replaceChildren(
-      genreSel.size ? h("button", { type: "button", class: "pill genre-clear", onclick: () => { genreSel.clear(); onChange(); } }, `✕ ${t("genre.clear")}`) : null,
-      ...names.map((n) => genreChip(n, genreSel.has(n), toggle(n))));
+  const names = [...genreSel];
+  if (!names.length) return h("div", { class: "genre-row", hidden: true });
+  const drop = (n) => () => { genreSel.delete(n); onChange(); };
+  return h("div", { class: "genre-row", role: "group", "aria-label": t("genre.filter") },
+    h("button", { type: "button", class: "pill genre-clear", onclick: () => { genreSel.clear(); onChange(); } }, `✕ ${t("genre.clear")}`),
+    ...names.map((n) => h("button", { type: "button", class: "pill genre-chip on", "aria-label": t("genre.remove", { name: n }), onclick: drop(n) }, `${n} ✕`)));
+}
+
+function genrePill(onChange) {
+  const label = genreSel.size ? t("genre.pillCount", { n: genreSel.size }) : t("genre.pill");
+  return h("button", { type: "button", class: `pill genre-pill${genreSel.size ? " on" : ""}`, "aria-haspopup": "dialog", onclick: () => openGenrePicker(onChange) }, label);
+}
+
+function genreEntries(d) {
+  const counts = new Map((d.genres || []).map((g) => [g.name, g.albums]));
+  const names = [...(d.list || [])];
+  for (const g of d.genres || []) if (!names.includes(g.name)) names.push(g.name);
+  for (const g of genreSel) if (!names.includes(g)) names.push(g);
+  return names.map((name) => ({ name, albums: counts.get(name) || 0 }));
+}
+
+function openGenrePicker(onChange) {
+  const before = [...genreSel].sort().join("\n");
+  const list = h("ul", { class: "sheet-list genre-pick" }, h("li", { class: "muted" }, t("common.loading")));
+  const items = [];
+  const paint = () => {
+    for (const { btn, name } of items) {
+      const on = genreSel.has(name);
+      btn.setAttribute("aria-pressed", String(on));
+      btn.querySelector(".genre-check").textContent = on ? "✓" : "";
+    }
   };
-  draw([]);
-  loadGenres().then((d) => draw(d.genres || [])).catch(() => draw([]));
-  return row;
+  const dlg = h("dialog", { class: "sheet card genre-sheet", "aria-labelledby": "genre-sheet-title" },
+    h("h2", { id: "genre-sheet-title" }, t("genre.filter")),
+    list,
+    h("div", { class: "genre-sheet-actions" },
+      h("button", { class: "ghost", type: "button", onclick: () => { genreSel.clear(); paint(); } }, t("genre.clear")),
+      h("button", { class: "primary", type: "button", onclick: () => dlg.close() }, t("genre.done"))));
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+  dlg.addEventListener("close", () => {
+    dlg.remove();
+    if ([...genreSel].sort().join("\n") !== before) onChange();
+  });
+  document.body.append(dlg);
+  dlg.showModal();
+  const draw = (entries) => {
+    items.length = 0;
+    list.replaceChildren(...entries.map(({ name, albums }) => {
+      const btn = h("button", { class: `sheet-item genre-item${albums ? "" : " empty"}`, type: "button", "aria-pressed": "false" },
+        h("span", { class: "genre-name" }, h("span", { class: "genre-check", "aria-hidden": "true" }, ""), name),
+        h("span", { class: "muted genre-count" }, String(albums)));
+      btn.addEventListener("click", () => {
+        if (genreSel.has(name)) genreSel.delete(name); else genreSel.add(name);
+        paint();
+      });
+      items.push({ btn, name });
+      return h("li", {}, btn);
+    }));
+    paint();
+  };
+  loadGenres().then((d) => draw(genreEntries(d))).catch(() => draw(genreEntries({})));
+}
+
+function genreEmpty(key) {
+  return h("div", { class: "card muted" }, h("div", {}, t(key)), h("div", { class: "genre-hint" }, t("genre.adminHint")));
 }
 
 async function genreArtists() {
@@ -330,13 +379,14 @@ function albumsFor(kind) {
 
 async function renderLists(container, kind, opts) {
   const chips = h("nav", { class: "chips-nav" },
-    LISTS.map(([k, label]) => h("a", { class: `pill${k === kind ? " on" : ""}`, href: `#/library/${k}` }, label)));
+    LISTS.map(([k, label]) => h("a", { class: `pill${k === kind ? " on" : ""}`, href: `#/library/${k}` }, label)),
+    genrePill(() => renderLists(container, kind, opts)));
   const body = h("div", { class: "muted" }, t("common.loading"));
   container.replaceChildren(genreRow(() => renderLists(container, kind, opts)), chips, body);
   try {
     if (kind === "artists" && genreSel.size) {
       const artists = await genreArtists();
-      body.replaceWith(artists.length ? h("div", { class: "artists" }, artistList(artists)) : h("div", { class: "card muted" }, t("genre.noArtists")));
+      body.replaceWith(artists.length ? h("div", { class: "artists" }, artistList(artists)) : genreEmpty("genre.noArtists"));
       return;
     }
     if (kind === "artists") {
@@ -349,7 +399,7 @@ async function renderLists(container, kind, opts) {
     const data = await albumsFor(kind);
     const albums = liveAlbums(data.album);
     body.replaceWith(albums.length ? h("div", { class: "grid" }, albums.map(albumCard))
-      : h("div", { class: "card muted" }, t(genreSel.size ? "genre.noAlbums" : "library.noAlbums")));
+      : genreSel.size ? genreEmpty("genre.noAlbums") : h("div", { class: "card muted" }, t("library.noAlbums")));
   } catch (e) {
     body.replaceWith(failBox(e, opts));
   }

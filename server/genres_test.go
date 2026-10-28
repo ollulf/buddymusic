@@ -58,7 +58,7 @@ func TestGenresEndpoint(t *testing.T) {
 	if len(got.Genres) != 3 || got.Genres[0] != (genreCount{"Electronic", 5}) || got.Genres[1] != (genreCount{"Hip Hop", 4}) || got.Genres[2].Name != "Krautrock" {
 		t.Fatalf("genres %+v", got.Genres)
 	}
-	if len(got.List) != len(genreList) {
+	if len(got.List) != len(genreList) || got.List[0] != "Rock" || got.List[len(got.List)-1] != "Children's" {
 		t.Fatalf("list %v", got.List)
 	}
 }

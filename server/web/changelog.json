@@ -1,9 +1,9 @@
 [
   {
-    "version": "1.0.2810.2",
+    "version": "1.0.2810.3",
     "date": "2026-10-28",
     "en": [
-      "Filter the library by genre with the new chip row; albums show their genres",
+      "Filter the library by genre with the new Genre button next to New and Random; albums show their genres",
       "Recommend whole albums to friends, not just songs",
       "Album titles under covers now wrap to two lines, with the artist and year neatly aligned",
       "Your friends' activity stays up to date, with a green dot showing who is online",
@@ -12,7 +12,7 @@
       "Admins can add more artists to an album or song in Edit album"
     ],
     "de": [
-      "Filtere die Bibliothek nach Genre mit der neuen Chip-Leiste; Alben zeigen ihre Genres",
+      "Filtere die Bibliothek nach Genre mit dem neuen Genre-Knopf neben Neu und Zufall; Alben zeigen ihre Genres",
       "Empfiehl Freunden ganze Alben, nicht nur Songs",
       "Albumtitel unter den Covern brechen jetzt auf zwei Zeilen um, Künstler und Jahr stehen sauber auf einer Höhe",
       "Die Aktivität deiner Freunde bleibt aktuell, ein grüner Punkt zeigt, wer online ist",
