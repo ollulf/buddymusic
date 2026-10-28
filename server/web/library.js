@@ -441,17 +441,6 @@ async function renderAlbum(container, id, opts) {
       player.removeSongs(songs.map((s) => s.id));
       location.hash = "#/library";
     };
-    const renewAlbum = async () => {
-      if (!confirm(t("library.confirmRenew", { name: al.name || t("library.unknownAlbum") }))) return;
-      try {
-        await apiJSON("POST", `/api/admin/album/${encodeURIComponent(al.id)}/renew`);
-        openedAlbums.add(al.id);
-        toast(t("library.renewed"));
-      } catch (e) {
-        if (e instanceof Unauthorized) opts.onUnauthorized?.();
-        else toast(t("library.renewFailed"));
-      }
-    };
     const head = caseCover(al, 600, "art big");
     if (al.backV) setBackVersion(al.id, al.backV);
     if (al.hasBack && al.id) flipBack(head, al.id);
@@ -476,7 +465,6 @@ async function renderAlbum(container, id, opts) {
             heartButton(al, "album", { cls: "album-heart", onUnauthorized: opts.onUnauthorized }),
             al.id ? h("button", { onclick: () => openAlbumRecommendSheet(al, opts) }, `${t("recs.recommendTo")}…`) : null,
             opts.admin ? h("button", { onclick: (e) => openAlbumEdit(al, songs, { returnTo: e.currentTarget, onUnauthorized: opts.onUnauthorized, onBackChanged: () => setBackVersion(al.id, Date.now()), onSaved: (body) => { if (body && "vinyl" in body) { if (body.vinyl) vinylAlbums.add(al.id); else vinylAlbums.delete(al.id); } renderAlbum(container, id, opts); } }) }, t("library.editAlbum")) : null,
-            opts.admin ? h("button", { onclick: renewAlbum }, t("library.renewAlbum")) : null,
             opts.admin ? h("button", { class: "danger", onclick: deleteAlbum }, t("library.deleteAlbum")) : null))),
       h("ol", { class: "songs card" }, songs.map((_, i) => songRow(songs, i, { album: al, onDelete: deleteTrack, onUnauthorized: opts.onUnauthorized }))));
   } catch (e) {
