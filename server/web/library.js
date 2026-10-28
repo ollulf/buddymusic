@@ -2,7 +2,7 @@ import { t } from "./i18n.js";
 import { h, api, apiSend, apiJSON, cover, fmtTime, Unauthorized, setPageTitle } from "./dom.js";
 import * as player from "./player.js";
 import { heartButton, isStarred, toggleStar } from "./favs.js";
-import { addToPlaylistButton, openAddSheet, toast } from "./playlists.js";
+import { openAddSheet, toast } from "./playlists.js";
 import { rowMenuButton, swipeRow } from "./rowactions.js";
 import { flyFrom } from "./fly.js";
 import { holo, sparkles, unholo } from "./holo.js";
@@ -13,7 +13,7 @@ const deletedSongs = new Set();
 const deletedAlbums = new Set();
 const liveAlbums = (list) => (list || []).filter((al) => !deletedAlbums.has(al.id));
 
-const LISTS = [["newest", t("library.new")], ["recent", t("library.recent")], ["random", t("library.random")], ["artists", t("library.artists")]];
+const LISTS = [["newest", t("library.new")], ["random", t("library.random")], ["artists", t("library.artists")]];
 
 const EAGER_COVERS = 12;
 
@@ -270,74 +270,72 @@ function loadGenres() {
 export function filterByGenre(name) {
   genreSel.clear();
   genreSel.add(name);
+  setFilterOpen(true);
 }
 
-function genreChip(name, on, onclick) {
-  return h("button", { type: "button", class: `pill genre-chip${on ? " on" : ""}`, "aria-pressed": String(on), onclick }, name);
+const FILTER_KEY = "bm.libFilter";
+let filterOpen = (() => { try { return sessionStorage.getItem(FILTER_KEY) === "1"; } catch { return false; } })();
+let filterBtn = null;
+let filterPanel = null;
+
+function setFilterOpen(on) {
+  filterOpen = on;
+  try { sessionStorage.setItem(FILTER_KEY, on ? "1" : "0"); } catch {}
+  if (filterPanel) filterPanel.hidden = !on;
+  paintFilterButton();
 }
 
-function genreRow(onChange) {
-  const names = [...genreSel];
-  if (!names.length) return h("div", { class: "genre-row", hidden: true });
-  const drop = (n) => () => { genreSel.delete(n); onChange(); };
-  return h("div", { class: "genre-row", role: "group", "aria-label": t("genre.filter") },
-    h("button", { type: "button", class: "pill genre-clear", onclick: () => { genreSel.clear(); onChange(); } }, `✕ ${t("genre.clear")}`),
-    ...names.map((n) => h("button", { type: "button", class: "pill genre-chip on", "aria-label": t("genre.remove", { name: n }), onclick: drop(n) }, `${n} ✕`)));
+function paintFilterButton() {
+  if (!filterBtn) return;
+  const n = genreSel.size;
+  const label = n ? t("filter.active", { n }) : t("filter.title");
+  filterBtn.classList.toggle("on", filterOpen);
+  filterBtn.classList.toggle("active", n > 0);
+  filterBtn.setAttribute("aria-expanded", String(filterOpen));
+  filterBtn.setAttribute("aria-label", label);
+  filterBtn.title = label;
+  const badge = filterBtn.querySelector(".filter-badge");
+  badge.textContent = n ? String(n) : "";
+  badge.hidden = !n;
 }
 
-function genrePill(onChange) {
-  const label = genreSel.size ? t("genre.pillCount", { n: genreSel.size }) : t("genre.pill");
-  return h("button", { type: "button", class: `pill genre-pill${genreSel.size ? " on" : ""}`, "aria-haspopup": "dialog", onclick: () => openGenrePicker(onChange) }, label);
+export function filterButton(icon) {
+  filterBtn = h("button", { type: "button", class: "filter-btn", "aria-controls": "lib-filter", onclick: () => setFilterOpen(!filterOpen) },
+    icon, h("span", { class: "filter-badge", "aria-hidden": "true", hidden: true }));
+  paintFilterButton();
+  return filterBtn;
+}
+
+export function libraryHasFilter(parts) {
+  const [kind, id] = parts;
+  return !((kind === "album" || kind === "artist") && id);
 }
 
 function genreEntries(d) {
   const counts = new Map((d.genres || []).map((g) => [g.name, g.albums]));
   const names = [...(d.list || [])];
   for (const g of d.genres || []) if (!names.includes(g.name)) names.push(g.name);
-  for (const g of genreSel) if (!names.includes(g)) names.push(g);
   return names.map((name) => ({ name, albums: counts.get(name) || 0 }));
 }
 
-function openGenrePicker(onChange) {
-  const before = [...genreSel].sort().join("\n");
-  const list = h("ul", { class: "sheet-list genre-pick" }, h("li", { class: "muted" }, t("common.loading")));
-  const items = [];
-  const paint = () => {
-    for (const { btn, name } of items) {
-      const on = genreSel.has(name);
-      btn.setAttribute("aria-pressed", String(on));
-      btn.querySelector(".genre-check").textContent = on ? "✓" : "";
-    }
-  };
-  const dlg = h("dialog", { class: "sheet card genre-sheet", "aria-labelledby": "genre-sheet-title" },
-    h("h2", { id: "genre-sheet-title" }, t("genre.filter")),
-    list,
-    h("div", { class: "genre-sheet-actions" },
-      h("button", { class: "ghost", type: "button", onclick: () => { genreSel.clear(); paint(); } }, t("genre.clear")),
-      h("button", { class: "primary", type: "button", onclick: () => dlg.close() }, t("genre.done"))));
-  dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
-  dlg.addEventListener("close", () => {
-    dlg.remove();
-    if ([...genreSel].sort().join("\n") !== before) onChange();
-  });
-  document.body.append(dlg);
-  dlg.showModal();
-  const draw = (entries) => {
-    items.length = 0;
-    list.replaceChildren(...entries.map(({ name, albums }) => {
-      const btn = h("button", { class: `sheet-item genre-item${albums ? "" : " empty"}`, type: "button", "aria-pressed": "false" },
-        h("span", { class: "genre-name" }, h("span", { class: "genre-check", "aria-hidden": "true" }, ""), name),
-        h("span", { class: "muted genre-count" }, String(albums)));
-      btn.addEventListener("click", () => {
-        if (genreSel.has(name)) genreSel.delete(name); else genreSel.add(name);
-        paint();
-      });
-      items.push({ btn, name });
-      return h("li", {}, btn);
-    }));
-    paint();
-  };
-  loadGenres().then((d) => draw(genreEntries(d))).catch(() => draw(genreEntries({})));
+function filterPanelEl(kind, onChange) {
+  const names = [...genreSel];
+  const lists = h("nav", { class: "chips-nav filter-row", "aria-label": t("filter.lists") },
+    LISTS.map(([k, label]) => h("a", { class: `pill${k === kind ? " on" : ""}`, href: `#/library/${k}` }, label)));
+  const applied = h("div", { class: "filter-row", role: "group", "aria-label": t("genre.filter") },
+    names.length
+      ? [...names.map((n) => h("button", { type: "button", class: "pill genre-chip on", "aria-label": t("genre.remove", { name: n }), onclick: () => { genreSel.delete(n); onChange(); } }, `${n} ✕`)),
+        h("button", { type: "button", class: "pill genre-clear", onclick: () => { genreSel.clear(); onChange(); } }, `✕ ${t("genre.clear")}`)]
+      : [h("span", { class: "muted filter-none" }, t("genre.none"))]);
+  const avail = h("div", { class: "filter-row filter-genres", role: "group", "aria-label": t("genre.available") });
+  loadGenres().then((d) => {
+    avail.replaceChildren(...genreEntries(d).filter((g) => !genreSel.has(g.name)).map(({ name, albums }) =>
+      h("button", { type: "button", class: `pill genre-chip${albums ? "" : " empty"}`, "aria-label": t("genre.add", { name }), onclick: () => { genreSel.add(name); onChange(); } },
+        name, h("span", { class: "genre-count", "aria-hidden": "true" }, String(albums)))));
+  }).catch(() => {});
+  filterPanel = h("div", { id: "lib-filter", class: "lib-filter", hidden: !filterOpen }, lists, applied, avail);
+  paintFilterButton();
+  return filterPanel;
 }
 
 function genreEmpty(key) {
@@ -378,11 +376,8 @@ function albumsFor(kind) {
 }
 
 async function renderLists(container, kind, opts) {
-  const chips = h("nav", { class: "chips-nav" },
-    LISTS.map(([k, label]) => h("a", { class: `pill${k === kind ? " on" : ""}`, href: `#/library/${k}` }, label)),
-    genrePill(() => renderLists(container, kind, opts)));
   const body = h("div", { class: "muted" }, t("common.loading"));
-  container.replaceChildren(genreRow(() => renderLists(container, kind, opts)), chips, body);
+  container.replaceChildren(filterPanelEl(kind, () => renderLists(container, kind, opts)), body);
   try {
     if (kind === "artists" && genreSel.size) {
       const artists = await genreArtists();
@@ -424,6 +419,38 @@ async function deleteItem(kind, id, opts) {
   }
 }
 
+function albumActions(al, songs, opts, { editAlbum, deleteAlbum }) {
+  const none = !songs.length;
+  const shuf = h("button", { class: "play-shuf", type: "button", disabled: none, title: t("library.playShuffled"), "aria-label": t("library.playShuffled"), "aria-pressed": "false" });
+  const syncShuf = () => shuf.setAttribute("aria-pressed", String(!!player.settings().shuffle));
+  syncShuf();
+  const off = player.onChange(() => { if (!shuf.isConnected) { off(); return; } syncShuf(); });
+  shuf.addEventListener("click", () => {
+    if (player.settings().shuffle) { player.toggleShuffle(); return; }
+    player.playList(songs, Math.floor(Math.random() * songs.length));
+    player.toggleShuffle();
+  });
+  const play = h("button", { class: "primary play-main", type: "button", disabled: none, title: t("library.playInOrder"), onclick: () => {
+    if (player.settings().shuffle) player.toggleShuffle();
+    player.playList(songs, 0);
+  } }, h("span", {}, t("player.play")));
+  const recommend = al.id ? h("button", { class: "icon album-rec", type: "button", title: `${t("recs.recommendTo")}…`, "aria-label": `${t("recs.recommendTo")}…`, onclick: () => openAlbumRecommendSheet(al, opts) }) : null;
+  const heart = heartButton(al, "album", { cls: "album-heart", onUnauthorized: opts.onUnauthorized });
+  const more = rowMenuButton(() => [
+    { icon: "+", label: t("song.addToQueue"), disabled: none, run: () => player.addToQueue(songs) },
+    { icon: "⤵", label: t("song.playNext"), disabled: none, run: () => player.playNext(songs) },
+    { icon: "☰", label: `${t("playlists.addTo")}…`, disabled: none, run: () => openAddSheet(songs, opts) },
+    opts.admin ? { icon: "✎", label: t("library.editAlbum"), run: () => editAlbum(more) } : null,
+    opts.admin ? { icon: "✕", label: t("library.deleteAlbum"), danger: true, run: deleteAlbum } : null,
+  ]);
+  more.classList.add("album-more");
+  more.title = t("library.albumMore");
+  more.setAttribute("aria-label", t("library.albumMore"));
+  return h("div", { class: "actions album-actions" },
+    h("div", { class: "play-split", role: "group", "aria-label": t("player.play") }, play, shuf),
+    heart, recommend, more);
+}
+
 async function renderAlbum(container, id, opts) {
   container.replaceChildren(h("div", { class: "muted" }, t("common.loading")));
   try {
@@ -446,17 +473,7 @@ async function renderAlbum(container, id, opts) {
       player.removeSongs(songs.map((s) => s.id));
       location.hash = "#/library";
     };
-    const renewAlbum = async () => {
-      if (!confirm(t("library.confirmRenew", { name: al.name || t("library.unknownAlbum") }))) return;
-      try {
-        await apiJSON("POST", `/api/admin/album/${encodeURIComponent(al.id)}/renew`);
-        openedAlbums.add(al.id);
-        toast(t("library.renewed"));
-      } catch (e) {
-        if (e instanceof Unauthorized) opts.onUnauthorized?.();
-        else toast(t("library.renewFailed"));
-      }
-    };
+    const editAlbum = (btn) => openAlbumEdit(al, songs, { returnTo: btn, onUnauthorized: opts.onUnauthorized, onBackChanged: () => setBackVersion(al.id, Date.now()), onSaved: (body) => { if (body && "vinyl" in body) { if (body.vinyl) vinylAlbums.add(al.id); else vinylAlbums.delete(al.id); } renderAlbum(container, id, opts); } });
     const head = caseCover(al, 600, "art big");
     if (al.backV) setBackVersion(al.id, al.backV);
     if (al.hasBack && al.id) flipBack(head, al.id);
@@ -473,16 +490,7 @@ async function renderAlbum(container, id, opts) {
             ? h("div", { class: "album-genres", role: "group", "aria-label": t("genre.album") }, al.genreTags.map((g) => h("a", { class: "pill genre-chip", href: "#/library/newest", title: t("genre.showAll", { name: g }), onclick: () => filterByGenre(g) }, g))) : null,
           Array.isArray(al.uploadedBy) && al.uploadedBy.length
             ? h("div", { class: "uploaded-by" }, t("library.uploadedBy", { names: al.uploadedBy.join(", ") })) : null,
-          h("div", { class: "actions" },
-            h("button", { class: "primary", onclick: () => player.playList(songs, 0), disabled: !songs.length }, t("player.play")),
-            h("button", { onclick: () => { player.playList(songs, Math.floor(Math.random() * songs.length)); if (!player.settings().shuffle) player.toggleShuffle(); }, disabled: !songs.length }, t("player.shuffle")),
-            h("button", { onclick: () => player.addToQueue(songs), disabled: !songs.length }, t("song.addToQueue")),
-            songs.length ? addToPlaylistButton(songs, opts, "") : null,
-            heartButton(al, "album", { cls: "album-heart", onUnauthorized: opts.onUnauthorized }),
-            al.id ? h("button", { onclick: () => openAlbumRecommendSheet(al, opts) }, `${t("recs.recommendTo")}…`) : null,
-            opts.admin ? h("button", { onclick: (e) => openAlbumEdit(al, songs, { returnTo: e.currentTarget, onUnauthorized: opts.onUnauthorized, onBackChanged: () => setBackVersion(al.id, Date.now()), onSaved: (body) => { if (body && "vinyl" in body) { if (body.vinyl) vinylAlbums.add(al.id); else vinylAlbums.delete(al.id); } renderAlbum(container, id, opts); } }) }, t("library.editAlbum")) : null,
-            opts.admin ? h("button", { onclick: renewAlbum }, t("library.renewAlbum")) : null,
-            opts.admin ? h("button", { class: "danger", onclick: deleteAlbum }, t("library.deleteAlbum")) : null))),
+          albumActions(al, songs, opts, { editAlbum, deleteAlbum }))),
       h("ol", { class: "songs card" }, songs.map((_, i) => songRow(songs, i, { album: al, onDelete: deleteTrack, onUnauthorized: opts.onUnauthorized }))));
   } catch (e) {
     container.replaceChildren(h("a", { class: "back", href: "#/library" }, t("library.back")), failBox(e, opts));

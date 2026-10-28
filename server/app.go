@@ -62,7 +62,7 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("GET /api/music/starred", a.requireUser(a.musicJSON("getStarred2.view", "starred2", noParams)))
 	mux.Handle("POST /api/music/star/{id}", a.requireUser(a.handleStar(true)))
 	mux.Handle("DELETE /api/music/star/{id}", a.requireUser(a.handleStar(false)))
-	mux.Handle("GET /api/music/playlists", a.requireUser(a.musicJSON("getPlaylists.view", "playlists", noParams)))
+	mux.Handle("GET /api/music/playlists", a.requireUser(a.handlePlaylists))
 	mux.Handle("POST /api/music/playlists", a.requireUser(a.handlePlaylistCreate))
 	mux.Handle("GET /api/music/playlist/{id}", a.requireUser(a.musicJSON("getPlaylist.view", "playlist", idParam)))
 	mux.Handle("PATCH /api/music/playlist/{id}", a.requireUser(a.handlePlaylistUpdate))

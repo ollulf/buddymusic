@@ -1,5 +1,5 @@
 import { renderUpload } from "./upload.js";
-import { renderLibrary, setNewAlbums, setVinylAlbums, prefetchLibrary, dropLibraryPrefetch } from "./library.js";
+import { renderLibrary, setNewAlbums, setVinylAlbums, prefetchLibrary, dropLibraryPrefetch, filterButton, libraryHasFilter } from "./library.js";
 import { renderSearch, searchBox } from "./search.js";
 import { renderFavorites } from "./favorites.js";
 import { renderQueue } from "./queue.js";
@@ -89,6 +89,8 @@ const TAB_ICONS = {
   upload: ["............", "..########..", ".#........#.", ".#...##...#.", ".#..####..#.", ".#.######.#.", ".#...##...#.", ".#...##...#.", ".#...##...#.", ".#........#.", "..########..", "............"],
   admin: ["............", "........##..", "........##..", "........##..", ".....##.##..", ".....##.##..", ".....##.##..", "..##.##.##..", "..##.##.##..", "..##.##.##..", "..##.##.##..", "............"],
 };
+
+const FILTER_ICON = ["................", "............##..", ".#########.####.", ".#########.####.", "............##..", "................", "....##..........", ".#.####.#######.", ".#.####.#######.", "....##..........", "................", ".........##.....", ".######.####.##.", ".######.####.##.", ".........##.....", "................"];
 
 function pixelIcon(rows) {
   const svg = document.createElementNS(SVG, "svg");
@@ -360,7 +362,8 @@ function showApp(user, admin, avatar, me = {}) {
   if (titleHandler) window.removeEventListener("page-title", titleHandler);
   titleHandler = (e) => setTitle(e.detail);
   window.addEventListener("page-title", titleHandler);
-  const titleRow = h("div", { class: "title-row" }, titleEl, searchBox());
+  const filterBtn = filterButton(pixelIcon(FILTER_ICON));
+  const titleRow = h("div", { class: "title-row" }, titleEl, searchBox(), h("div", { class: "title-tools" }, filterBtn));
   const settingsView = h("main", { class: "view view-settings", hidden: true });
   let cameFromApp = false;
   const closeSettings = () => {
@@ -403,6 +406,7 @@ function showApp(user, admin, avatar, me = {}) {
     if (inSettings) {
       setTitle(t("settings.title"));
       titleRow.classList.remove("no-search");
+      filterBtn.hidden = true;
       return;
     }
     const tab = TABS.some(([k]) => k === parts[0]) ? parts[0] : "library";
@@ -415,6 +419,7 @@ function showApp(user, admin, avatar, me = {}) {
     }
     setTitle(TABS.find(([k]) => k === tab)[1]);
     titleRow.classList.toggle("no-search", tab === "upload" || tab === "admin");
+    filterBtn.hidden = tab !== "library" || !libraryHasFilter(parts.slice(1));
     const key = [tab, ...parts.slice(1)].join("/");
     if (tab === "library" && key !== shown) {
       renderLibrary(views.library, parts.slice(1), opts);

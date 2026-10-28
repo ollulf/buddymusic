@@ -1,5 +1,5 @@
-import { t } from "./i18n.js";
-import { h, api, apiJSON, fmtTime, Unauthorized, setPageTitle } from "./dom.js";
+import { t, relTime } from "./i18n.js";
+import { h, api, apiJSON, fmtTime, cover, Unauthorized, setPageTitle } from "./dom.js";
 import { songRow } from "./library.js";
 import * as player from "./player.js";
 
@@ -45,21 +45,42 @@ function deleteButton(pl, opts, after) {
   } }, "✕");
 }
 
+function pile(pl) {
+  const covers = (pl.covers || []).slice(0, 5);
+  const n = pl.songCount || 0;
+  const cases = covers.length
+    ? covers.map((id, i) => {
+      const c = cover(id, 150, i ? "art jc pl-case" : "art jc pl-case pl-front");
+      c.style.setProperty("--i", i);
+      return c;
+    }).reverse()
+    : [h("div", { class: "pl-case pl-empty" }, "+")];
+  return h("div", { class: "pl-pile", "aria-hidden": "true" },
+    ...cases,
+    n ? h("span", { class: "pl-count" }, String(n)) : null);
+}
+
 function playlistRow(pl, opts, reload) {
   const own = mine(pl);
-  const sub = [t("common.songCount", { n: pl.songCount || 0 }), pl.duration ? fmtTime(pl.duration) : null, own ? null : t("playlists.byLower", { owner: pl.owner })].filter(Boolean).join(" · ");
+  const meta = [t("common.songCount", { n: pl.songCount || 0 }), pl.duration ? fmtTime(pl.duration) : null].filter(Boolean).join(" · ");
+  const changed = pl.changed ? Date.parse(pl.changed) : NaN;
+  const by = [own ? null : t("playlists.byLower", { owner: pl.owner }), isFinite(changed) ? t("playlists.updated", { date: relTime(changed / 1000) }) : null].filter(Boolean).join(" · ");
   return h("li", { class: "pl-row" },
     h("a", { class: "pl-main", href: `#/playlists/${encodeURIComponent(pl.id)}` },
-      h("span", { class: "s-meta" },
+      pile(pl),
+      h("span", { class: "pl-text" },
         h("span", { class: "s-title" }, pl.name || t("playlists.untitled"), own && pl.public ? h("span", { class: "badge" }, t("playlists.publicBadge")) : null),
-        h("span", { class: "s-sub" }, sub))),
-    h("button", { class: "icon more", title: t("player.play"), "aria-label": t("playlists.playNamed", { name: pl.name }), onclick: async () => {
-      try {
-        const full = await api(`/api/music/playlist/${encodeURIComponent(pl.id)}`);
-        if (full.entry?.length) player.playList(full.entry, 0);
-      } catch (e) { report(e, opts, "load"); }
-    } }, "▶"),
-    own ? deleteButton(pl, opts, reload) : null);
+        h("span", { class: pl.comment ? "pl-desc" : "pl-desc none" }, pl.comment || t("playlists.noComment")),
+        h("span", { class: "pl-meta" }, meta),
+        by ? h("span", { class: "pl-by" }, by) : null)),
+    h("span", { class: "pl-actions" },
+      h("button", { class: "icon more", title: t("player.play"), "aria-label": t("playlists.playNamed", { name: pl.name }), onclick: async () => {
+        try {
+          const full = await api(`/api/music/playlist/${encodeURIComponent(pl.id)}`);
+          if (full.entry?.length) player.playList(full.entry, 0);
+        } catch (e) { report(e, opts, "load"); }
+      } }, "▶"),
+      own ? deleteButton(pl, opts, reload) : null));
 }
 
 async function renderOverview(container, opts) {
@@ -79,11 +100,11 @@ async function renderOverview(container, opts) {
       h("div", { class: "pl-top" }, newBtn),
       h("section", {},
         h("h2", {}, t("playlists.mine", { n: own.length })),
-        own.length ? h("ul", { class: "songs card" }, own.map((pl) => playlistRow(pl, opts, reload)))
+        own.length ? h("ul", { class: "pl-list" }, own.map((pl) => playlistRow(pl, opts, reload)))
           : h("p", { class: "card muted" }, t("playlists.noneMine"))),
       h("section", {},
         h("h2", {}, t("playlists.friends", { n: friends.length })),
-        friends.length ? h("ul", { class: "songs card" }, friends.map((pl) => playlistRow(pl, opts, reload)))
+        friends.length ? h("ul", { class: "pl-list" }, friends.map((pl) => playlistRow(pl, opts, reload)))
           : h("p", { class: "card muted" }, t("playlists.noneFriends"))));
   } catch (e) {
     if (e instanceof Unauthorized) return opts.onUnauthorized?.();

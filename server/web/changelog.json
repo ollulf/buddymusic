@@ -1,23 +1,27 @@
 [
   {
-    "version": "1.0.2810.3",
+    "version": "1.0.2810.4",
     "date": "2026-10-28",
     "en": [
-      "Filter the library by genre with the new Genre button next to New and Random; albums show their genres",
+      "New Filter button next to the centered library search: pick New, Random, Artists or genres; albums show their genres",
+      "Album pages: a big Play button with Shuffle attached, heart and share icons, and everything else under \"…\"",
+      "Playlists now show as a pile of CDs with the description next to them",
+      "Pick genres when uploading an album",
       "Recommend whole albums to friends, not just songs",
       "Album titles under covers now wrap to two lines, with the artist and year neatly aligned",
       "Your friends' activity stays up to date, with a green dot showing who is online",
       "Back covers now show for every album that has one",
-      "Shorter \"Vinyl recording\" label in the upload form",
       "Admins can add more artists to an album or song in Edit album"
     ],
     "de": [
-      "Filtere die Bibliothek nach Genre mit dem neuen Genre-Knopf neben Neu und Zufall; Alben zeigen ihre Genres",
+      "Neuer Filter-Knopf neben der zentrierten Suche in der Bibliothek: wähle Neu, Zufall, Künstler oder Genres; Alben zeigen ihre Genres",
+      "Albumseiten: großer Play-Knopf mit angehängtem Shuffle, Herz- und Teilen-Symbol, alles andere unter „…“",
+      "Playlists erscheinen jetzt als CD-Stapel mit der Beschreibung daneben",
+      "Wähle beim Hochladen eines Albums seine Genres",
       "Empfiehl Freunden ganze Alben, nicht nur Songs",
       "Albumtitel unter den Covern brechen jetzt auf zwei Zeilen um, Künstler und Jahr stehen sauber auf einer Höhe",
       "Die Aktivität deiner Freunde bleibt aktuell, ein grüner Punkt zeigt, wer online ist",
       "Rückseiten werden jetzt bei allen Alben angezeigt, die eine haben",
-      "Kürzeres „Vinyl-Aufnahme“-Feld beim Hochladen",
       "Admins können unter „Album bearbeiten“ weitere Künstler zu einem Album oder Song hinzufügen"
     ]
   },

@@ -40,7 +40,7 @@ func fakePlaylists() func(w http.ResponseWriter, r *http.Request) bool {
 	view := func(p *fakePlaylist) map[string]any {
 		entries := []map[string]string{}
 		for _, s := range p.Songs {
-			entries = append(entries, map[string]string{"id": s})
+			entries = append(entries, map[string]string{"id": s, "albumId": "al-" + s})
 		}
 		return map[string]any{"id": p.ID, "name": p.Name, "owner": p.Owner, "public": p.Public, "songCount": len(p.Songs), "entry": entries}
 	}
@@ -148,7 +148,7 @@ func TestPlaylistsFlow(t *testing.T) {
 
 	rec = asUser(t, a, max, "GET", "/api/music/playlists", "")
 	body := rec.Body.String()
-	if rec.Code != 200 || !strings.Contains(body, `"id":"pl1"`) || !strings.Contains(body, `"id":"pl-boss-pub"`) || strings.Contains(body, "pl-boss-priv") {
+	if rec.Code != 200 || !strings.Contains(body, `"id":"pl1"`) || !strings.Contains(body, `"id":"pl-boss-pub"`) || !strings.Contains(body, `"covers":["al-s1","al-s2"]`) || !strings.Contains(body, `"covers":["al-s1"]`) || strings.Contains(body, "pl-boss-priv") {
 		t.Fatalf("list %d: %s", rec.Code, body)
 	}
 
@@ -170,7 +170,7 @@ func TestPlaylistsFlow(t *testing.T) {
 		t.Fatalf("replace %d: %s", rec.Code, rec.Body)
 	}
 	rec = asUser(t, a, max, "GET", "/api/music/playlist/pl1", "")
-	if !strings.Contains(rec.Body.String(), `"entry":[{"id":"s3"},{"id":"s1"}]`) {
+	if !strings.Contains(rec.Body.String(), `"entry":[{"albumId":"al-s3","id":"s3"},{"albumId":"al-s1","id":"s1"}]`) {
 		t.Fatalf("songs after replace: %s", rec.Body)
 	}
 
@@ -213,5 +213,18 @@ func TestPlaylistsValidation(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/music/playlists", nil)
 	if rec := do(t, a.Routes(), req); rec.Code != 401 {
 		t.Fatalf("anon list %d", rec.Code)
+	}
+}
+
+func TestPlaylistCovers(t *testing.T) {
+	in := []playlistEntry{
+		{AlbumID: "a1", CoverArt: "mf-1"}, {AlbumID: "a1", CoverArt: "mf-2"}, {AlbumID: "a2"},
+		{CoverArt: "c3"}, {}, {AlbumID: "a4"}, {AlbumID: "a5"}, {AlbumID: "a6"},
+	}
+	if got := strings.Join(playlistCovers(in, 5), ","); got != "mf-1,a2,c3,a4,a5" {
+		t.Fatalf("covers: %s", got)
+	}
+	if n := len(playlistCovers(nil, 5)); n != 0 {
+		t.Fatalf("empty: %d", n)
 	}
 }

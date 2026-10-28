@@ -232,6 +232,26 @@ func TestUploadTypedTagsAndCover(t *testing.T) {
 	}
 }
 
+func TestUploadTypedGenres(t *testing.T) {
+	needFFmpeg(t)
+	a := newTestApp(t)
+	cookie := login(t, a)
+	file := makeAudio(t, "g.mp3", true, "title", "Tune", "artist", "Band", "album", "Styles", "track", "1", "genre", "Polka")
+	rec, body := postUpload(t, a, cookie,
+		formPart{"tags", "", []byte(`{"genres":["hip-hop","Jazz","jazz","My Own Genre"]}`)},
+		formPart{"file", "g.mp3", file})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("%d %s", rec.Code, rec.Body)
+	}
+	tags, err := probe(context.Background(), filepath.Join(a.cfg.LibraryDir(), body["libraryPath"].(string)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := tags.Fields["genre"]; got != "Hip Hop; Jazz; My Own Genre" {
+		t.Fatalf("genre tag %q", got)
+	}
+}
+
 func png(t *testing.T) []byte {
 	t.Helper()
 	img := filepath.Join(t.TempDir(), "c.png")
