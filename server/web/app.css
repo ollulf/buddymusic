@@ -241,6 +241,10 @@ h1 { font-size: var(--fs-xl); margin: 0; line-height: 1.25; color: var(--accent)
 }
 .album-genres { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
 .album-genres .pill { white-space: nowrap; }
+.upload-genre-field { grid-column: 1 / -1; }
+.upload-genres { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.upload-genres .pill { cursor: pointer; font: inherit; font-size: var(--fs-sm); white-space: nowrap; }
+.upload-genres:empty { display: none; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--sp-4); }
 .album { display: flex; flex-direction: column; gap: 2px; text-decoration: none; min-width: 0; }
 .album .a-name { font-weight: 600; font-size: var(--fs-lg); line-height: 1.2; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; margin-top: var(--sp-1); min-height: 2.4em; }

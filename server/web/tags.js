@@ -42,6 +42,7 @@ export function fromMediaTags(t) {
     track: tags.track != null ? String(tags.track) : "",
     year: tags.year ? String(tags.year) : raw("DATE") || raw("TDRC") || raw("©day") || "",
     disc: raw("TPOS") || raw("DISCNUMBER") || "",
+    genre: tags.genre ? String(tags.genre) : raw("GENRE") || raw("©gen") || "",
     cover: !!(tags.picture && tags.picture.data && tags.picture.data.length),
   };
 }

@@ -168,7 +168,24 @@ func parseTyped(raw []byte) (map[string]string, error) {
 	if len(albumArtists) > 1 || len(artists) > 1 {
 		out["albumartist"] = strings.Join(albumArtists, artistSep)
 	}
+	if genres := genreTagList(in["genres"]); len(genres) > 0 {
+		out["genre"] = strings.Join(genres, artistSep)
+	}
 	return out, nil
+}
+
+func genreTagList(v any) []string {
+	out := []string{}
+	seen := map[string]bool{}
+	for _, s := range artistList(v) {
+		g := canonGenre(s)
+		if g == "" || seen[strings.ToLower(g)] {
+			continue
+		}
+		seen[strings.ToLower(g)] = true
+		out = append(out, g)
+	}
+	return out
 }
 
 func artistList(v any) []string {

@@ -15,7 +15,9 @@ const ERRORS = {
   "unauthorized": t("upload.err.unauthorized"),
 };
 
-let state = { files: [], cover: null, back: null, edited: new Set(), busy: false, nextId: 1, albumArtists: [] };
+let state = { files: [], cover: null, back: null, edited: new Set(), busy: false, nextId: 1, albumArtists: [], genres: [] };
+const MAX_GENRES = 8;
+let genreListPromise = null;
 
 const h = (tag, attrs = {}, ...kids) => {
   const el = document.createElement(tag);
@@ -103,6 +105,70 @@ function prefillAlbum() {
     if (state.edited.has(k)) continue;
     ui.album[k].value = mostCommon(readable.map((e) => e.fileTags[k]));
   }
+  if (!state.edited.has("genre")) {
+    state.genres = splitGenres(mostCommon(readable.map((e) => e.fileTags.genre)));
+    renderGenres();
+  }
+}
+
+function splitGenres(raw) {
+  const out = [];
+  for (const part of String(raw || "").split(/[;\u0000]/)) addGenreTo(out, part);
+  return out;
+}
+
+function addGenreTo(list, name) {
+  const g = String(name || "").replace(/\s+/g, " ").trim();
+  if (!g || list.length >= MAX_GENRES || list.some((x) => x.toLowerCase() === g.toLowerCase())) return false;
+  list.push(g);
+  return true;
+}
+
+function loadGenreList() {
+  if (!genreListPromise) {
+    genreListPromise = fetch("/api/music/genres").then((r) => r.ok ? r.json() : Promise.reject(r.status))
+      .then((b) => Array.isArray(b.list) ? b.list : []);
+    genreListPromise.catch(() => { genreListPromise = null; });
+  }
+  return genreListPromise;
+}
+
+function toggleGenre(name) {
+  const i = state.genres.findIndex((x) => x.toLowerCase() === name.toLowerCase());
+  if (i >= 0) state.genres.splice(i, 1);
+  else addGenreTo(state.genres, name);
+  state.edited.add("genre");
+  renderGenres();
+}
+
+function renderGenres() {
+  if (!ui.genreChips) return;
+  const chosen = new Set(state.genres.map((g) => g.toLowerCase()));
+  const names = [...ui.genreCanon];
+  for (const g of state.genres) if (!names.some((n) => n.toLowerCase() === g.toLowerCase())) names.push(g);
+  ui.genreChips.replaceChildren(...names.map((n) => {
+    const on = chosen.has(n.toLowerCase());
+    return h("button", { type: "button", class: "pill genre-chip" + (on ? " on" : ""), "aria-pressed": String(on),
+      disabled: state.busy, onclick: () => toggleGenre(n) }, n);
+  }));
+}
+
+function genreField() {
+  ui.genreCanon = [];
+  ui.genreChips = h("div", { class: "upload-genres", role: "group", "aria-label": t("upload.genres") });
+  const add = () => {
+    const v = ui.genreInput.value;
+    if (addGenreTo(state.genres, v)) state.edited.add("genre");
+    ui.genreInput.value = "";
+    renderGenres();
+  };
+  ui.genreInput = h("input", { type: "text", maxlength: "60", placeholder: t("upload.genreAdd"), autocomplete: "off",
+    "aria-label": t("upload.genreAdd"),
+    onkeydown: (e) => { if (e.key === "Enter") { e.preventDefault(); add(); } },
+    onchange: add });
+  loadGenreList().then((list) => { ui.genreCanon = list; renderGenres(); }).catch(() => {});
+  renderGenres();
+  return h("div", { class: "field upload-genre-field" }, h("span", {}, t("upload.genres")), ui.genreChips, ui.genreInput);
 }
 
 function resetAlbum() {
@@ -110,7 +176,9 @@ function resetAlbum() {
   state.cover = null;
   state.back = null;
   state.albumArtists.length = 0;
+  state.genres = [];
   ui.renderAlbumArtists();
+  renderGenres();
   for (const k of ALBUM_FIELDS) ui.album[k].value = "";
   ui.coverInput.value = "";
   ui.backInput.value = "";
@@ -306,6 +374,7 @@ function tagPayload(entry) {
   const disc = String(entry.disc ?? "").trim();
   if (disc) out.disc = disc;
   for (const k of ALBUM_FIELDS) if (a[k]) out[k] = a[k];
+  if (state.edited.has("genre") && state.genres.length) out.genres = [...state.genres];
   if (a.artist && (state.albumArtists.length || entry.artists.length)) {
     out.albumArtists = artistNames([a.artist, ...state.albumArtists]);
     out.artists = artistNames([...out.albumArtists, ...entry.artists]);
@@ -345,6 +414,8 @@ function setAlbumEnabled(on) {
   ui.coverInput.disabled = !on;
   ui.backInput.disabled = !on;
   ui.vinyl.disabled = !on;
+  ui.genreInput.disabled = !on;
+  renderGenres();
 }
 
 async function uploadAll() {
@@ -420,7 +491,7 @@ function albumInput(key) {
 }
 
 export function renderUpload(container, opts = {}) {
-  state = { files: [], cover: null, back: null, edited: new Set(), busy: false, nextId: 1, albumArtists: [] };
+  state = { files: [], cover: null, back: null, edited: new Set(), busy: false, nextId: 1, albumArtists: [], genres: [] };
   ui = { album: {}, renderAlbumArtists: () => {} };
   if (opts.onUnauthorized) onUnauthorized = opts.onUnauthorized;
   const picker = h("input", { type: "file", multiple: true, accept: "audio/*,.flac,.mp3,.m4a,.ogg,.opus,.wma", hidden: true,
@@ -452,7 +523,7 @@ export function renderUpload(container, opts = {}) {
   ui.albumBox = h("section", { class: "card album", hidden: true },
     h("h2", {}, t("tag.album")),
     h("p", { class: "muted" }, t("upload.albumHint")),
-    h("div", { class: "album-grid" }, ui.coverBox, h("div", { class: "fields" }, ...ALBUM_FIELDS.map(albumInput),
+    h("div", { class: "album-grid" }, ui.coverBox, h("div", { class: "fields" }, ...ALBUM_FIELDS.map(albumInput), genreField(),
       h("label", { class: "field edit-check" }, ui.vinyl, h("span", {}, t("upload.vinyl"))))));
 
   ui.list = h("div", { class: "list", "data-empty": t("upload.emptyList") });
