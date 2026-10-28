@@ -2,7 +2,7 @@ import { t } from "./i18n.js";
 import { h, api, apiSend, apiJSON, cover, fmtTime, Unauthorized, setPageTitle } from "./dom.js";
 import * as player from "./player.js";
 import { heartButton, isStarred, toggleStar } from "./favs.js";
-import { addToPlaylistButton, openAddSheet, toast } from "./playlists.js";
+import { openAddSheet, toast } from "./playlists.js";
 import { rowMenuButton, swipeRow } from "./rowactions.js";
 import { flyFrom } from "./fly.js";
 import { holo, sparkles, unholo } from "./holo.js";
@@ -424,6 +424,39 @@ async function deleteItem(kind, id, opts) {
   }
 }
 
+function albumActions(al, songs, opts, { editAlbum, renewAlbum, deleteAlbum }) {
+  const none = !songs.length;
+  const shuf = h("button", { class: "play-shuf", type: "button", disabled: none, title: t("library.playShuffled"), "aria-label": t("library.playShuffled"), "aria-pressed": "false" });
+  const syncShuf = () => shuf.setAttribute("aria-pressed", String(!!player.settings().shuffle));
+  syncShuf();
+  const off = player.onChange(() => { if (!shuf.isConnected) { off(); return; } syncShuf(); });
+  shuf.addEventListener("click", () => {
+    if (player.settings().shuffle) { player.toggleShuffle(); return; }
+    player.playList(songs, Math.floor(Math.random() * songs.length));
+    player.toggleShuffle();
+  });
+  const play = h("button", { class: "primary play-main", type: "button", disabled: none, title: t("library.playInOrder"), onclick: () => {
+    if (player.settings().shuffle) player.toggleShuffle();
+    player.playList(songs, 0);
+  } }, h("span", {}, t("player.play")));
+  const recommend = al.id ? h("button", { class: "icon album-rec", type: "button", title: `${t("recs.recommendTo")}…`, "aria-label": `${t("recs.recommendTo")}…`, onclick: () => openAlbumRecommendSheet(al, opts) }) : null;
+  const heart = heartButton(al, "album", { cls: "album-heart", onUnauthorized: opts.onUnauthorized });
+  const more = rowMenuButton(() => [
+    { icon: "+", label: t("song.addToQueue"), disabled: none, run: () => player.addToQueue(songs) },
+    { icon: "⤵", label: t("song.playNext"), disabled: none, run: () => player.playNext(songs) },
+    { icon: "☰", label: `${t("playlists.addTo")}…`, disabled: none, run: () => openAddSheet(songs, opts) },
+    opts.admin ? { icon: "✎", label: t("library.editAlbum"), run: () => editAlbum(more) } : null,
+    opts.admin ? { icon: "★", label: t("library.renewAlbum"), run: renewAlbum } : null,
+    opts.admin ? { icon: "✕", label: t("library.deleteAlbum"), danger: true, run: deleteAlbum } : null,
+  ]);
+  more.classList.add("album-more");
+  more.title = t("library.albumMore");
+  more.setAttribute("aria-label", t("library.albumMore"));
+  return h("div", { class: "actions album-actions" },
+    h("div", { class: "play-split", role: "group", "aria-label": t("player.play") }, play, shuf),
+    heart, recommend, more);
+}
+
 async function renderAlbum(container, id, opts) {
   container.replaceChildren(h("div", { class: "muted" }, t("common.loading")));
   try {
@@ -457,6 +490,7 @@ async function renderAlbum(container, id, opts) {
         else toast(t("library.renewFailed"));
       }
     };
+    const editAlbum = (btn) => openAlbumEdit(al, songs, { returnTo: btn, onUnauthorized: opts.onUnauthorized, onBackChanged: () => setBackVersion(al.id, Date.now()), onSaved: (body) => { if (body && "vinyl" in body) { if (body.vinyl) vinylAlbums.add(al.id); else vinylAlbums.delete(al.id); } renderAlbum(container, id, opts); } });
     const head = caseCover(al, 600, "art big");
     if (al.backV) setBackVersion(al.id, al.backV);
     if (al.hasBack && al.id) flipBack(head, al.id);
@@ -473,16 +507,7 @@ async function renderAlbum(container, id, opts) {
             ? h("div", { class: "album-genres", role: "group", "aria-label": t("genre.album") }, al.genreTags.map((g) => h("a", { class: "pill genre-chip", href: "#/library/newest", title: t("genre.showAll", { name: g }), onclick: () => filterByGenre(g) }, g))) : null,
           Array.isArray(al.uploadedBy) && al.uploadedBy.length
             ? h("div", { class: "uploaded-by" }, t("library.uploadedBy", { names: al.uploadedBy.join(", ") })) : null,
-          h("div", { class: "actions" },
-            h("button", { class: "primary", onclick: () => player.playList(songs, 0), disabled: !songs.length }, t("player.play")),
-            h("button", { onclick: () => { player.playList(songs, Math.floor(Math.random() * songs.length)); if (!player.settings().shuffle) player.toggleShuffle(); }, disabled: !songs.length }, t("player.shuffle")),
-            h("button", { onclick: () => player.addToQueue(songs), disabled: !songs.length }, t("song.addToQueue")),
-            songs.length ? addToPlaylistButton(songs, opts, "") : null,
-            heartButton(al, "album", { cls: "album-heart", onUnauthorized: opts.onUnauthorized }),
-            al.id ? h("button", { onclick: () => openAlbumRecommendSheet(al, opts) }, `${t("recs.recommendTo")}…`) : null,
-            opts.admin ? h("button", { onclick: (e) => openAlbumEdit(al, songs, { returnTo: e.currentTarget, onUnauthorized: opts.onUnauthorized, onBackChanged: () => setBackVersion(al.id, Date.now()), onSaved: (body) => { if (body && "vinyl" in body) { if (body.vinyl) vinylAlbums.add(al.id); else vinylAlbums.delete(al.id); } renderAlbum(container, id, opts); } }) }, t("library.editAlbum")) : null,
-            opts.admin ? h("button", { onclick: renewAlbum }, t("library.renewAlbum")) : null,
-            opts.admin ? h("button", { class: "danger", onclick: deleteAlbum }, t("library.deleteAlbum")) : null))),
+          albumActions(al, songs, opts, { editAlbum, renewAlbum, deleteAlbum }))),
       h("ol", { class: "songs card" }, songs.map((_, i) => songRow(songs, i, { album: al, onDelete: deleteTrack, onUnauthorized: opts.onUnauthorized }))));
   } catch (e) {
     container.replaceChildren(h("a", { class: "back", href: "#/library" }, t("library.back")), failBox(e, opts));
