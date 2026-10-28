@@ -496,6 +496,8 @@ button.heart[aria-pressed="true"]::before { content: ""; --i: var(--i-heartfull)
 .friends-empty { margin: 0; font-size: var(--fs-xs); }
 .rec-badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; display: grid; place-items: center; font-family: var(--num); font-size: 11px; line-height: 1; color: var(--accent-fg); background: var(--orange); border: 2px solid var(--ink); pointer-events: none; z-index: 1; }
 .rec-badge[hidden] { display: none; }
+.friends-dot { position: absolute; bottom: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 3px; box-sizing: border-box; display: grid; place-items: center; font-family: var(--num); font-size: 10px; line-height: 1; color: var(--ink); background: var(--ok); border: 2px solid var(--ink); pointer-events: none; z-index: 1; }
+.friends-dot[hidden] { display: none; }
 .recs-panel[hidden] { display: none; }
 .rec { display: flex; gap: var(--sp-2); align-items: flex-start; min-width: 0; color: var(--muted); }
 .rec .friend-text { flex: 1; }
