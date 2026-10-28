@@ -3,6 +3,7 @@ import { h, api, apiJSON, Unauthorized, cover } from "./dom.js";
 import * as player from "./player.js";
 import { toast } from "./playlists.js";
 import { AVATAR } from "./settings.js";
+import { refreshFriendsQuietly } from "./friends.js";
 
 const NOTE_MAX = 140;
 const ERRORS = { "rate-limited": "recs.rateLimited", "unknown-user": "recs.unknownUser", self: "recs.self" };
@@ -191,18 +192,24 @@ export function recsPanel(opts = {}) {
 const POLL_MS = 60000;
 let pollTimer = null;
 
+function refreshAll() {
+  refreshUnread();
+  refreshFriendsQuietly();
+}
+
 function poll() {
   clearInterval(pollTimer);
   pollTimer = null;
   if (document.visibilityState !== "visible") return;
-  refreshUnread();
-  pollTimer = setInterval(refreshUnread, POLL_MS);
+  refreshAll();
+  pollTimer = setInterval(refreshAll, POLL_MS);
 }
 
 export function startRecPolling() {
   if (startRecPolling.on) return;
   startRecPolling.on = true;
   document.addEventListener("visibilitychange", poll);
-  window.addEventListener("focus", () => { if (document.visibilityState === "visible") refreshUnread(); });
-  pollTimer = setInterval(refreshUnread, POLL_MS);
+  window.addEventListener("focus", () => { if (document.visibilityState === "visible") refreshAll(); });
+  refreshFriendsQuietly();
+  if (document.visibilityState === "visible") pollTimer = setInterval(refreshAll, POLL_MS);
 }
