@@ -224,6 +224,12 @@ h1 { font-size: var(--fs-xl); margin: 0; line-height: 1.25; color: var(--accent)
 .chips-nav { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 .pill { text-decoration: none; border: 2px solid var(--ink); border-radius: 0; padding: 3px var(--sp-3); font-size: var(--fs-sm); background: var(--card); color: var(--muted); box-shadow: var(--bevel); }
 .pill.on { border-color: var(--accent); background: var(--accent); color: var(--accent-fg); font-weight: 400; }
+.genre-row { display: flex; gap: var(--sp-2); overflow-x: auto; scrollbar-width: none; margin-bottom: var(--sp-2); padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+.genre-row::-webkit-scrollbar { display: none; }
+.genre-row .pill { flex: none; white-space: nowrap; cursor: pointer; font: inherit; font-size: var(--fs-sm); }
+.genre-clear { color: var(--ink); }
+.album-genres { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
+.album-genres .pill { white-space: nowrap; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--sp-4); }
 .album { display: flex; flex-direction: column; gap: 2px; text-decoration: none; min-width: 0; }
 .album .a-name { font-weight: 600; font-size: var(--fs-lg); line-height: 1.2; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; margin-top: var(--sp-1); min-height: 2.4em; }

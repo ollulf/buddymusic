@@ -355,6 +355,9 @@ func (a *App) handleAlbum(w http.ResponseWriter, r *http.Request, user string) {
 			al["backV"], _ = json.Marshal(v)
 		}
 	}
+	if tags := albumGenres(body); len(tags) > 0 {
+		al["genreTags"], _ = json.Marshal(tags)
+	}
 	out, err := json.Marshal(al)
 	if err != nil {
 		w.Write(body)
