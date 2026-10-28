@@ -66,6 +66,9 @@ CREATE TABLE IF NOT EXISTS avatars (
 	if err == nil {
 		err = migrateUserSeen(db)
 	}
+	if err == nil {
+		err = migrateRecs(db)
+	}
 	if err != nil {
 		db.Close()
 		return nil, err

@@ -1,9 +1,11 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -102,5 +104,102 @@ func TestRecsRateLimit(t *testing.T) {
 	}
 	if _, err := s.SendRecs("max", []string{"ann"}, song, "", now.Add(2*time.Hour)); err != nil {
 		t.Fatalf("after an hour: %v", err)
+	}
+}
+
+func TestAlbumRecs(t *testing.T) {
+	a := newTestApp(t)
+	max := login(t, a)
+	boss := loginAs(t, a, "boss", "bosspw")
+	call := func(c *http.Cookie, method, path, body string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(method, path, strings.NewReader(body))
+		req.AddCookie(c)
+		return do(t, a.Routes(), req)
+	}
+	var me struct{ User string }
+	json.Unmarshal(call(boss, "GET", "/api/me", "").Body.Bytes(), &me)
+	send := func(body map[string]any) *httptest.ResponseRecorder {
+		b, _ := json.Marshal(body)
+		return call(max, "POST", "/api/recs", string(b))
+	}
+	if rec := send(map[string]any{"kind": "album", "album": map[string]any{"id": ""}, "to": []string{me.User}}); rec.Code != 400 {
+		t.Fatalf("no album id: %d", rec.Code)
+	}
+	if rec := send(map[string]any{"kind": "video", "song": map[string]any{"id": "s1"}, "to": []string{me.User}}); rec.Code != 400 {
+		t.Fatalf("bad kind: %d", rec.Code)
+	}
+	if rec := send(map[string]any{"kind": "album", "album": map[string]any{"id": "al1", "name": "Record", "artist": "Band", "coverArt": "c1"}, "to": []string{me.User}, "note": "whole thing"}); rec.Code != 200 {
+		t.Fatalf("send album: %d %s", rec.Code, rec.Body)
+	}
+	if rec := send(map[string]any{"song": map[string]any{"id": "s1", "title": "Song"}, "to": []string{me.User}}); rec.Code != 200 {
+		t.Fatalf("send song: %d %s", rec.Code, rec.Body)
+	}
+	var list struct {
+		Recs   []Rec `json:"recs"`
+		Unread int   `json:"unread"`
+	}
+	json.Unmarshal(call(boss, "GET", "/api/recs", "").Body.Bytes(), &list)
+	if len(list.Recs) != 2 || list.Unread != 2 {
+		t.Fatalf("list: %+v", list)
+	}
+	song, album := list.Recs[0], list.Recs[1]
+	if song.Kind != "song" || song.Album != nil || song.Song.ID != "s1" {
+		t.Fatalf("song rec: %+v", song)
+	}
+	if album.Kind != "album" || album.Album == nil || *album.Album != (RecAlbum{ID: "al1", Name: "Record", Artist: "Band", CoverArt: "c1"}) || album.Note != "whole thing" {
+		t.Fatalf("album rec: %+v %+v", album, album.Album)
+	}
+}
+
+func TestAlbumRecsShareRateLimit(t *testing.T) {
+	a := newTestApp(t)
+	s := a.store
+	now := time.Now()
+	s.TouchSeen("ann", now, "")
+	for i := 0; i < recPerHour; i++ {
+		if _, err := s.SendRecs("max", []string{"ann"}, RecSong{ID: "s1"}, "", now); err != nil {
+			t.Fatalf("send %d: %v", i, err)
+		}
+	}
+	if _, err := s.SendAlbumRecs("max", []string{"ann"}, RecAlbum{ID: "al1"}, "", now); err != errRecLimit {
+		t.Fatalf("want limit, got %v", err)
+	}
+}
+
+func TestRecsKindMigration(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "old.db")
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE recommendations (id TEXT PRIMARY KEY, sender TEXT NOT NULL, recipient TEXT NOT NULL, song_id TEXT NOT NULL,
+title TEXT NOT NULL DEFAULT '', artist TEXT NOT NULL DEFAULT '', album TEXT NOT NULL DEFAULT '', album_id TEXT NOT NULL DEFAULT '',
+cover_art TEXT NOT NULL DEFAULT '', duration INTEGER NOT NULL DEFAULT 0, note TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL,
+seen INTEGER NOT NULL DEFAULT 0, dismissed INTEGER NOT NULL DEFAULT 0);
+INSERT INTO recommendations (id, sender, recipient, song_id, title, created_at) VALUES ('r1', 'max', 'ann', 's1', 'Old', 1)`); err != nil {
+		t.Fatal(err)
+	}
+	db.Close()
+	s, err := OpenStore(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.db.Close()
+	list, err := s.Recs("ann", 10)
+	if err != nil || len(list) != 1 || list[0].Kind != "song" || list[0].Song.Title != "Old" || list[0].Album != nil {
+		t.Fatalf("old rec: %+v %v", list, err)
+	}
+}
+
+func TestRecPushText(t *testing.T) {
+	al := albumAsSong(RecAlbum{ID: "al1", Name: "Record", Artist: "Band"})
+	if got := recPushText("en", "max", recKindAlbum, al); got != "max recommends the album Record – Band" {
+		t.Fatalf("en: %q", got)
+	}
+	if got := recPushText("de", "max", recKindAlbum, al); got != "max empfiehlt das Album Record – Band" {
+		t.Fatalf("de: %q", got)
+	}
+	if got := recPushText("en", "max", recKindSong, RecSong{Title: "Song", Artist: "Band"}); got != "max recommends Song – Band" {
+		t.Fatalf("song: %q", got)
 	}
 }

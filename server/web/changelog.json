@@ -1,5 +1,25 @@
 [
   {
+    "version": "1.0.2810",
+    "date": "2026-10-28",
+    "en": [
+      "Filter the library by genre with the new chip row; albums show their genres",
+      "Recommend whole albums to friends, not just songs",
+      "Album titles under covers now wrap to two lines, with the artist and year neatly aligned",
+      "Your friends' activity stays up to date, with a green dot showing who is online",
+      "Back covers now show for every album that has one",
+      "Shorter \"Vinyl recording\" label in the upload form"
+    ],
+    "de": [
+      "Filtere die Bibliothek nach Genre mit der neuen Chip-Leiste; Alben zeigen ihre Genres",
+      "Empfiehl Freunden ganze Alben, nicht nur Songs",
+      "Albumtitel unter den Covern brechen jetzt auf zwei Zeilen um, Künstler und Jahr stehen sauber auf einer Höhe",
+      "Die Aktivität deiner Freunde bleibt aktuell, ein grüner Punkt zeigt, wer online ist",
+      "Rückseiten werden jetzt bei allen Alben angezeigt, die eine haben",
+      "Kürzeres „Vinyl-Aufnahme“-Feld beim Hochladen"
+    ]
+  },
+  {
     "version": "1.0.2710.3",
     "date": "2026-10-27",
     "en": [
