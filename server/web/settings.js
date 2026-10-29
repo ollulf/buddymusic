@@ -297,7 +297,7 @@ const ITEMS = [
 ];
 
 export function renderSettings(el, { onClose, ...profile }) {
-  const close = h("button", { class: "ghost settings-close", type: "button", "aria-label": t("settings.closeLabel"), onclick: onClose }, t("settings.close"));
+  const close = h("button", { class: "news-close settings-close", type: "button", "aria-label": t("settings.closeLabel"), title: t("settings.closeLabel"), onclick: onClose }, "✕");
   el.replaceChildren(
     h("div", { class: "settings-head" }, h("h1", {}, t("settings.title")), close),
     profileHeader(profile),
