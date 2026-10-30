@@ -383,7 +383,47 @@ func (a *App) deleteSongs(id string, songs []navSong) (int, any) {
 	return http.StatusOK, map[string]any{"moved": moved}
 }
 
+var errNotOwner = errors.New("not the uploader")
+
+func (a *App) ownsAll(user string, songs []navSong) bool {
+	exact, suffix := a.albumDirs(songs)
+	if len(exact) == 0 && len(suffix) == 0 {
+		return false
+	}
+	var groups [][2][]string
+	for _, d := range exact {
+		groups = append(groups, [2][]string{{d}, nil})
+	}
+	for _, d := range suffix {
+		groups = append(groups, [2][]string{nil, {d}})
+	}
+	for _, g := range groups {
+		users, err := a.store.AlbumUploaders(g[0], g[1])
+		if err != nil {
+			log.Printf("delete uploaders: %v", err)
+			return false
+		}
+		if len(users) == 0 {
+			return false
+		}
+		for _, u := range users {
+			if u != user {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func (a *App) adminDelete(load func(ctx context.Context, creds SubsonicCreds, id string) ([]navSong, error)) userHandler {
+	return a.deleteHandler(load, false)
+}
+
+func (a *App) ownerDelete(load func(ctx context.Context, creds SubsonicCreds, id string) ([]navSong, error)) userHandler {
+	return a.deleteHandler(load, true)
+}
+
+func (a *App) deleteHandler(load func(ctx context.Context, creds SubsonicCreds, id string) ([]navSong, error), owners bool) userHandler {
 	return func(w http.ResponseWriter, r *http.Request, user string) {
 		id := r.PathValue("id")
 		if !validID(id) {
@@ -396,12 +436,15 @@ func (a *App) adminDelete(load func(ctx context.Context, creds SubsonicCreds, id
 			return
 		}
 		admin, err := a.checkAdmin(r.Context(), creds)
-		if err == nil && !admin {
+		if err == nil && !admin && !owners {
 			err = errNotAdmin
 		}
 		if err == nil {
 			var songs []navSong
 			songs, err = load(r.Context(), creds, id)
+			if err == nil && !admin && !a.ownsAll(user, songs) {
+				err = errNotOwner
+			}
 			if err == nil {
 				status, body := a.deleteSongs(id, songs)
 				writeJSON(w, status, body)
@@ -411,6 +454,8 @@ func (a *App) adminDelete(load func(ctx context.Context, creds SubsonicCreds, id
 		switch {
 		case errors.Is(err, errNotAdmin):
 			writeError(w, http.StatusForbidden, "admin-only")
+		case errors.Is(err, errNotOwner):
+			writeError(w, http.StatusForbidden, "not-owner")
 		case errors.Is(err, ErrBadLogin):
 			writeError(w, http.StatusUnauthorized, "unauthorized")
 		case errors.Is(err, ErrNotFound):

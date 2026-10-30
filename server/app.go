@@ -86,7 +86,7 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("PUT /api/admin/album/{id}/back", a.requireUser(a.handleAlbumBackPut))
 	mux.Handle("DELETE /api/admin/album/{id}/back", a.requireUser(a.handleAlbumBackDelete))
 	mux.Handle("DELETE /api/music/track/{id}", a.requireUser(a.adminDelete(a.loadTrack)))
-	mux.Handle("DELETE /api/music/album/{id}", a.requireUser(a.adminDelete(a.loadAlbum)))
+	mux.Handle("DELETE /api/music/album/{id}", a.requireUser(a.ownerDelete(a.loadAlbum)))
 	mux.Handle("GET /", a.webHandler())
 	return a.trustedOnly(mux)
 }
