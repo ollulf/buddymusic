@@ -352,7 +352,7 @@ function showApp(user, admin, avatar, me = {}) {
   setUnread(me.recsUnread);
   startRecPolling();
   const TABS = admin === true ? [...BASE_TABS, ["admin", t("tab.admin")]] : BASE_TABS;
-  const opts = { onUnauthorized: showLogin, admin: admin === true };
+  const opts = { onUnauthorized: showLogin, admin: admin === true, user };
   setPlaylistUser(user);
   const views = Object.fromEntries(TABS.map(([k]) => [k, h("main", { class: `view view-${k}`, hidden: true })]));
   const links = Object.fromEntries(TABS.filter(([k]) => k !== "search").map(([k, label]) => [k, h("a", { class: "tab", href: `#/${k}`, title: label, "aria-label": label }, pixelIcon(TAB_ICONS[k]), h("span", { class: "tab-label", "aria-hidden": "true" }, label))]));

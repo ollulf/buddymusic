@@ -494,6 +494,63 @@ function albumInput(key) {
   return [field, extra.box];
 }
 
+const HOWTO_SECTIONS = ["Cd", "Cover", "Vinyl"];
+
+function howtoText(text) {
+  const out = [];
+  let list = null;
+  for (const raw of text.split(/\n\s*\n/)) {
+    const p = raw.trim();
+    if (!p) continue;
+    const m = p.match(/^\d+\.\s+([\s\S]*)$/);
+    if (m) {
+      if (!list) { list = h("ol", { class: "howto-steps" }); out.push(list); }
+      list.append(h("li", {}, m[1]));
+    } else {
+      list = null;
+      out.push(h("p", {}, p));
+    }
+  }
+  return out;
+}
+
+function howtoAccordion() {
+  const items = HOWTO_SECTIONS.map((key, i) => {
+    const panel = h("div", { class: "howto-panel", id: `howto-panel-${key}`, role: "region", "aria-labelledby": `howto-head-${key}` },
+      ...howtoText(t(`upload.howto${key}`)));
+    const head = h("button", { class: "howto-head", type: "button", id: `howto-head-${key}`, "aria-controls": panel.id,
+      onclick: () => toggle(i) }, h("span", {}, t(`upload.howto${key}Title`)), h("span", { class: "howto-sign", "aria-hidden": "true" }));
+    return { head, panel, box: h("section", { class: "howto-item" }, h("h3", {}, head), panel) };
+  });
+  function toggle(i) {
+    const opening = items[i].head.getAttribute("aria-expanded") !== "true";
+    items.forEach((it, j) => {
+      const open = j === i && opening;
+      it.head.setAttribute("aria-expanded", String(open));
+      it.panel.hidden = !open;
+      it.box.classList.toggle("open", open);
+    });
+  }
+  toggle(0);
+  return items.map((it) => it.box);
+}
+
+function openHowto(returnTo) {
+  const closeBtn = h("button", { class: "ghost news-close", type: "button", "aria-label": t("news.close"), title: t("news.close"), onclick: () => dlg.close() }, "✕");
+  const dlg = h("dialog", { class: "sheet card news howto", "aria-labelledby": "howto-title" },
+    h("div", { class: "news-head" }, h("h2", { id: "howto-title" }, t("upload.howtoTitle")), closeBtn),
+    h("div", { class: "news-body howto-body", tabindex: "0" }, ...howtoAccordion()));
+  dlg.addEventListener("click", (e) => {
+    if (e.target !== dlg) return;
+    const r = dlg.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dlg.close();
+  });
+  dlg.addEventListener("close", () => { dlg.remove(); returnTo?.focus(); });
+  document.body.append(dlg);
+  dlg.showModal();
+  closeBtn.focus();
+}
+
 export function renderUpload(container, opts = {}) {
   state = { files: [], cover: null, back: null, edited: new Set(), busy: false, nextId: 1, albumArtists: [], genres: [] };
   ui = { album: {}, renderAlbumArtists: () => {} };
@@ -539,7 +596,10 @@ export function renderUpload(container, opts = {}) {
     refresh();
   } }, t("upload.clear"));
 
+  const howto = h("button", { class: "ghost howto-btn", type: "button", "aria-haspopup": "dialog", "aria-label": t("upload.howtoTitle"),
+    onclick: () => openHowto(howto) }, "? ", t("upload.howto"));
   container.replaceChildren(
+    h("div", { class: "upload-top" }, howto),
     drop, ui.albumBox,
     h("section", { class: "card files" }, h("h2", {}, t("search.songs")), ui.list,
       h("div", { class: "foot" }, ui.summary, h("div", { class: "actions" }, ui.clear, ui.upload))));
