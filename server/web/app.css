@@ -964,3 +964,16 @@ dialog.sheet.album-edit-dialog { width: min(560px, calc(100vw - 32px)); max-heig
 .upload-top { display: flex; justify-content: flex-end; margin-bottom: var(--sp-2); }
 button.howto-btn { padding: 2px var(--sp-2); font-size: var(--fs-sm, 0.85em); border: 2px solid var(--ink); box-shadow: var(--bevel); background: var(--card); }
 .howto-body p { margin: 0; }
+dialog.sheet.news.howto { width: min(520px, calc(100vw - 32px)); max-height: min(85vh, 720px); }
+.howto-body { gap: var(--sp-2); }
+.howto-item { border: 2px solid var(--ink); background: var(--shade); }
+.howto-item h3 { margin: 0; font-size: var(--fs-md); }
+button.howto-head { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 0; box-shadow: none; background: var(--card); color: var(--fg); font: inherit; text-align: left; }
+.howto-item.open button.howto-head { color: var(--accent); border-bottom: 2px solid var(--ink); }
+button.howto-head:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.howto-sign::before { content: "+"; font-family: var(--pix); }
+.howto-item.open .howto-sign::before { content: "\2212"; }
+.howto-panel { padding: var(--sp-2) var(--sp-3) var(--sp-3); display: grid; gap: var(--sp-2); }
+.howto-panel[hidden] { display: none; }
+.howto-steps { margin: 0; padding-left: 1.6em; display: grid; gap: var(--sp-2); line-height: 1.4; }
+.howto-steps li::marker { color: var(--accent); font-family: var(--num); }

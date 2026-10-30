@@ -494,12 +494,52 @@ function albumInput(key) {
   return [field, extra.box];
 }
 
+const HOWTO_SECTIONS = ["Cd", "Cover", "Vinyl"];
+
+function howtoText(text) {
+  const out = [];
+  let list = null;
+  for (const raw of text.split(/\n\s*\n/)) {
+    const p = raw.trim();
+    if (!p) continue;
+    const m = p.match(/^\d+\.\s+([\s\S]*)$/);
+    if (m) {
+      if (!list) { list = h("ol", { class: "howto-steps" }); out.push(list); }
+      list.append(h("li", {}, m[1]));
+    } else {
+      list = null;
+      out.push(h("p", {}, p));
+    }
+  }
+  return out;
+}
+
+function howtoAccordion() {
+  const items = HOWTO_SECTIONS.map((key, i) => {
+    const panel = h("div", { class: "howto-panel", id: `howto-panel-${key}`, role: "region", "aria-labelledby": `howto-head-${key}` },
+      ...howtoText(t(`upload.howto${key}`)));
+    const head = h("button", { class: "howto-head", type: "button", id: `howto-head-${key}`, "aria-controls": panel.id,
+      onclick: () => toggle(i) }, h("span", {}, t(`upload.howto${key}Title`)), h("span", { class: "howto-sign", "aria-hidden": "true" }));
+    return { head, panel, box: h("section", { class: "howto-item" }, h("h3", {}, head), panel) };
+  });
+  function toggle(i) {
+    const opening = items[i].head.getAttribute("aria-expanded") !== "true";
+    items.forEach((it, j) => {
+      const open = j === i && opening;
+      it.head.setAttribute("aria-expanded", String(open));
+      it.panel.hidden = !open;
+      it.box.classList.toggle("open", open);
+    });
+  }
+  toggle(0);
+  return items.map((it) => it.box);
+}
+
 function openHowto(returnTo) {
   const closeBtn = h("button", { class: "ghost news-close", type: "button", "aria-label": t("news.close"), title: t("news.close"), onclick: () => dlg.close() }, "✕");
-  const paras = t("upload.howtoBody").split(/\n\s*\n/).map((p) => h("p", {}, p.trim()));
-  const dlg = h("dialog", { class: "sheet card news", "aria-labelledby": "howto-title" },
+  const dlg = h("dialog", { class: "sheet card news howto", "aria-labelledby": "howto-title" },
     h("div", { class: "news-head" }, h("h2", { id: "howto-title" }, t("upload.howtoTitle")), closeBtn),
-    h("div", { class: "news-body howto-body", tabindex: "0" }, ...paras));
+    h("div", { class: "news-body howto-body", tabindex: "0" }, ...howtoAccordion()));
   dlg.addEventListener("click", (e) => {
     if (e.target !== dlg) return;
     const r = dlg.getBoundingClientRect();
