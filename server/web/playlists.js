@@ -85,23 +85,25 @@ function playlistRow(pl, opts, reload) {
 
 async function renderOverview(container, opts) {
   const reload = () => renderOverview(container, opts);
-  const newBtn = h("button", { class: "primary", onclick: async () => {
-    const name = prompt(t("playlists.newName"));
-    if (!name || !name.trim()) return;
-    const pl = await createPlaylist(name.trim(), [], opts);
-    if (pl) location.hash = `#/playlists/${encodeURIComponent(pl.id)}`;
-  } }, t("playlists.new"));
-  container.replaceChildren(h("div", { class: "pl-top" }, newBtn), h("div", { class: "muted" }, t("common.loading")));
+  const newTile = h("li", { class: "pl-row pl-new" },
+    h("button", { class: "pl-main", type: "button", "aria-label": t("playlists.new"), onclick: async () => {
+      const name = prompt(t("playlists.newName"));
+      if (!name || !name.trim()) return;
+      const pl = await createPlaylist(name.trim(), [], opts);
+      if (pl) location.hash = `#/playlists/${encodeURIComponent(pl.id)}`;
+    } },
+      h("div", { class: "pl-pile", "aria-hidden": "true" }, h("div", { class: "pl-case pl-empty" }, "+")),
+      h("span", { class: "pl-text" }, h("span", { class: "s-title" }, t("playlists.new")))));
+  container.replaceChildren(h("div", { class: "muted" }, t("common.loading")));
   try {
     const all = await listPlaylists();
     const own = all.filter(mine);
     const friends = all.filter((pl) => !mine(pl));
     container.replaceChildren(
-      h("div", { class: "pl-top" }, newBtn),
       h("section", {},
         h("h2", {}, t("playlists.mine", { n: own.length })),
-        own.length ? h("ul", { class: "pl-list" }, own.map((pl) => playlistRow(pl, opts, reload)))
-          : h("p", { class: "card muted" }, t("playlists.noneMine"))),
+        h("ul", { class: "pl-list" }, newTile, own.map((pl) => playlistRow(pl, opts, reload))),
+        own.length ? null : h("p", { class: "card muted" }, t("playlists.noneMine"))),
       h("section", {},
         h("h2", {}, t("playlists.friends", { n: friends.length })),
         friends.length ? h("ul", { class: "pl-list" }, friends.map((pl) => playlistRow(pl, opts, reload)))
