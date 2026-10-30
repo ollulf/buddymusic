@@ -1,11 +1,19 @@
 [
   {
-    "version": "1.0.3010",
+    "version": "1.0.3010.2",
     "date": "2026-10-30",
     "en": [
+      "Smoother streaming: songs start faster, jumping within a song is quicker, and the next songs load ahead",
+      "Songs keep playing one after another while your iPhone is locked",
+      "New playlist: tap the empty CD case in your playlists",
+      "Uploads now accept MP3 and FLAC files only",
       "Cleaner settings window: closes with just the X in the corner"
     ],
     "de": [
+      "Flüssigeres Streaming: Songs starten schneller, Springen im Song geht flotter und die nächsten Songs laden vorab",
+      "Songs laufen weiter nacheinander, auch wenn dein iPhone gesperrt ist",
+      "Neue Playlist: tippe auf die leere CD-Hülle bei deinen Playlists",
+      "Uploads nehmen jetzt nur noch MP3- und FLAC-Dateien an",
       "Aufgeräumtes Einstellungsfenster: schließt nur noch mit dem X in der Ecke"
     ]
   },

@@ -24,6 +24,7 @@ type Config struct {
 	SecureCookie bool
 	ScanDelay    time.Duration
 	Feedback     string
+	FFmpeg       string
 }
 
 func env(key, def string) string {
@@ -44,6 +45,7 @@ func LoadConfig() (*Config, error) {
 		SecureCookie: env("SECURE_COOKIE", "false") == "true",
 		ScanDelay:    10 * time.Second,
 		Feedback:     os.Getenv("FEEDBACK_DIR"),
+		FFmpeg:       env("FFMPEG", "/usr/bin/ffmpeg"),
 	}
 	mb, err := strconv.Atoi(env("MAX_UPLOAD_MB", "200"))
 	if err != nil || mb <= 0 {

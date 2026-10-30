@@ -60,7 +60,7 @@ func TestUploadMultipleArtists(t *testing.T) {
 	needFFmpeg(t)
 	a := newTestApp(t)
 	cookie := login(t, a)
-	for _, name := range []string{"m.flac", "m.mp3", "m.m4a", "m.opus"} {
+	for _, name := range []string{"m.flac", "m.mp3"} {
 		data := makeAudio(t, name, false, "title", "Duet "+name)
 		rec, body := postUpload(t, a, cookie,
 			formPart{"tags", "", []byte(`{"artists":["Lead","Guest"],"albumArtists":["Lead","Partner"],"album":"Together","track":"4"}`)},
