@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -305,7 +306,70 @@ func (a *App) handleStream(w http.ResponseWriter, r *http.Request, user string) 
 		return
 	}
 	saver := q.Get("format") != ""
+	if sent, ok := a.servePretranscoded(w, r, id, q); ok {
+		a.recordStream(r, user, id, sent, saver)
+		return
+	}
 	a.recordStream(r, user, id, a.proxyBinary(w, r, "stream.view", q, "private, no-cache"), saver)
+}
+
+type countingWriter struct {
+	http.ResponseWriter
+	n int64
+}
+
+func (c *countingWriter) Write(b []byte) (int, error) {
+	n, err := c.ResponseWriter.Write(b)
+	c.n += int64(n)
+	return n, err
+}
+
+func (a *App) servePretranscoded(w http.ResponseWriter, r *http.Request, id string, q url.Values) (int64, bool) {
+	if a.transcodes == nil || q.Get("timeOffset") != "" {
+		return 0, false
+	}
+	kbps, _ := strconv.Atoi(q.Get("maxBitRate"))
+	tier, ok := findTier(q.Get("format"), kbps)
+	if !ok {
+		return 0, false
+	}
+	src, ok := a.transcodes.songPath(id)
+	if !ok {
+		creds, err := a.sessionCreds(r)
+		if err != nil {
+			return 0, false
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		songs, err := a.loadTrack(ctx, creds, id)
+		cancel()
+		if err != nil || len(songs) != 1 {
+			return 0, false
+		}
+		if src, err = a.resolveSongPath(songs[0].Path); err != nil {
+			return 0, false
+		}
+		a.transcodes.rememberSong(id, src)
+	}
+	p, ok := a.transcodes.Lookup(src, tier)
+	if !ok {
+		return 0, false
+	}
+	f, err := os.Open(p)
+	if err != nil {
+		return 0, false
+	}
+	defer f.Close()
+	st, err := f.Stat()
+	if err != nil {
+		return 0, false
+	}
+	w.Header().Set("Content-Type", tier.Type)
+	w.Header().Set("Cache-Control", "private, no-cache")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Pretranscoded", "1")
+	cw := &countingWriter{ResponseWriter: w}
+	http.ServeContent(cw, r, "", st.ModTime(), f)
+	return cw.n, true
 }
 
 func streamParams(id string, in url.Values) (url.Values, bool) {

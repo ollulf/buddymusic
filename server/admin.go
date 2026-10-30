@@ -363,6 +363,7 @@ func (a *App) deleteSongs(id string, songs []navSong) (int, any) {
 		if err != nil {
 			log.Printf("delete %s: move %s: %v", id, f, err)
 			a.scanner.Trigger()
+			a.transcodes.Kick()
 			return http.StatusInternalServerError, map[string]any{"error": "move-failed", "moved": moved}
 		}
 		moved = append(moved, rel)
@@ -378,6 +379,7 @@ func (a *App) deleteSongs(id string, songs []navSong) (int, any) {
 	}
 	log.Printf("delete %s: moved %d files to %s", id, len(moved), trash)
 	a.scanner.Trigger()
+	a.transcodes.Kick()
 	return http.StatusOK, map[string]any{"moved": moved}
 }
 

@@ -367,11 +367,15 @@ export function prev() {
   const i = step(-1);
   if (i >= 0) load(i); else seek(0);
 }
+function seekableTo(t) {
+  const r = audio.seekable;
+  try { return play.offset === 0 && r.length > 0 && r.start(0) <= 0.5 && r.end(r.length - 1) >= t && r.end(r.length - 1) > bufferedEnd() + 1; } catch { return false; }
+}
 export function seek(t) {
   if (!isFinite(t)) return;
   const song = current();
   const local = t - play.offset;
-  if (song && meter.playing && meter.playing.format && !play.blob && (local < 0 || local > bufferedEnd() + 1)) {
+  if (song && meter.playing && meter.playing.format && !play.blob && (local < 0 || (local > bufferedEnd() + 1 && !seekableTo(local)))) {
     const playing = !audio.paused;
     startStream(song, meter.playing.tier, Math.max(0, t));
     if (playing) audio.play().catch(() => {});
