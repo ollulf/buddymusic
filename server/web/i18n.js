@@ -4,7 +4,6 @@ export const LANGS = { en: "English", de: "Deutsch" };
 
 const en = {
   "settings.title": "Settings",
-  "settings.close": "✕ Close",
   "settings.closeLabel": "Close settings",
   "settings.language": "Language",
   "settings.theme": "Colour scheme",
@@ -451,7 +450,6 @@ const en = {
 
 const de = {
   "settings.title": "Einstellungen",
-  "settings.close": "✕ Schließen",
   "settings.closeLabel": "Einstellungen schließen",
   "settings.language": "Sprache",
   "settings.theme": "Farbschema",
