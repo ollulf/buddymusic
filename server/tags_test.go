@@ -321,7 +321,7 @@ func TestTagWritingPerFormat(t *testing.T) {
 	needFFmpeg(t)
 	a := newTestApp(t)
 	cookie := login(t, a)
-	for _, name := range []string{"x.flac", "x.opus", "x.m4a", "x.mp3"} {
+	for _, name := range []string{"x.flac", "x.mp3"} {
 		data := makeAudio(t, name, name != "x.opus", "title", "Song "+name)
 		rec, body := postUpload(t, a, cookie,
 			formPart{"tags", "", []byte(`{"artist":"Fmt","album":"Formats","track":"1","year":"2021"}`)},

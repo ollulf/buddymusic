@@ -44,6 +44,12 @@ func main() {
 		srv.Shutdown(shutdown)
 	}()
 
+	if _, err := os.Stat(cfg.FFmpeg); err == nil {
+		go app.transcodes.Run(ctx)
+	} else {
+		log.Printf("transcode: %s not found, songs are transcoded live", cfg.FFmpeg)
+	}
+
 	log.Printf("buddymusic-api listening on %s", cfg.Listen)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
