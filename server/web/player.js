@@ -65,6 +65,9 @@ export const opusSupported = (() => {
   try { return audio.canPlayType("audio/ogg; codecs=opus") !== ""; } catch { return false; }
 })();
 
+const appleWebKit = /iPhone|iPad|iPod/.test(navigator.userAgent || "") || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const blobPlay = { ok: !appleWebKit };
+
 const auto = { tier: 1, speed: 0, measuredKbps: 0, ups: 0, stalls: 0, next: null, song: null, songStalls: 0 };
 
 function streamSpec(song, tier) {
@@ -114,7 +117,8 @@ function pickTier(song, commit) {
     if (commit) { auto.tier = t; auto.next = null; }
     return TIERS[t];
   }
-  const t = decideAuto(song);
+  let t = decideAuto(song);
+  if (t === 0 && document.visibilityState === "hidden") t = 1;
   if (commit) auto.tier = t;
   else auto.next = { id: song.id, tier: t };
   return TIERS[t];
@@ -225,7 +229,7 @@ function startStream(song, tier, from = 0) {
   const base = streamURL(song, spec);
   const off = spec.format && from >= 1 ? Math.floor(from) : 0;
   let blob = "";
-  if (!off && pre.ready.has(base)) {
+  if (!off && blobPlay.ok && pre.ready.has(base)) {
     blob = pre.ready.get(base);
     pre.ready.delete(base);
   }
@@ -456,7 +460,7 @@ function upcoming() {
 }
 
 function preloadNext() {
-  if (state.preload === "off") return;
+  if (state.preload === "off" || !blobPlay.ok) return;
   const later = state.quality === "auto" ? TIERS[auto.tier] : state.quality;
   const urls = upcoming().map((song, k) => {
     const spec = streamSpec(song, k === 0 ? pickTier(song, false) : later);
@@ -520,8 +524,9 @@ function bindSession() {
 }
 bindSession();
 
-function retryStream(song, at) {
-  const delay = RETRY_DELAYS[play.tries] || 0;
+function retryStream(song, at, tier) {
+  const hidden = document.visibilityState === "hidden";
+  const delay = hidden && navigator.onLine !== false ? 0 : RETRY_DELAYS[play.tries] || 0;
   play.tries += 1;
   const gen = play.gen;
   let done = false;
@@ -530,7 +535,7 @@ function retryStream(song, at) {
     if (done || play.gen !== gen || current() !== song) return;
     done = true;
     logEvent("retry", `at ${at.toFixed(2)} try ${play.tries}`);
-    startStream(song, meter.playing.tier, Math.max(0, at));
+    startStream(song, tier || meter.playing.tier, Math.max(0, at));
     audio.play().catch(() => {});
     emit();
   };
@@ -551,8 +556,14 @@ function streamOver(failed, why = "") {
   const missing = known ? known - at > 3 : failed;
   if (why) logEvent(why, `ready ${audio.readyState} net ${audio.networkState} try ${play.tries}`);
   else if (failed && document.visibilityState === "hidden") logEvent("error", audio.error ? `code ${audio.error.code}` : "");
+  if (failed && play.blob && audio.error && audio.error.code === 4) {
+    blobPlay.ok = false;
+    dropPreload();
+  }
   if (meter.playing && missing && play.tries < RETRY_DELAYS.length) {
-    retryStream(song, at);
+    const lighter = failed && document.visibilityState === "hidden" && state.quality === "auto" && meter.playing.tier === "original" ? "normal" : "";
+    if (lighter) auto.tier = Math.max(auto.tier, 1);
+    retryStream(song, at, lighter);
     return;
   }
   if (!failed && state.repeat === "one") { seek(0); audio.play().catch(() => {}); return; }
