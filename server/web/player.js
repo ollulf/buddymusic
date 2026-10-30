@@ -3,6 +3,7 @@ import { h, coverURL, fmtTime } from "./dom.js";
 import { heartButton, retarget } from "./favs.js";
 import { netMonitor, netChip } from "./net.js";
 import { renderViz, vizRisky } from "./viz.js";
+import { fetchAudio, cachedBlob, storeBlob } from "./audiocache.js";
 
 const SAVER_KEY = "bm.dataSaver";
 const QUALITY_KEY = "bm.quality";
@@ -64,7 +65,7 @@ export const opusSupported = (() => {
   try { return audio.canPlayType("audio/ogg; codecs=opus") !== ""; } catch { return false; }
 })();
 
-const auto = { tier: 0, speed: 0, measuredKbps: 0, ups: 0, stalls: 0, next: null, song: null, songStalls: 0 };
+const auto = { tier: 1, speed: 0, measuredKbps: 0, ups: 0, stalls: 0, next: null, song: null, songStalls: 0 };
 
 function streamSpec(song, tier) {
   if (tier === "normal") return opusSupported ? { format: "opus", kbps: 128 } : { format: "mp3", kbps: 192 };
@@ -126,7 +127,8 @@ const STALL_MS = 15000;
 const STALL_EMPTY_MS = 6000;
 const stall = { t: 0, b: 0, at: 0 };
 const watch = { t: -1, at: 0, stalled: false, sent: 0 };
-const pre = { url: "", blob: "", ctrl: null, speed: 0 };
+const pre = { ready: new Map(), jobs: new Map(), speed: 0 };
+const PREFETCH_AHEAD = 2;
 const startT = { at: 0, gen: 0, live: false };
 let autoAdvance = false;
 const adv = { gen: 0, stuck: false, retried: false, logged: false, fails: 0 };
@@ -223,9 +225,9 @@ function startStream(song, tier, from = 0) {
   const base = streamURL(song, spec);
   const off = spec.format && from >= 1 ? Math.floor(from) : 0;
   let blob = "";
-  if (!off && pre.blob && pre.url === base) {
-    blob = pre.blob;
-    Object.assign(pre, { url: "", blob: "" });
+  if (!off && pre.ready.has(base)) {
+    blob = pre.ready.get(base);
+    pre.ready.delete(base);
   }
   const stale = play.blob && play.blob !== blob ? play.blob : "";
   play.blob = blob;
@@ -365,11 +367,15 @@ export function prev() {
   const i = step(-1);
   if (i >= 0) load(i); else seek(0);
 }
+function seekableTo(t) {
+  const r = audio.seekable;
+  try { return play.offset === 0 && r.length > 0 && r.start(0) <= 0.5 && r.end(r.length - 1) >= t && r.end(r.length - 1) > bufferedEnd() + 1; } catch { return false; }
+}
 export function seek(t) {
   if (!isFinite(t)) return;
   const song = current();
   const local = t - play.offset;
-  if (song && meter.playing && meter.playing.format && !play.blob && (local < 0 || local > bufferedEnd() + 1)) {
+  if (song && meter.playing && meter.playing.format && !play.blob && (local < 0 || (local > bufferedEnd() + 1 && !seekableTo(local)))) {
     const playing = !audio.paused;
     startStream(song, meter.playing.tier, Math.max(0, t));
     if (playing) audio.play().catch(() => {});
@@ -396,10 +402,9 @@ export function setPreload(m) {
   if (m === "off") dropPreload();
   emit();
 }
-function dropPreload(keep = "") {
-  if (pre.ctrl) pre.ctrl.abort();
-  if (pre.blob) URL.revokeObjectURL(pre.blob);
-  Object.assign(pre, { url: "", blob: "", ctrl: null });
+function dropPreload(keep = "", wanted = null) {
+  for (const [url, ctrl] of pre.jobs) if (!wanted || !wanted.has(url)) { ctrl.abort(); pre.jobs.delete(url); }
+  for (const [url, blob] of pre.ready) if (!wanted || !wanted.has(url)) { URL.revokeObjectURL(blob); pre.ready.delete(url); }
   if (preloader.src && preloader.src !== keep) { preloader.removeAttribute("src"); preloader.load(); }
 }
 export function stopAll() {
@@ -439,31 +444,53 @@ function restream(tier) {
   emit();
 }
 
-function preloadNext() {
-  const i = state.repeat === "one" ? -1 : step(1);
-  const song = state.queue[i];
-  if (!song || state.preload === "off") return;
-  const spec = streamSpec(song, pickTier(song, false));
-  const url = streamURL(song, spec);
-  if (!spec.format) {
-    if (!preloader.src.endsWith(url)) { preloader.src = url; preloader.load(); }
-    return;
+function upcoming() {
+  const out = [];
+  if (state.repeat === "one") return out;
+  for (let k = 1; out.length < PREFETCH_AHEAD && k <= PREFETCH_AHEAD + 1; k++) {
+    const song = state.queue[step(k)];
+    if (!song || song === current() || out.includes(song)) continue;
+    out.push(song);
   }
-  if (pre.url === url) return;
-  if (pre.ctrl) pre.ctrl.abort();
-  if (pre.blob) URL.revokeObjectURL(pre.blob);
-  const ctrl = new AbortController();
-  Object.assign(pre, { url, blob: "", ctrl });
-  const t0 = performance.now();
-  fetch(url, { signal: ctrl.signal })
-    .then((res) => { if (!res.ok) throw new Error(String(res.status)); return res.blob(); })
-    .then((b) => {
-      if (pre.ctrl !== ctrl) return;
-      if (b.size < 4096) throw new Error("short");
-      const secs = Math.max((performance.now() - t0) / 1000, 0.25);
-      Object.assign(pre, { ctrl: null, blob: URL.createObjectURL(b), speed: Math.max(0.01, (b.size * 8 / 1000 / secs) / spec.kbps) });
-    })
-    .catch(() => { if (pre.ctrl === ctrl) pre.ctrl = null; });
+  return out;
+}
+
+function preloadNext() {
+  if (state.preload === "off") return;
+  const later = state.quality === "auto" ? TIERS[auto.tier] : state.quality;
+  const urls = upcoming().map((song, k) => {
+    const spec = streamSpec(song, k === 0 ? pickTier(song, false) : later);
+    return { url: streamURL(song, spec), spec };
+  });
+  dropPreload(audio.src, new Set(urls.map((u) => u.url)));
+  prefetchChain(urls);
+}
+
+async function prefetchChain(urls) {
+  for (const { url, spec } of urls) {
+    if (state.preload === "off") return;
+    if (pre.ready.has(url)) continue;
+    if (pre.jobs.has(url)) return;
+    const ctrl = new AbortController();
+    pre.jobs.set(url, ctrl);
+    try {
+      let b = await cachedBlob(url);
+      if (!b) {
+        const t0 = performance.now();
+        b = await fetchAudio(url, ctrl.signal);
+        if (b.size < 4096) throw new Error("short");
+        const secs = Math.max((performance.now() - t0) / 1000, 0.25);
+        pre.speed = Math.max(0.01, (b.size * 8 / 1000 / secs) / spec.kbps);
+        storeBlob(url, b);
+      }
+      if (pre.jobs.get(url) !== ctrl) return;
+      pre.jobs.delete(url);
+      pre.ready.set(url, URL.createObjectURL(b));
+    } catch {
+      if (pre.jobs.get(url) === ctrl) pre.jobs.delete(url);
+      return;
+    }
+  }
 }
 
 function updateSession() {
@@ -714,7 +741,7 @@ audio.addEventListener("timeupdate", () => {
     state.scrobbled = true;
     fetch(`/api/music/scrobble/${encodeURIComponent(song.id)}`, { method: "POST" }).catch(() => {});
   }
-  if (d && d - p < 30) preloadNext();
+  if (d && p > 3 && (meter.done || d - p < 90)) preloadNext();
 });
 for (const ev of ["play", "pause", "loadedmetadata", "durationchange", "seeking", "seeked", "emptied"]) audio.addEventListener(ev, emit);
 

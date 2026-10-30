@@ -317,6 +317,7 @@ func (a *App) placeUpload(ctx context.Context, u *Upload, form *uploadForm, stor
 		}
 	}
 	a.scanner.Trigger()
+	a.transcodes.Kick()
 	return http.StatusCreated, u
 }
 

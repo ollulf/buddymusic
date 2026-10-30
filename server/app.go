@@ -6,28 +6,31 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"path/filepath"
 	"time"
 )
 
 type App struct {
-	cfg      *Config
-	store    *Store
-	nav      *Navidrome
-	limiter  loginLimiter
-	scanner  *Scanner
-	admins   adminCache
-	seen     seenThrottle
-	jumps    jumpLimiter
-	feedback jumpLimiter
-	feat     featuredCache
-	push     *pusher
-	vinylTry vinylThrottle
+	cfg        *Config
+	store      *Store
+	nav        *Navidrome
+	limiter    loginLimiter
+	scanner    *Scanner
+	admins     adminCache
+	seen       seenThrottle
+	jumps      jumpLimiter
+	feedback   jumpLimiter
+	feat       featuredCache
+	push       *pusher
+	vinylTry   vinylThrottle
+	transcodes *Transcodes
 }
 
 func NewApp(cfg *Config, store *Store) *App {
 	nav := NewNavidrome(cfg.NavidromeURL)
 	return &App{cfg: cfg, store: store, nav: nav, scanner: NewScanner(nav, cfg.ScanUser, cfg.ScanPassword, cfg.ScanDelay),
-		feedback: jumpLimiter{window: 10 * time.Minute, max: 5}, push: newPusher(store)}
+		feedback: jumpLimiter{window: 10 * time.Minute, max: 5}, push: newPusher(store),
+		transcodes: NewTranscodes(filepath.Join(cfg.DataDir, "transcodes"), cfg.LibraryDir(), ffmpegEncoder(cfg.FFmpeg))}
 }
 
 func (a *App) Routes() http.Handler {
