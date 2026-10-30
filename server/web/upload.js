@@ -494,6 +494,23 @@ function albumInput(key) {
   return [field, extra.box];
 }
 
+function openHowto(returnTo) {
+  const closeBtn = h("button", { class: "ghost news-close", type: "button", "aria-label": t("news.close"), title: t("news.close"), onclick: () => dlg.close() }, "✕");
+  const paras = t("upload.howtoBody").split(/\n\s*\n/).map((p) => h("p", {}, p.trim()));
+  const dlg = h("dialog", { class: "sheet card news", "aria-labelledby": "howto-title" },
+    h("div", { class: "news-head" }, h("h2", { id: "howto-title" }, t("upload.howtoTitle")), closeBtn),
+    h("div", { class: "news-body howto-body", tabindex: "0" }, ...paras));
+  dlg.addEventListener("click", (e) => {
+    if (e.target !== dlg) return;
+    const r = dlg.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dlg.close();
+  });
+  dlg.addEventListener("close", () => { dlg.remove(); returnTo?.focus(); });
+  document.body.append(dlg);
+  dlg.showModal();
+  closeBtn.focus();
+}
+
 export function renderUpload(container, opts = {}) {
   state = { files: [], cover: null, back: null, edited: new Set(), busy: false, nextId: 1, albumArtists: [], genres: [] };
   ui = { album: {}, renderAlbumArtists: () => {} };
@@ -539,7 +556,10 @@ export function renderUpload(container, opts = {}) {
     refresh();
   } }, t("upload.clear"));
 
+  const howto = h("button", { class: "ghost howto-btn", type: "button", "aria-haspopup": "dialog", "aria-label": t("upload.howtoTitle"),
+    onclick: () => openHowto(howto) }, "? ", t("upload.howto"));
   container.replaceChildren(
+    h("div", { class: "upload-top" }, howto),
     drop, ui.albumBox,
     h("section", { class: "card files" }, h("h2", {}, t("search.songs")), ui.list,
       h("div", { class: "foot" }, ui.summary, h("div", { class: "actions" }, ui.clear, ui.upload))));

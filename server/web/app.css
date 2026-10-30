@@ -961,3 +961,6 @@ dialog.sheet.album-edit-dialog { width: min(560px, calc(100vw - 32px)); max-heig
 .art.jc.flippable:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .cover .back-preview { width: 70px; }
 @media (prefers-reduced-motion: reduce) { .art.jc img.back, .art.jc .vinyl-tag, .art.jc .holo { transition: none; } }
+.upload-top { display: flex; justify-content: flex-end; margin-bottom: var(--sp-2); }
+button.howto-btn { padding: 2px var(--sp-2); font-size: var(--fs-sm, 0.85em); border: 2px solid var(--ink); box-shadow: var(--bevel); background: var(--card); }
+.howto-body p { margin: 0; }
