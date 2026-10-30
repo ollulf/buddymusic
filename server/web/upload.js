@@ -187,6 +187,10 @@ function resetAlbum() {
 }
 
 function addFiles(list) {
+  const all = [...list];
+  const skipped = all.filter((f) => !/\.(mp3|flac)$/i.test(f.name));
+  if (skipped.length) alert(t("upload.onlyMp3Flac", { files: skipped.map((f) => f.name).join(", ") }));
+  list = all.filter((f) => !skipped.includes(f));
   if (!list.length) return;
   if (!pending().length) resetAlbum();
   for (const file of list) {
@@ -494,7 +498,7 @@ export function renderUpload(container, opts = {}) {
   state = { files: [], cover: null, back: null, edited: new Set(), busy: false, nextId: 1, albumArtists: [], genres: [] };
   ui = { album: {}, renderAlbumArtists: () => {} };
   if (opts.onUnauthorized) onUnauthorized = opts.onUnauthorized;
-  const picker = h("input", { type: "file", multiple: true, accept: "audio/*,.flac,.mp3,.m4a,.ogg,.opus,.wma", hidden: true,
+  const picker = h("input", { type: "file", multiple: true, accept: ".mp3,.flac,audio/mpeg,audio/flac", hidden: true,
     onchange: (e) => { addFiles(e.target.files); e.target.value = ""; } });
   const drop = h("div", { class: "drop", tabindex: "0", role: "button",
     onclick: () => picker.click(),

@@ -181,9 +181,10 @@ func TestSniffAudio(t *testing.T) {
 		{[]byte("fLaC\x00\x00"), "a.flac", ".flac"},
 		{[]byte("ID3\x04\x00"), "a.mp3", ".mp3"},
 		{[]byte{0xFF, 0xFB, 0x90}, "a.mp3", ".mp3"},
-		{[]byte("\x00\x00\x00\x20ftypM4A \x00"), "a.m4a", ".m4a"},
-		{[]byte("OggS\x00\x02........OpusHead"), "a.ogg", ".opus"},
-		{[]byte("OggS\x00\x02........\x01vorbis"), "a.ogg", ".ogg"},
+		{[]byte("\x00\x00\x00\x20ftypM4A \x00"), "a.m4a", ""},
+		{[]byte("OggS\x00\x02........OpusHead"), "a.ogg", ""},
+		{[]byte("OggS\x00\x02........\x01vorbis"), "a.ogg", ""},
+		{[]byte("\x30\x26\xB2\x75\x8E\x66\xCF\x11"), "a.wma", ""},
 		{[]byte("hello world"), "a.mp3", ""},
 	}
 	for _, c := range cases {
