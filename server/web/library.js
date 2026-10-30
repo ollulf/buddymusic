@@ -402,6 +402,7 @@ async function renderLists(container, kind, opts) {
 
 const DELETE_ERRORS = {
   "admin-only": t("delete.adminOnly"),
+  "not-owner": t("delete.notOwner"),
   "outside-library": t("delete.outside"),
   "file-not-found": t("delete.fileNotFound"),
   "not-found": t("delete.notFound"),
@@ -417,6 +418,12 @@ async function deleteItem(kind, id, opts) {
     alert(t("delete.failed", { error: DELETE_ERRORS[e.message] || e.message }));
     return null;
   }
+}
+
+function canDeleteAlbum(al, opts) {
+  if (opts.admin) return true;
+  const by = Array.isArray(al.uploadedBy) ? al.uploadedBy : [];
+  return !!opts.user && by.length > 0 && by.every((u) => u === opts.user);
 }
 
 function albumActions(al, songs, opts, { editAlbum, deleteAlbum }) {
@@ -441,7 +448,7 @@ function albumActions(al, songs, opts, { editAlbum, deleteAlbum }) {
     { icon: "⤵", label: t("song.playNext"), disabled: none, run: () => player.playNext(songs) },
     { icon: "☰", label: `${t("playlists.addTo")}…`, disabled: none, run: () => openAddSheet(songs, opts) },
     opts.admin ? { icon: "✎", label: t("library.editAlbum"), run: () => editAlbum(more) } : null,
-    opts.admin ? { icon: "✕", label: t("library.deleteAlbum"), danger: true, run: deleteAlbum } : null,
+    canDeleteAlbum(al, opts) ? { icon: "✕", label: t("library.deleteAlbum"), danger: true, run: deleteAlbum } : null,
   ]);
   more.classList.add("album-more");
   more.title = t("library.albumMore");
