@@ -410,6 +410,9 @@ button.add-artist { font-size: var(--fs-xs); padding: 2px var(--sp-2); }
 .pl-main:hover .pl-pile, .pl-main:focus-visible .pl-pile { --step: 10px; }
 .pl-pile .art.jc.pl-case { position: absolute; left: 0; top: 0; width: 68px; border-width: 4px 3px 4px 9px; border-image-width: 4px 3px 4px 9px; filter: drop-shadow(3px 3px 0 var(--ink)); transform: translate(calc(var(--i) * var(--step)), calc(var(--i) * var(--step))); transition: transform .2s steps(3); }
 .pl-main:hover .pl-front, .pl-main:focus-visible .pl-front { transform: translate(0, -6px); border-image-source: var(--jc-hot); }
+.pl-new .pl-main { background: none; border: 0; font: inherit; text-align: left; cursor: pointer; }
+.pl-new .pl-empty { opacity: .8; }
+.pl-new .pl-main:hover .pl-empty, .pl-new .pl-main:focus-visible .pl-empty { opacity: 1; color: var(--accent); border-color: var(--accent); transform: translate(0, -6px); }
 .pl-pile .pl-empty { position: absolute; left: 6px; top: 6px; width: 68px; height: 68px; display: grid; place-items: center; border: 3px dashed var(--ph); background: repeating-linear-gradient(45deg, var(--shade) 0 6px, var(--bg) 6px 12px); color: var(--muted); font-family: var(--pix); font-size: 28px; }
 .pl-count { position: absolute; z-index: var(--z-ribbon); left: 54px; top: 58px; padding: 0 4px; background: var(--orange); color: var(--ink); border: 2px solid var(--ink); font-family: var(--num, var(--pix)); font-size: var(--fs-xs); line-height: 14px; }
 .pl-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
