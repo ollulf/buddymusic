@@ -196,7 +196,7 @@ function addFiles(list) {
   for (const file of list) {
     const guess = fromFileName(file.name);
     const entry = { id: state.nextId++, file, fileTags: undefined, picture: null, title: guess.title, track: guess.track, disc: guess.disc,
-      artists: [], serverMissing: [], status: "reading" };
+      artists: [], skip: new Set(), serverMissing: [], status: "reading" };
     state.files.push(entry);
     entry.el = buildRow(entry);
     ui.list.append(entry.el.row);
@@ -255,8 +255,45 @@ function buildFields(entry) {
   const keys = present("track", entry.disc) ? [...ROW_FIELDS, "disc"] : ROW_FIELDS;
   const extra = artistEditor(entry.artists, () => MAX_ARTISTS - 1 - state.albumArtists.length, t("upload.songArtists"),
     (el) => { entry.el.artistInputs = el; });
-  entry.el.fields.replaceChildren(...keys.map((k) => rowInput(entry, k)), extra.box);
+  const pills = h("div", { class: "pills" });
+  const credits = h("div", { class: "field song-credits" }, h("span", {}, t("upload.songBy")), pills);
+  entry.el.fields.replaceChildren(...keys.map((k) => rowInput(entry, k)), credits, extra.box);
   entry.el.renderArtists = extra.render;
+  entry.el.credits = { box: credits, pills, key: null, buttons: [] };
+  renderCredits(entry);
+}
+
+function leadArtists() {
+  const a = album();
+  return a.artist ? artistNames([a.artist, ...state.albumArtists]) : [];
+}
+
+function creditedArtists(entry, lead) {
+  const on = lead.filter((n) => !entry.skip.has(n.toLowerCase()));
+  return on.length ? on : lead;
+}
+
+function renderCredits(entry) {
+  const c = entry.el.credits;
+  if (!c) return;
+  const lead = leadArtists();
+  const on = creditedArtists(entry, lead);
+  const key = JSON.stringify([lead, on]);
+  if (key === c.key) return;
+  c.key = key;
+  c.box.hidden = lead.length < 2;
+  c.buttons = lead.map((name) => {
+    const active = on.includes(name);
+    return h("button", { type: "button", class: "pill" + (active ? " on" : ""), "aria-pressed": String(active),
+      disabled: entry.status === "uploading" || entry.status === "done" || state.busy,
+      onclick: () => {
+        const low = name.toLowerCase();
+        if (entry.skip.has(low)) entry.skip.delete(low);
+        else if (creditedArtists(entry, lead).length > 1) entry.skip.add(low);
+        refresh();
+      } }, name);
+  });
+  c.pills.replaceChildren(...c.buttons);
 }
 
 function sortKey(e) {
@@ -342,6 +379,7 @@ function refresh() {
   const needAlbum = new Set();
   for (const e of state.files) {
     e.el.row.dataset.status = e.status;
+    renderCredits(e);
     if (e.status === "done") { done++; e.el.state.textContent = t("upload.inLibrary"); renderChips(e, []); continue; }
     if (e.status === "reading") { blocked++; renderChips(e, []); continue; }
     const miss = missingOf(e);
@@ -381,7 +419,7 @@ function tagPayload(entry) {
   if (state.edited.has("genre") && state.genres.length) out.genres = [...state.genres];
   if (a.artist && (state.albumArtists.length || entry.artists.length)) {
     out.albumArtists = artistNames([a.artist, ...state.albumArtists]);
-    out.artists = artistNames([...out.albumArtists, ...entry.artists]);
+    out.artists = artistNames([...creditedArtists(entry, out.albumArtists), ...entry.artists]);
   }
   return out;
 }
@@ -410,6 +448,7 @@ function send(entry) {
 function setRowEnabled(entry, on) {
   for (const el of Object.values(entry.el.inputs)) el.disabled = !on;
   for (const el of entry.el.artistInputs || []) el.disabled = !on;
+  for (const el of entry.el.credits?.buttons || []) el.disabled = !on;
 }
 
 function setAlbumEnabled(on) {
@@ -486,7 +525,7 @@ function albumInput(key) {
   const field = h("label", { class: "field" }, h("span", {}, LABELS[key]), el);
   if (key !== "artist") return field;
   const extra = artistEditor(state.albumArtists, () => MAX_ARTISTS - 1, t("upload.moreArtists"), (els) => { ui.albumArtistInputs = els; },
-    () => { for (const e of state.files) e.el.renderArtists?.(); });
+    () => { for (const e of state.files) e.el.renderArtists?.(); refresh(); }, refresh);
   ui.renderAlbumArtists = () => {
     extra.render();
     for (const e of state.files) e.el.renderArtists?.();

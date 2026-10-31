@@ -386,6 +386,9 @@ button.icon.danger:hover, button.icon.danger:focus-visible { color: var(--bad); 
 .artist-item { display: flex; align-items: center; }
 .artist-item input { width: 160px; max-width: 60vw; }
 .row.blocked .field.artists input:placeholder-shown { border-color: var(--ink); }
+.song-credits[hidden] { display: none; }
+.song-credits .pills { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-2); }
+.song-credits .pill { cursor: pointer; font: inherit; font-size: var(--fs-sm); white-space: nowrap; }
 button.add-artist { font-size: var(--fs-xs); padding: 2px var(--sp-2); }
 @media (max-width: 520px) {
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }

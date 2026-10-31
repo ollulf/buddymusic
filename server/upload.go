@@ -260,7 +260,7 @@ func (a *App) placeUpload(ctx context.Context, u *Upload, form *uploadForm, stor
 	}
 	fields := mergeTags(tags, typed)
 	u.Title, u.Artist, u.Album, u.TrackNo = fields["title"], fields["artist"], fields["album"], number(fields["track"])
-	dir := a.albumDir(u.User, fields)
+	dir := a.albumDir(u.User, folderFields(typed, fields))
 	hasCover := tags.Cover || form.cover != nil || (fields["album"] != "" && fields["artist"] != "" && hasCoverFile(dir))
 	if missing := missingTags(fields, hasCover); len(missing) > 0 {
 		u.Status, u.Missing = "rejected", missing

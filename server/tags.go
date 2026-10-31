@@ -254,6 +254,19 @@ func chooseAlbumArtist(typed, fields map[string]string, existing string) string 
 	return fields["artist"]
 }
 
+func folderFields(typed, fields map[string]string) map[string]string {
+	lead, _, _ := strings.Cut(typed["albumartist"], artistSep)
+	if lead = strings.TrimSpace(lead); lead == "" || lead == fields["artist"] {
+		return fields
+	}
+	out := map[string]string{}
+	for k, v := range fields {
+		out[k] = v
+	}
+	out["artist"] = lead
+	return out
+}
+
 func number(v string) int {
 	head, _, _ := strings.Cut(strings.TrimSpace(v), "/")
 	n, err := strconv.Atoi(strings.TrimSpace(head))
