@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.0.3110",
+    "date": "2026-10-31",
+    "en": [
+      "Albums can now have two artists, and each song shows who made it, without \"feat.\"",
+      "When uploading an album by two artists, choose for each song who made it"
+    ],
+    "de": [
+      "Alben können jetzt zwei Künstler haben, und jeder Song zeigt, von wem er ist, ohne \"feat.\"",
+      "Beim Hochladen eines Albums von zwei Künstlern wählst du für jeden Song, von wem er ist"
+    ]
+  },
+  {
     "version": "1.0.3010.3",
     "date": "2026-10-30",
     "en": [
