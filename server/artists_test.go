@@ -84,3 +84,36 @@ func TestUploadMultipleArtists(t *testing.T) {
 		}
 	}
 }
+
+func TestUploadSplitAlbumSongsPerArtist(t *testing.T) {
+	needFFmpeg(t)
+	a := newTestApp(t)
+	cookie := login(t, a)
+	songs := []struct {
+		track, artists, want string
+	}{
+		{"1", `["Anna"]`, "Anna"},
+		{"2", `["Ben"]`, "Ben"},
+		{"3", `["Anna","Ben"]`, "Anna; Ben"},
+	}
+	for _, s := range songs {
+		tags := `{"artist":"Anna","albumArtists":["Anna","Ben"],"artists":` + s.artists + `,"album":"Split","track":"` + s.track + `","title":"T` + s.track + `"}`
+		rec, body := postUpload(t, a, cookie,
+			formPart{"tags", "", []byte(tags)},
+			formPart{"cover", "c.jpg", jpeg(t)},
+			formPart{"file", "s.flac", makeAudio(t, "s.flac", false)})
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("track %s: %d %s", s.track, rec.Code, rec.Body)
+		}
+		if !strings.HasPrefix(body["libraryPath"].(string), "max/Anna/Split/0"+s.track) {
+			t.Fatalf("track %s: folder %v", s.track, body["libraryPath"])
+		}
+		got := rawTags(t, filepath.Join(a.cfg.LibraryDir(), body["libraryPath"].(string)))
+		if got["artist"] != s.want {
+			t.Fatalf("track %s: artist %q", s.track, got["artist"])
+		}
+		if aa := got["album_artist"] + got["albumartist"]; aa != "Anna; Ben" {
+			t.Fatalf("track %s: album artist %q", s.track, aa)
+		}
+	}
+}

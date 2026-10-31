@@ -152,14 +152,18 @@ player.onChange(() => {
 });
 
 function artistNames(list, fallback) {
-  const names = Array.isArray(list) ? list.map((a) => (a?.name || "").trim()).filter(Boolean) : [];
-  return names.length ? names : (fallback ? [fallback.trim()] : []);
+  const split = (v) => String(v || "").split(/\s*;\s*/).map((n) => n.trim()).filter(Boolean);
+  const names = Array.isArray(list) ? list.flatMap((a) => split(a?.name)) : [];
+  return names.length ? names : split(fallback);
 }
 
 function guestLine(s, al) {
   const album = new Set(artistNames(al.artists, al.artist).map((n) => n.toLowerCase()));
   const own = artistNames(s.artists, s.artist);
   const extra = own.filter((n) => !album.has(n.toLowerCase()));
+  const mine = new Set(own.map((n) => n.toLowerCase()));
+  const partial = album.size > 1 && own.length > 0 && [...album].some((n) => !mine.has(n));
+  if (partial) return own.join(", ");
   if (!extra.length) return "";
   if (Array.isArray(s.artists) && s.artists.length) return "feat. " + extra.join(", ");
   return s.artist || "";
