@@ -125,7 +125,7 @@ function pickTier(song, commit) {
 }
 
 const meter = { t0: 0, b0: 0, done: false, playing: null, started: false };
-const play = { offset: 0, tries: 0, blob: "", heard: 0, heardAt: 0, gen: 0, okSince: 0, pending: false, wantSeek: 0 };
+const play = { offset: 0, tries: 0, blob: "", heard: 0, heardAt: 0, gen: 0, okSince: 0, pending: false, wantSeek: 0, srcAt: 0, awaitSeek: false, durLogged: 0 };
 const heal = { song: null, n: 0 };
 const RETRY_DELAYS = [0, 1500, 4000, 8000];
 const STALL_MS = 15000;
@@ -246,10 +246,12 @@ function startStream(song, tier, from = 0) {
   const seekTo = from - off;
   Object.assign(meter, { t0: performance.now(), b0: Math.max(0, seekTo), done: !!blob, started: false, playing: { ...spec, tier } });
   if (blob && pre.speed) { auto.speed = pre.speed; auto.measuredKbps = spec.kbps; }
+  play.srcAt = Date.now();
+  play.awaitSeek = seekTo > 0.05;
   audio.src = blob || (off ? `${base}&timeOffset=${off}` : base);
   if (stale) URL.revokeObjectURL(stale);
   const gen = play.gen;
-  if (seekTo > 0.05) audio.addEventListener("loadedmetadata", () => { if (play.gen === gen) { play.wantSeek = Date.now(); audio.currentTime = seekTo; } }, { once: true });
+  if (seekTo > 0.05) audio.addEventListener("loadedmetadata", () => { if (play.gen === gen) { play.awaitSeek = false; play.wantSeek = Date.now(); audio.currentTime = seekTo; } }, { once: true });
 }
 
 function load(i, autoplay = true) {
@@ -557,7 +559,8 @@ function streamOver(failed, why = "") {
   const at = play.offset + (heardOK(t) ? t : play.heard);
   const missing = known ? known - at > 3 : failed;
   if (why) logEvent(why, `ready ${audio.readyState} net ${audio.networkState} try ${play.tries}`);
-  else if (failed && document.visibilityState === "hidden") logEvent("error", audio.error ? `code ${audio.error.code}` : "");
+  else if (failed) logEvent("error", `${audio.error ? `code ${audio.error.code}` : ""} at ${at.toFixed(2)} dur ${(+audio.duration || 0).toFixed(1)}`);
+  else if (missing) logEvent("ended-early", `at ${at.toFixed(2)} known ${known.toFixed(1)} dur ${(+audio.duration || 0).toFixed(1)}`);
   if (failed && play.blob && audio.error && audio.error.code === 4) {
     blobPlay.ok = false;
     dropPreload();
@@ -672,6 +675,14 @@ function healJump(at) {
   return true;
 }
 
+function checkRewind(t) {
+  if (audio.paused || audio.seeking || play.awaitSeek || play.heard <= 5 || t >= play.heard - 3) return;
+  const now = Date.now();
+  if (now - play.wantSeek < 1500 || now - play.srcAt < 1500) return;
+  logEvent("rewind", `to ${(play.offset + t).toFixed(2)} heard ${(play.offset + play.heard).toFixed(2)}`);
+  healJump(play.offset + play.heard);
+}
+
 function syncSession() {
   if (!("mediaSession" in navigator) || !current()) return;
   const ms = navigator.mediaSession;
@@ -683,6 +694,18 @@ function syncSession() {
 }
 
 const rebase = () => { watch.t = -1; };
+for (const ev of ["loadstart", "emptied"]) audio.addEventListener(ev, () => {
+  if (!current() || !audio.getAttribute("src") || Date.now() - play.srcAt < 1500) return;
+  logEvent(`reload-${ev}`, `heard ${(play.offset + play.heard).toFixed(2)} age ${Math.round((Date.now() - play.srcAt) / 1000)}s`);
+});
+audio.addEventListener("durationchange", () => {
+  const song = current();
+  const d = audio.duration;
+  if (!song || !(+song.duration > 0) || !isFinite(d) || d <= 0 || play.durLogged === play.gen) return;
+  if (Math.abs(play.offset + d - song.duration) < 5) return;
+  play.durLogged = play.gen;
+  logEvent("duration", `element ${(play.offset + d).toFixed(1)} song ${(+song.duration).toFixed(1)}`);
+});
 for (const ev of ["play", "pause", "seeking", "seeked", "emptied", "loadstart", "ratechange"]) audio.addEventListener(ev, rebase);
 audio.addEventListener("playing", () => { watch.t = audio.currentTime || 0; watch.at = Date.now(); });
 for (const ev of ["play", "pause", "playing", "waiting", "seeked", "ratechange", "loadedmetadata", "durationchange"]) audio.addEventListener(ev, syncSession);
@@ -760,6 +783,7 @@ audio.addEventListener("timeupdate", () => {
   if (!song) return;
   const t = audio.currentTime;
   checkJump();
+  checkRewind(t);
   if (heardOK(t)) play.heard = t;
   if (play.tries && play.okSince && !audio.paused && Date.now() - play.okSince > 30000) play.tries = 0;
   play.heardAt = Date.now();
