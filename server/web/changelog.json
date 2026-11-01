@@ -1,12 +1,12 @@
 [
   {
-    "version": "1.0.0111",
+    "version": "1.0.0111.2",
     "date": "2026-11-01",
     "en": [
-      "Songs no longer start over in the middle on iPhone"
+      "Songs no longer start over in the middle on iPhone, with the screen locked or on"
     ],
     "de": [
-      "Songs fangen auf dem iPhone nicht mehr mittendrin von vorne an"
+      "Songs fangen auf dem iPhone nicht mehr mittendrin von vorne an, egal ob gesperrt oder nicht"
     ]
   },
   {
