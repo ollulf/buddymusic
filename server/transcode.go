@@ -10,10 +10,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 )
 
 type transcodeTier struct {
@@ -56,7 +58,17 @@ type Transcodes struct {
 	mu      sync.Mutex
 	failed  map[string]bool
 	ids     map[string]songPathEntry
-	sizes   map[int64][]string
+	sizes   map[int64][]storeFile
+	files   []storeFile
+	indexMu sync.Mutex
+}
+
+type storeFile struct {
+	path  string
+	rel   string
+	info  fs.FileInfo
+	name  string
+	album string
 }
 
 type encodeFlight struct {
@@ -211,12 +223,154 @@ func (t *Transcodes) songPath(id string) (string, bool) {
 }
 
 func (t *Transcodes) bySize(size int64) (string, bool) {
+	return t.find(size, "")
+}
+
+func (t *Transcodes) find(size int64, navPath string) (string, bool) {
+	t.mu.Lock()
+	built := t.sizes != nil
+	t.mu.Unlock()
+	if !built {
+		t.Index(context.Background())
+	}
+	name, album := songName(navPath), songAlbum(navPath)
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	if size <= 0 || len(t.sizes[size]) != 1 {
+	if size > 0 {
+		cands := t.sizes[size]
+		if len(cands) == 1 {
+			return cands[0].path, true
+		}
+		if p, ok := pickByName(cands, name, album); ok {
+			return p, true
+		}
+	}
+	if name == "" || album == "" {
 		return "", false
 	}
-	return t.sizes[size][0], true
+	var same []storeFile
+	for _, f := range t.files {
+		if f.name == name && f.album == album {
+			same = append(same, f)
+		}
+	}
+	if len(same) == 1 {
+		return same[0].path, true
+	}
+	return "", false
+}
+
+func pickByName(cands []storeFile, name, album string) (string, bool) {
+	if name == "" || len(cands) == 0 {
+		return "", false
+	}
+	var byName, byBoth []string
+	for _, c := range cands {
+		if c.name != name {
+			continue
+		}
+		byName = append(byName, c.path)
+		if album != "" && c.album == album {
+			byBoth = append(byBoth, c.path)
+		}
+	}
+	if len(byBoth) == 1 {
+		return byBoth[0], true
+	}
+	if len(byName) == 1 {
+		return byName[0], true
+	}
+	return "", false
+}
+
+var trackPrefix = regexp.MustCompile(`^\s*\d{1,3}(\s*[-.]\s*\d{1,3})?\s*[-._)]?\s+`)
+
+func songName(p string) string {
+	if p == "" {
+		return ""
+	}
+	base := filepath.Base(filepath.FromSlash(p))
+	base = strings.TrimSuffix(base, filepath.Ext(base))
+	if stripped := trackPrefix.ReplaceAllString(base, ""); stripped != "" {
+		base = stripped
+	}
+	return foldName(base)
+}
+
+func songAlbum(p string) string {
+	if p == "" {
+		return ""
+	}
+	dir := filepath.Dir(filepath.FromSlash(p))
+	if dir == "." || dir == string(filepath.Separator) {
+		return ""
+	}
+	return foldName(filepath.Base(dir))
+}
+
+func foldName(s string) string {
+	var b strings.Builder
+	for _, r := range strings.ToLower(s) {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+func (t *Transcodes) scan(ctx context.Context) ([]storeFile, error) {
+	var files []storeFile
+	err := filepath.WalkDir(t.lib, func(p string, d fs.DirEntry, err error) error {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			if p != t.lib && strings.HasPrefix(d.Name(), ".") {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !d.Type().IsRegular() || !audioExts[strings.ToLower(filepath.Ext(p))] {
+			return nil
+		}
+		info, err := d.Info()
+		if err != nil {
+			return nil
+		}
+		rel, err := filepath.Rel(t.lib, p)
+		if err != nil {
+			return nil
+		}
+		rel = filepath.ToSlash(rel)
+		files = append(files, storeFile{path: p, rel: rel, info: info, name: songName(rel), album: songAlbum(rel)})
+		return nil
+	})
+	return files, err
+}
+
+func (t *Transcodes) publish(files []storeFile) {
+	sizes := map[int64][]storeFile{}
+	for _, f := range files {
+		sizes[f.info.Size()] = append(sizes[f.info.Size()], f)
+	}
+	t.mu.Lock()
+	t.sizes = sizes
+	t.files = files
+	t.mu.Unlock()
+}
+
+func (t *Transcodes) Index(ctx context.Context) ([]storeFile, error) {
+	t.indexMu.Lock()
+	defer t.indexMu.Unlock()
+	files, err := t.scan(ctx)
+	if err != nil {
+		return nil, err
+	}
+	t.publish(files)
+	return files, nil
 }
 
 func (t *Transcodes) rememberSong(id, path string) {
@@ -232,6 +386,7 @@ func (t *Transcodes) Kick() {
 	if t == nil {
 		return
 	}
+	go t.Index(context.Background())
 	select {
 	case t.kick <- struct{}{}:
 	default:
@@ -258,38 +413,25 @@ func (t *Transcodes) Run(ctx context.Context) {
 }
 
 func (t *Transcodes) Sweep(ctx context.Context) (made int) {
-	keep := map[string]bool{}
-	sizes := map[int64][]string{}
 	start := time.Now()
-	walkErr := filepath.WalkDir(t.lib, func(p string, d fs.DirEntry, err error) error {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		if err != nil {
-			return nil
-		}
-		if d.IsDir() {
-			if p != t.lib && strings.HasPrefix(d.Name(), ".") {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if !d.Type().IsRegular() || !audioExts[strings.ToLower(filepath.Ext(p))] {
-			return nil
-		}
-		info, err := d.Info()
-		if err != nil {
-			return nil
-		}
-		rel, err := filepath.Rel(t.lib, p)
-		if err != nil {
-			return nil
-		}
-		key := transcodeKey(filepath.ToSlash(rel), info)
-		sizes[info.Size()] = append(sizes[info.Size()], p)
+	files, err := t.Index(ctx)
+	if err != nil {
+		return made
+	}
+	keep := map[string]bool{}
+	for _, f := range files {
+		key := transcodeKey(f.rel, f.info)
 		for _, tier := range transcodeTiers {
+			keep[t.target(key, tier)] = true
+		}
+	}
+	for _, f := range files {
+		key := transcodeKey(f.rel, f.info)
+		for _, tier := range transcodeTiers {
+			if ctx.Err() != nil {
+				return made
+			}
 			dst := t.target(key, tier)
-			keep[dst] = true
 			if ready(dst) {
 				continue
 			}
@@ -299,26 +441,19 @@ func (t *Transcodes) Sweep(ctx context.Context) (made int) {
 			if failed {
 				continue
 			}
-			f := t.flight(p, dst, tier, t.encode)
+			fl := t.flight(f.path, dst, tier, t.encode)
 			select {
 			case <-ctx.Done():
-				return ctx.Err()
-			case <-f.done:
+				return made
+			case <-fl.done:
 			}
-			if f.err != nil {
-				log.Printf("transcode %s (%s %d): %v", rel, tier.Format, tier.Kbps, f.err)
+			if fl.err != nil {
+				log.Printf("transcode %s (%s %d): %v", f.rel, tier.Format, tier.Kbps, fl.err)
 				continue
 			}
 			made++
 		}
-		return nil
-	})
-	if walkErr != nil {
-		return made
 	}
-	t.mu.Lock()
-	t.sizes = sizes
-	t.mu.Unlock()
 	removed := 0
 	filepath.WalkDir(t.dir, func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
