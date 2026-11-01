@@ -28,9 +28,11 @@ type App struct {
 
 func NewApp(cfg *Config, store *Store) *App {
 	nav := NewNavidrome(cfg.NavidromeURL)
-	return &App{cfg: cfg, store: store, nav: nav, scanner: NewScanner(nav, cfg.ScanUser, cfg.ScanPassword, cfg.ScanDelay),
+	a := &App{cfg: cfg, store: store, nav: nav, scanner: NewScanner(nav, cfg.ScanUser, cfg.ScanPassword, cfg.ScanDelay),
 		feedback: jumpLimiter{window: 10 * time.Minute, max: 5}, push: newPusher(store),
-		transcodes: NewTranscodes(filepath.Join(cfg.DataDir, "transcodes"), cfg.LibraryDir(), ffmpegEncoder(cfg.FFmpeg))}
+		transcodes: NewTranscodes(filepath.Join(cfg.DataDir, "transcodes"), cfg.LibraryDir(), ffmpegEncoder(cfg.FFmpeg, true))}
+	a.transcodes.urgent = ffmpegEncoder(cfg.FFmpeg, false)
+	return a
 }
 
 func (a *App) Routes() http.Handler {

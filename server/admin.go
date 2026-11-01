@@ -104,6 +104,7 @@ var audioExts = map[string]bool{
 type navSong struct {
 	ID   string `json:"id"`
 	Path string `json:"path"`
+	Size int64  `json:"size"`
 }
 
 var errOutside = errors.New("path outside the library")
