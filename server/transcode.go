@@ -27,6 +27,8 @@ type transcodeTier struct {
 var transcodeTiers = []transcodeTier{
 	{Format: "opus", Kbps: 128, Ext: ".opus", Type: "audio/ogg", Codec: []string{"-c:a", "libopus", "-b:a", "128k", "-vbr", "on", "-f", "ogg"}},
 	{Format: "mp3", Kbps: 192, Ext: ".mp3", Type: "audio/mpeg", Codec: []string{"-c:a", "libmp3lame", "-b:a", "192k", "-f", "mp3"}},
+	{Format: "mp3", Kbps: 128, Ext: ".mp3", Type: "audio/mpeg", Codec: []string{"-c:a", "libmp3lame", "-b:a", "128k", "-f", "mp3"}},
+	{Format: "opus", Kbps: 80, Ext: ".opus", Type: "audio/ogg", Codec: []string{"-c:a", "libopus", "-b:a", "80k", "-vbr", "on", "-f", "ogg"}},
 }
 
 func findTier(format string, kbps int) (transcodeTier, bool) {
@@ -41,15 +43,25 @@ func findTier(format string, kbps int) (transcodeTier, bool) {
 type encodeFunc func(ctx context.Context, src, dst string, t transcodeTier) error
 
 type Transcodes struct {
-	dir    string
-	lib    string
-	encode encodeFunc
-	kick   chan struct{}
-	every  time.Duration
-	delay  time.Duration
-	mu     sync.Mutex
-	failed map[string]bool
-	ids    map[string]songPathEntry
+	dir     string
+	lib     string
+	encode  encodeFunc
+	urgent  encodeFunc
+	wait    time.Duration
+	limit   time.Duration
+	flights map[string]*encodeFlight
+	kick    chan struct{}
+	every   time.Duration
+	delay   time.Duration
+	mu      sync.Mutex
+	failed  map[string]bool
+	ids     map[string]songPathEntry
+	sizes   map[int64][]string
+}
+
+type encodeFlight struct {
+	done chan struct{}
+	err  error
 }
 
 type songPathEntry struct {
@@ -58,12 +70,16 @@ type songPathEntry struct {
 }
 
 func NewTranscodes(dir, lib string, enc encodeFunc) *Transcodes {
-	return &Transcodes{dir: dir, lib: lib, encode: enc, kick: make(chan struct{}, 1), every: 6 * time.Hour, delay: 2 * time.Minute,
+	return &Transcodes{dir: dir, lib: lib, encode: enc, urgent: enc, wait: time.Minute, limit: 10 * time.Minute,
+		flights: map[string]*encodeFlight{}, kick: make(chan struct{}, 1), every: 6 * time.Hour, delay: 2 * time.Minute,
 		failed: map[string]bool{}, ids: map[string]songPathEntry{}}
 }
 
-func ffmpegEncoder(bin string) encodeFunc {
-	nice, _ := exec.LookPath("nice")
+func ffmpegEncoder(bin string, background bool) encodeFunc {
+	nice := ""
+	if background {
+		nice, _ = exec.LookPath("nice")
+	}
 	return func(ctx context.Context, src, dst string, t transcodeTier) error {
 		args := append([]string{"-nostdin", "-hide_banner", "-loglevel", "error", "-y", "-i", src, "-map", "0:a:0", "-vn", "-map_metadata", "-1"}, t.Codec...)
 		args = append(args, dst)
@@ -90,20 +106,98 @@ func (t *Transcodes) target(key string, tier transcodeTier) string {
 	return filepath.Join(t.dir, tier.Format+strconv.Itoa(tier.Kbps), key[:2], key+tier.Ext)
 }
 
-func (t *Transcodes) Lookup(src string, tier transcodeTier) (string, bool) {
-	rel, err := filepath.Rel(t.lib, src)
-	if err != nil || strings.HasPrefix(rel, "..") {
-		return "", false
+func (t *Transcodes) relPath(src string) (string, bool) {
+	roots := []string{t.lib}
+	if real, err := filepath.EvalSymlinks(t.lib); err == nil && real != t.lib {
+		roots = append(roots, real)
+	}
+	for _, root := range roots {
+		if inside(root, src) {
+			rel, err := filepath.Rel(root, src)
+			if err == nil {
+				return filepath.ToSlash(rel), true
+			}
+		}
+	}
+	return "", false
+}
+
+func (t *Transcodes) storePath(src string, tier transcodeTier) (string, error) {
+	rel, ok := t.relPath(src)
+	if !ok {
+		return "", fmt.Errorf("%s is outside the library %s", src, t.lib)
 	}
 	info, err := os.Stat(src)
-	if err != nil || !info.Mode().IsRegular() {
-		return "", false
+	if err != nil {
+		return "", err
 	}
-	p := t.target(transcodeKey(filepath.ToSlash(rel), info), tier)
-	if st, err := os.Stat(p); err != nil || st.Size() == 0 {
+	if !info.Mode().IsRegular() {
+		return "", fmt.Errorf("%s is not a regular file", src)
+	}
+	return t.target(transcodeKey(rel, info), tier), nil
+}
+
+func ready(p string) bool {
+	st, err := os.Stat(p)
+	return err == nil && st.Size() > 0
+}
+
+func (t *Transcodes) Lookup(src string, tier transcodeTier) (string, bool) {
+	p, err := t.storePath(src, tier)
+	if err != nil || !ready(p) {
 		return "", false
 	}
 	return p, true
+}
+
+func (t *Transcodes) Ensure(ctx context.Context, src string, tier transcodeTier) (string, error) {
+	p, err := t.storePath(src, tier)
+	if err != nil {
+		return "", err
+	}
+	if ready(p) {
+		return p, nil
+	}
+	f := t.flight(src, p, tier, t.urgent)
+	wait, cancel := context.WithTimeout(ctx, t.wait)
+	defer cancel()
+	select {
+	case <-f.done:
+		if f.err != nil {
+			return "", f.err
+		}
+		return p, nil
+	case <-wait.Done():
+		return "", fmt.Errorf("encode still running: %w", wait.Err())
+	}
+}
+
+func (t *Transcodes) flight(src, dst string, tier transcodeTier, enc encodeFunc) *encodeFlight {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if f, ok := t.flights[dst]; ok {
+		return f
+	}
+	f := &encodeFlight{done: make(chan struct{})}
+	if t.failed[dst] {
+		f.err = fmt.Errorf("encode failed before")
+		close(f.done)
+		return f
+	}
+	t.flights[dst] = f
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), t.limit)
+		defer cancel()
+		f.err = t.encodeOne(ctx, src, dst, tier, enc)
+		t.mu.Lock()
+		delete(t.flights, dst)
+		if f.err != nil {
+			t.failed[dst] = true
+		}
+		t.mu.Unlock()
+		close(f.done)
+	}()
+	return f
 }
 
 func (t *Transcodes) songPath(id string) (string, bool) {
@@ -114,6 +208,15 @@ func (t *Transcodes) songPath(id string) (string, bool) {
 		return "", false
 	}
 	return e.path, true
+}
+
+func (t *Transcodes) bySize(size int64) (string, bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if size <= 0 || len(t.sizes[size]) != 1 {
+		return "", false
+	}
+	return t.sizes[size][0], true
 }
 
 func (t *Transcodes) rememberSong(id, path string) {
@@ -156,6 +259,7 @@ func (t *Transcodes) Run(ctx context.Context) {
 
 func (t *Transcodes) Sweep(ctx context.Context) (made int) {
 	keep := map[string]bool{}
+	sizes := map[int64][]string{}
 	start := time.Now()
 	walkErr := filepath.WalkDir(t.lib, func(p string, d fs.DirEntry, err error) error {
 		if ctx.Err() != nil {
@@ -182,21 +286,27 @@ func (t *Transcodes) Sweep(ctx context.Context) (made int) {
 			return nil
 		}
 		key := transcodeKey(filepath.ToSlash(rel), info)
+		sizes[info.Size()] = append(sizes[info.Size()], p)
 		for _, tier := range transcodeTiers {
 			dst := t.target(key, tier)
 			keep[dst] = true
-			if st, err := os.Stat(dst); err == nil && st.Size() > 0 {
+			if ready(dst) {
 				continue
 			}
-			if t.failed[dst] {
+			t.mu.Lock()
+			failed := t.failed[dst]
+			t.mu.Unlock()
+			if failed {
 				continue
 			}
-			if err := t.encodeOne(ctx, p, dst, tier); err != nil {
-				if ctx.Err() != nil {
-					return ctx.Err()
-				}
-				t.failed[dst] = true
-				log.Printf("transcode %s (%s %d): %v", rel, tier.Format, tier.Kbps, err)
+			f := t.flight(p, dst, tier, t.encode)
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-f.done:
+			}
+			if f.err != nil {
+				log.Printf("transcode %s (%s %d): %v", rel, tier.Format, tier.Kbps, f.err)
 				continue
 			}
 			made++
@@ -206,12 +316,15 @@ func (t *Transcodes) Sweep(ctx context.Context) (made int) {
 	if walkErr != nil {
 		return made
 	}
+	t.mu.Lock()
+	t.sizes = sizes
+	t.mu.Unlock()
 	removed := 0
 	filepath.WalkDir(t.dir, func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return nil
 		}
-		if !keep[p] {
+		if !keep[p] && !strings.Contains(filepath.Base(p), ".tmp") {
 			if os.Remove(p) == nil {
 				removed++
 			}
@@ -224,13 +337,13 @@ func (t *Transcodes) Sweep(ctx context.Context) (made int) {
 	return made
 }
 
-func (t *Transcodes) encodeOne(ctx context.Context, src, dst string, tier transcodeTier) error {
+func (t *Transcodes) encodeOne(ctx context.Context, src, dst string, tier transcodeTier, enc encodeFunc) error {
 	if err := os.MkdirAll(filepath.Dir(dst), 0o750); err != nil {
 		return err
 	}
 	tmp := strings.TrimSuffix(dst, tier.Ext) + ".tmp" + tier.Ext
 	defer os.Remove(tmp)
-	if err := t.encode(ctx, src, tmp, tier); err != nil {
+	if err := enc(ctx, src, tmp, tier); err != nil {
 		return err
 	}
 	st, err := os.Stat(tmp)

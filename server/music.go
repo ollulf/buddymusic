@@ -463,15 +463,21 @@ func (a *App) servePretranscoded(w http.ResponseWriter, r *http.Request, id stri
 		songs, err := a.loadTrack(ctx, creds, id)
 		cancel()
 		if err != nil || len(songs) != 1 {
+			log.Printf("stream track=%s not in store: song lookup: %v", id, err)
 			return 0, false
 		}
 		if src, err = a.resolveSongPath(songs[0].Path); err != nil {
-			return 0, false
+			var found bool
+			if src, found = a.transcodes.bySize(songs[0].Size); !found {
+				log.Printf("stream track=%s not in store: path %q size %d: %v", id, songs[0].Path, songs[0].Size, err)
+				return 0, false
+			}
 		}
 		a.transcodes.rememberSong(id, src)
 	}
-	p, ok := a.transcodes.Lookup(src, tier)
-	if !ok {
+	p, err := a.transcodes.Ensure(r.Context(), src, tier)
+	if err != nil {
+		log.Printf("stream track=%s %s %d not in store: %v", id, tier.Format, tier.Kbps, err)
 		return 0, false
 	}
 	f, err := os.Open(p)

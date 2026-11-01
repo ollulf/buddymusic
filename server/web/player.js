@@ -87,6 +87,9 @@ export function qualityHint(q) {
   return `${spec.format === "opus" ? "Opus" : "MP3"} ${spec.kbps}`;
 }
 
+const STORED = { mp3: [128, 192], opus: [80, 128] };
+const storedSpec = (spec) => (STORED[spec.format] || []).includes(spec.kbps);
+
 function streamURL(song, spec) {
   const base = `/api/music/stream/${encodeURIComponent(song.id)}`;
   return spec.format ? `${base}?format=${spec.format}&maxBitRate=${spec.kbps}` : base;
@@ -232,7 +235,7 @@ function report(playing) {
 function startStream(song, tier, from = 0, why = "") {
   const spec = streamSpec(song, tier);
   const base = streamURL(song, spec);
-  const off = spec.format && from >= 1 ? Math.floor(from) : 0;
+  const off = spec.format && !storedSpec(spec) && from >= 1 ? Math.floor(from) : 0;
   let blob = "";
   if (!off && blobPlay.ok && pre.ready.has(base)) {
     blob = pre.ready.get(base);

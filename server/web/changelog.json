@@ -1,14 +1,16 @@
 [
   {
-    "version": "1.0.0111.5",
+    "version": "1.0.0111.6",
     "date": "2026-11-01",
     "en": [
       "Songs no longer start over in the middle on iPhone, with the screen locked or on",
-      "iPhone and iPad now stream MP3 for steadier playback"
+      "iPhone and iPad now stream MP3 for steadier playback",
+      "Steadier streaming: songs now always play from a finished file, so jumping within a song works reliably"
     ],
     "de": [
       "Songs fangen auf dem iPhone nicht mehr mittendrin von vorne an, egal ob gesperrt oder nicht",
-      "iPhone und iPad streamen jetzt MP3 für stabilere Wiedergabe"
+      "iPhone und iPad streamen jetzt MP3 für stabilere Wiedergabe",
+      "Stabileres Streaming: Songs spielen jetzt immer aus einer fertigen Datei, Springen im Song klappt zuverlässig"
     ]
   },
   {
