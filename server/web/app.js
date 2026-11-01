@@ -4,7 +4,7 @@ import { renderSearch, searchBox } from "./search.js";
 import { renderFavorites } from "./favorites.js";
 import { renderQueue } from "./queue.js";
 import "./fly.js";
-import { renderBar, playList, settings, setQuality, onChange, stopAll, QUALITIES, qualityHint } from "./player.js";
+import { renderBar, playList, settings, setQuality, onChange, stopAll, QUALITIES, qualityHint, restoreSession, forgetSession } from "./player.js";
 import { api, Unauthorized } from "./dom.js";
 import { renderPlaylists, setPlaylistUser } from "./playlists.js";
 import { renderAdmin } from "./admin.js";
@@ -70,6 +70,7 @@ function showLogin() {
 }
 
 async function logout() {
+  forgetSession();
   await fetch("/api/logout", { method: "POST" }).catch(() => {});
   showLogin();
 }
@@ -372,6 +373,7 @@ function showApp(user, admin, avatar, me = {}) {
   };
   settingsView.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSettings(); });
   if (!playerBar) { playerBar = renderBar({ onUnauthorized: showLogin, onQuality: () => openQuality && openQuality() }); playerBar.append(renderQueue()); }
+  restoreSession(user);
   root.replaceChildren(
     h("header", { class: "top" },
       h("nav", { class: "tabs", "aria-label": t("tab.sections") }, Object.values(links)),

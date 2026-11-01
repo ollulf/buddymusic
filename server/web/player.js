@@ -130,7 +130,7 @@ function pickTier(song, commit) {
 }
 
 const meter = { t0: 0, b0: 0, done: false, playing: null, started: false };
-const play = { offset: 0, tries: 0, blob: "", heard: 0, heardAt: 0, gen: 0, okSince: 0, pending: false, wantSeek: 0, srcAt: 0, awaitSeek: false, durLogged: 0 };
+const play = { offset: 0, tries: 0, blob: "", heard: 0, heardAt: 0, gen: 0, okSince: 0, pending: false, wantSeek: 0, srcAt: 0, awaitSeek: false, from: 0, durLogged: 0 };
 const heal = { song: null, n: 0 };
 const RETRY_DELAYS = [0, 1500, 4000, 8000];
 const STALL_MS = 15000;
@@ -182,7 +182,7 @@ export const duration = () => {
   const song = current();
   return song && song.duration > 0 ? +song.duration : 0;
 };
-export const position = () => play.offset + (audio.currentTime || 0);
+export const position = () => (play.awaitSeek ? play.from : play.offset + (audio.currentTime || 0));
 
 const tags = new WeakMap();
 let batches = 0;
@@ -255,6 +255,7 @@ function startStream(song, tier, from = 0, why = "") {
   if (blob && pre.speed) { auto.speed = pre.speed; auto.measuredKbps = spec.kbps; }
   play.srcAt = Date.now();
   play.awaitSeek = seekTo > 0.05;
+  play.from = from;
   if (why) logEvent("src", `${why} from ${from.toFixed(2)} off ${off} ${spec.format || "original"}${spec.kbps}`);
   audio.src = blob || (off ? `${base}&timeOffset=${off}` : base);
   if (stale) URL.revokeObjectURL(stale);
@@ -262,7 +263,7 @@ function startStream(song, tier, from = 0, why = "") {
   if (seekTo > 0.05) audio.addEventListener("loadedmetadata", () => { if (play.gen === gen) { play.awaitSeek = false; play.wantSeek = Date.now(); audio.currentTime = seekTo; } }, { once: true });
 }
 
-function load(i, autoplay = true) {
+function load(i, autoplay = true, from = 0) {
   const before = listen.song;
   if (listen.song) report(false);
   state.index = i;
@@ -271,7 +272,7 @@ function load(i, autoplay = true) {
   play.tries = 0;
   const song = current();
   if (!song) { audio.removeAttribute("src"); audio.load(); emit(); return; }
-  startStream(song, pickTier(song, true), 0, before === song ? "same-song" : "");
+  startStream(song, pickTier(song, true), from, from > 0 ? "resume" : before === song ? "same-song" : "");
   dropPreload(audio.src);
   startT.live = false;
   if (autoplay) {
@@ -287,7 +288,7 @@ function load(i, autoplay = true) {
       if (hidden) logEvent("advance-refused", e && e.name);
     });
   }
-  fetch(`/api/music/scrobble/${encodeURIComponent(song.id)}?submission=false`, { method: "POST" }).catch(() => {});
+  if (autoplay) fetch(`/api/music/scrobble/${encodeURIComponent(song.id)}?submission=false`, { method: "POST" }).catch(() => {});
   updateSession();
   bindSession();
   syncSession();
@@ -391,7 +392,7 @@ export function seek(t) {
   if (!isFinite(t)) return;
   const song = current();
   const local = t - play.offset;
-  if (song && meter.playing && meter.playing.format && !play.blob && (local < 0 || (local > bufferedEnd() + 1 && !seekableTo(local)))) {
+  if (song && meter.playing && (play.awaitSeek || (meter.playing.format && !play.blob && (local < 0 || (local > bufferedEnd() + 1 && !seekableTo(local)))))) {
     const playing = !audio.paused;
     startStream(song, meter.playing.tier, Math.max(0, t), "seek");
     if (playing) audio.play().catch(() => {});
@@ -439,6 +440,7 @@ export function stopAll() {
   Object.assign(play, { offset: 0, tries: 0, blob: "", heard: 0, pending: false });
   dropPreload();
   Object.assign(state, { queue: [], index: -1, order: [], scrobbled: false });
+  Object.assign(session, { user: "", sig: "" });
   if ("mediaSession" in navigator) { navigator.mediaSession.metadata = null; navigator.mediaSession.playbackState = "none"; }
   emit();
 }
@@ -601,6 +603,9 @@ audio.addEventListener("playing", () => {
   if (!adv.logged && document.visibilityState === "hidden") { adv.logged = true; logEvent("advance-ok", ""); }
 });
 document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden" && current() && !life.closing) { markPlay(!audio.paused); saveSession(true); }
+});
+document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible" || !adv.stuck || adv.gen !== play.gen || !audio.paused) return;
   adv.stuck = false;
   audio.play().catch(() => {});
@@ -760,6 +765,7 @@ audio.addEventListener("waiting", () => {
 });
 const life = { closing: false };
 function shutdown(e) {
+  if (!life.closing) { markPlay(!audio.paused); saveSession(true); }
   if (e.persisted && vizRisky) return;
   report(false);
   life.closing = true;
@@ -788,15 +794,89 @@ function markPlay(playing) {
   store.set(LAST_PLAY_KEY, JSON.stringify({ id: song ? song.id : "", pos: Math.round(position()), at: lastPlay.at, playing: playing && !!song }));
 }
 
-(() => {
+const startedWith = (() => {
   let last = null;
   try { last = JSON.parse(store.get(LAST_PLAY_KEY) || "null"); } catch {}
-  if (!last || !last.playing || !last.id) return;
-  const age = Math.round((Date.now() - (+last.at || 0)) / 1000);
-  if (age < 0 || age > 900) return;
-  logEvent("page-start", `was ${String(last.id).slice(0, 24)} at ${+last.pos || 0} age ${age}s ${document.visibilityState}`);
-  store.set(LAST_PLAY_KEY, JSON.stringify({ ...last, playing: false }));
+  if (!last || !last.id) return null;
+  if (last.playing) store.set(LAST_PLAY_KEY, JSON.stringify({ ...last, playing: false }));
+  return last;
 })();
+
+const SESSION_KEY = "bm.session";
+const SESSION_MAX_AGE = 12 * 3600 * 1000;
+const SESSION_LIVE = 120 * 1000;
+const SESSION_SONGS = 500;
+const session = { user: "", sig: "", restored: false };
+
+function saveSession(force = false) {
+  if (!session.user) return;
+  const q = state.queue;
+  const sig = `${state.index}|${state.shuffle}|${state.repeat}|${q.map((s) => s.id + (tags.has(s) ? "+" + tags.get(s).batch : "")).join(",")}`;
+  if (!force && sig === session.sig) return;
+  session.sig = sig;
+  if (!q.length || state.index < 0) { try { localStorage.removeItem(SESSION_KEY); } catch {} return; }
+  const lo = Math.max(0, Math.min(state.index - 100, q.length - SESSION_SONGS));
+  const hi = Math.min(q.length, lo + SESSION_SONGS);
+  const songs = q.slice(lo, hi).map((s) => {
+    const e = tags.get(s);
+    return e ? { ...s, _m: [e.batch, e.size] } : s;
+  });
+  const order = state.shuffle ? state.order.filter((i) => i >= lo && i < hi).map((i) => i - lo) : [];
+  store.set(SESSION_KEY, JSON.stringify({ user: session.user, at: Date.now(), index: state.index - lo, shuffle: state.shuffle, repeat: state.repeat, order, songs }));
+}
+listeners.add(() => saveSession());
+
+export function forgetSession() {
+  session.user = "";
+  session.sig = "";
+  try { localStorage.removeItem(SESSION_KEY); localStorage.removeItem(LAST_PLAY_KEY); } catch {}
+}
+
+export function restoreSession(user) {
+  if (!user) return;
+  const first = !session.restored;
+  session.restored = true;
+  if (state.index >= 0) { session.user = user; saveSession(true); return; }
+  let saved = null;
+  try { saved = JSON.parse(store.get(SESSION_KEY) || "null"); } catch {}
+  const last = startedWith;
+  const startNote = (what) => {
+    if (!first || !last || !last.playing) return;
+    const age = Math.round((Date.now() - (+last.at || 0)) / 1000);
+    if (age < 0 || age > 900) return;
+    logEvent("page-start", `was ${String(last.id).slice(0, 24)} at ${+last.pos || 0} age ${age}s ${document.visibilityState} ${what}`);
+  };
+  const ok = saved && saved.user === user && Array.isArray(saved.songs) && saved.songs.length && Date.now() - (+saved.at || 0) < SESSION_MAX_AGE;
+  if (!ok) {
+    if (saved && saved.user !== user) try { localStorage.removeItem(SESSION_KEY); } catch {}
+    session.user = user;
+    startNote("restored none");
+    return;
+  }
+  const remap = new Map();
+  const songs = saved.songs.filter((s) => s && s.id).map((s) => {
+    const { _m, ...song } = s;
+    if (!Array.isArray(_m)) return song;
+    if (!remap.has(_m[0])) remap.set(_m[0], ++batches);
+    tags.set(song, { manual: true, batch: remap.get(_m[0]), size: +_m[1] || 1 });
+    return song;
+  });
+  const index = Math.min(Math.max(0, +saved.index || 0), songs.length - 1);
+  state.queue = songs;
+  state.index = index;
+  state.shuffle = !!saved.shuffle;
+  state.repeat = ["off", "all", "one"].includes(saved.repeat) ? saved.repeat : "off";
+  const order = Array.isArray(saved.order) ? saved.order : [];
+  if (state.shuffle && order.length === songs.length && order[0] === index && new Set(order).size === songs.length && order.every((i) => i >= 0 && i < songs.length)) state.order = order;
+  else rebuildOrder();
+  const song = songs[index];
+  let from = last && last.id === song.id && Date.now() - (+last.at || 0) < SESSION_MAX_AGE ? Math.max(0, +last.pos || 0) : 0;
+  if (+song.duration > 0 && from >= +song.duration - 3) from = 0;
+  const live = !!(last && last.playing && last.id === song.id && Date.now() - (+last.at || 0) < SESSION_LIVE);
+  session.user = user;
+  load(index, live, from);
+  startNote(`restored ${from}${live ? " autoplay" : ""}`);
+}
 window.addEventListener("pageshow", (e) => {
   if (!e.persisted) return;
   life.closing = false;

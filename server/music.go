@@ -468,7 +468,7 @@ func (a *App) servePretranscoded(w http.ResponseWriter, r *http.Request, id stri
 		}
 		if src, err = a.resolveSongPath(songs[0].Path); err != nil {
 			var found bool
-			if src, found = a.transcodes.bySize(songs[0].Size); !found {
+			if src, found = a.transcodes.find(songs[0].Size, songs[0].Path); !found {
 				log.Printf("stream track=%s not in store: path %q size %d: %v", id, songs[0].Path, songs[0].Size, err)
 				return 0, false
 			}
