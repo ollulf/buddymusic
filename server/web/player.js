@@ -61,11 +61,13 @@ const syncNow = () => {
 listeners.add(syncNow);
 for (const ev of ["play", "pause", "emptied", "ended"]) audio.addEventListener(ev, syncNow);
 
+const appleWebKit = /iPhone|iPad|iPod/.test(navigator.userAgent || "") || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
 export const opusSupported = (() => {
+  if (appleWebKit) return false;
   try { return audio.canPlayType("audio/ogg; codecs=opus") !== ""; } catch { return false; }
 })();
 
-const appleWebKit = /iPhone|iPad|iPod/.test(navigator.userAgent || "") || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const blobPlay = { ok: !appleWebKit };
 
 const auto = { tier: 1, speed: 0, measuredKbps: 0, ups: 0, stalls: 0, next: null, song: null, songStalls: 0 };

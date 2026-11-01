@@ -1,12 +1,14 @@
 [
   {
-    "version": "1.0.0111.2",
+    "version": "1.0.0111.3",
     "date": "2026-11-01",
     "en": [
-      "Songs no longer start over in the middle on iPhone, with the screen locked or on"
+      "Songs no longer start over in the middle on iPhone, with the screen locked or on",
+      "iPhone and iPad now stream MP3 for steadier playback"
     ],
     "de": [
-      "Songs fangen auf dem iPhone nicht mehr mittendrin von vorne an, egal ob gesperrt oder nicht"
+      "Songs fangen auf dem iPhone nicht mehr mittendrin von vorne an, egal ob gesperrt oder nicht",
+      "iPhone und iPad streamen jetzt MP3 für stabilere Wiedergabe"
     ]
   },
   {
