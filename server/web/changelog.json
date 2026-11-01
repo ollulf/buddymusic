@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.0.0111",
+    "date": "2026-11-01",
+    "en": [
+      "Songs no longer start over in the middle on iPhone"
+    ],
+    "de": [
+      "Songs fangen auf dem iPhone nicht mehr mittendrin von vorne an"
+    ]
+  },
+  {
     "version": "1.0.3110",
     "date": "2026-10-31",
     "en": [
