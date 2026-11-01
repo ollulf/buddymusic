@@ -133,7 +133,9 @@ const RETRY_DELAYS = [0, 1500, 4000, 8000];
 const STALL_MS = 15000;
 const STALL_EMPTY_MS = 6000;
 const stall = { t: 0, b: 0, at: 0 };
-const watch = { t: -1, at: 0, stalled: false, sent: 0 };
+const watch = { t: -1, at: 0, stalled: false, sent: 0, song: "", songSent: 0 };
+const LAST_PLAY_KEY = "bm.lastPlay";
+const lastPlay = { at: 0 };
 const pre = { ready: new Map(), jobs: new Map(), speed: 0 };
 const PREFETCH_AHEAD = 2;
 const startT = { at: 0, gen: 0, live: false };
@@ -227,7 +229,7 @@ function report(playing) {
   fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
 }
 
-function startStream(song, tier, from = 0) {
+function startStream(song, tier, from = 0, why = "") {
   const spec = streamSpec(song, tier);
   const base = streamURL(song, spec);
   const off = spec.format && from >= 1 ? Math.floor(from) : 0;
@@ -250,6 +252,7 @@ function startStream(song, tier, from = 0) {
   if (blob && pre.speed) { auto.speed = pre.speed; auto.measuredKbps = spec.kbps; }
   play.srcAt = Date.now();
   play.awaitSeek = seekTo > 0.05;
+  if (why) logEvent("src", `${why} from ${from.toFixed(2)} off ${off} ${spec.format || "original"}${spec.kbps}`);
   audio.src = blob || (off ? `${base}&timeOffset=${off}` : base);
   if (stale) URL.revokeObjectURL(stale);
   const gen = play.gen;
@@ -257,6 +260,7 @@ function startStream(song, tier, from = 0) {
 }
 
 function load(i, autoplay = true) {
+  const before = listen.song;
   if (listen.song) report(false);
   state.index = i;
   Object.assign(listen, { song: current(), secs: 0, last: -1, sent: 0 });
@@ -264,7 +268,7 @@ function load(i, autoplay = true) {
   play.tries = 0;
   const song = current();
   if (!song) { audio.removeAttribute("src"); audio.load(); emit(); return; }
-  startStream(song, pickTier(song, true));
+  startStream(song, pickTier(song, true), 0, before === song ? "same-song" : "");
   dropPreload(audio.src);
   startT.live = false;
   if (autoplay) {
@@ -386,7 +390,7 @@ export function seek(t) {
   const local = t - play.offset;
   if (song && meter.playing && meter.playing.format && !play.blob && (local < 0 || (local > bufferedEnd() + 1 && !seekableTo(local)))) {
     const playing = !audio.paused;
-    startStream(song, meter.playing.tier, Math.max(0, t));
+    startStream(song, meter.playing.tier, Math.max(0, t), "seek");
     if (playing) audio.play().catch(() => {});
     emit();
     return;
@@ -448,7 +452,7 @@ function restream(tier) {
   if (song) {
     const t = position();
     const playing = !audio.paused;
-    startStream(song, tier, t);
+    startStream(song, tier, t, `quality-${tier}`);
     if (playing) audio.play().catch(() => {});
   }
   emit();
@@ -573,7 +577,7 @@ function streamOver(failed, why = "") {
     retryStream(song, at, lighter);
     return;
   }
-  if (!failed && state.repeat === "one") { seek(0); audio.play().catch(() => {}); return; }
+  if (!failed && state.repeat === "one") { logEvent("repeat-one", `at ${at.toFixed(2)} known ${known.toFixed(1)}`); seek(0); audio.play().catch(() => {}); return; }
   if (failed && ++adv.fails > 3) { adv.fails = 0; audio.pause(); emit(); return; }
   autoAdvance = true;
   try { next(); } finally { autoAdvance = false; }
@@ -632,9 +636,12 @@ function logEvent(event, detail) {
 }
 
 function reportJump(from, to, expected, event = "", detail = "") {
-  if (watch.sent >= 20) return;
-  watch.sent += 1;
   const song = current();
+  const id = song ? song.id : "";
+  if (watch.song !== id) Object.assign(watch, { song: id, songSent: 0 });
+  if (watch.sent >= 80 || watch.songSent >= 8) return;
+  watch.sent += 1;
+  watch.songSent += 1;
   const spec = meter.playing || {};
   const body = JSON.stringify({
     track: song ? song.id : "", format: spec.format || "original", kbps: spec.kbps || 0, quality: state.quality,
@@ -712,7 +719,7 @@ for (const ev of ["play", "pause", "seeking", "seeked", "emptied", "loadstart", 
 audio.addEventListener("playing", () => { watch.t = audio.currentTime || 0; watch.at = Date.now(); });
 for (const ev of ["play", "pause", "playing", "waiting", "seeked", "ratechange", "loadedmetadata", "durationchange"]) audio.addEventListener(ev, syncSession);
 
-audio.addEventListener("pause", () => { listen.last = -1; report(false); });
+audio.addEventListener("pause", () => { listen.last = -1; report(false); if (!life.closing) markPlay(false); });
 audio.addEventListener("play", () => { listen.last = audio.currentTime; report(true); });
 audio.addEventListener("seeking", () => { listen.last = -1; });
 audio.addEventListener("seeking", () => {
@@ -771,6 +778,22 @@ function shutdown(e) {
   }
 }
 window.addEventListener("pagehide", shutdown);
+
+function markPlay(playing) {
+  const song = current();
+  lastPlay.at = Date.now();
+  store.set(LAST_PLAY_KEY, JSON.stringify({ id: song ? song.id : "", pos: Math.round(position()), at: lastPlay.at, playing: playing && !!song }));
+}
+
+(() => {
+  let last = null;
+  try { last = JSON.parse(store.get(LAST_PLAY_KEY) || "null"); } catch {}
+  if (!last || !last.playing || !last.id) return;
+  const age = Math.round((Date.now() - (+last.at || 0)) / 1000);
+  if (age < 0 || age > 900) return;
+  logEvent("page-start", `was ${String(last.id).slice(0, 24)} at ${+last.pos || 0} age ${age}s ${document.visibilityState}`);
+  store.set(LAST_PLAY_KEY, JSON.stringify({ ...last, playing: false }));
+})();
 window.addEventListener("pageshow", (e) => {
   if (!e.persisted) return;
   life.closing = false;
@@ -794,6 +817,7 @@ audio.addEventListener("timeupdate", () => {
   if (!audio.paused && Date.now() - listen.sent > 30000) report(true);
   const d = duration();
   const p = position();
+  if (!audio.paused && Date.now() - lastPlay.at > 5000) markPlay(true);
   if (!state.scrobbled && d > 30 && (p >= d / 2 || p >= 240)) {
     state.scrobbled = true;
     fetch(`/api/music/scrobble/${encodeURIComponent(song.id)}`, { method: "POST" }).catch(() => {});
