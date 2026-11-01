@@ -92,8 +92,8 @@ func TestStreamServesPretranscoded(t *testing.T) {
 	if rec.Body.String() != "ENC-opus-0123456789" {
 		t.Fatalf("opus 80 should come from the store: %s", rec.Body)
 	}
-	rec = authed(t, a, httptest.NewRequest("GET", "/api/music/stream/s1?format=mp3&maxBitRate=320", nil))
-	if !strings.HasPrefix(rec.Body.String(), "0123456789mp3320") {
+	rec = authed(t, a, httptest.NewRequest("GET", "/api/music/stream/s1?format=mp3&maxBitRate=256", nil))
+	if !strings.HasPrefix(rec.Body.String(), "0123456789mp3256") {
 		t.Fatalf("bitrate without a store tier should proxy live: %s", rec.Body)
 	}
 	rec = authed(t, a, httptest.NewRequest("GET", "/api/music/stream/s1?format=opus&maxBitRate=128&timeOffset=30", nil))

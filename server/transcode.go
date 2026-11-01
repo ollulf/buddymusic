@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log"
@@ -31,7 +32,12 @@ var transcodeTiers = []transcodeTier{
 	{Format: "mp3", Kbps: 192, Ext: ".mp3", Type: "audio/mpeg", Codec: []string{"-c:a", "libmp3lame", "-b:a", "192k", "-f", "mp3"}},
 	{Format: "mp3", Kbps: 128, Ext: ".mp3", Type: "audio/mpeg", Codec: []string{"-c:a", "libmp3lame", "-b:a", "128k", "-f", "mp3"}},
 	{Format: "opus", Kbps: 80, Ext: ".opus", Type: "audio/ogg", Codec: []string{"-c:a", "libopus", "-b:a", "80k", "-vbr", "on", "-f", "ogg"}},
+	{Format: "mp3", Kbps: 320, Ext: ".mp3", Type: "audio/mpeg", Codec: []string{"-c:a", "libmp3lame", "-b:a", "320k", "-f", "mp3"}},
 }
+
+const urgentEncodes = 2
+
+var errNoSlot = errors.New("no free encode slot")
 
 func findTier(format string, kbps int) (transcodeTier, bool) {
 	for _, t := range transcodeTiers {
@@ -52,6 +58,7 @@ type Transcodes struct {
 	wait    time.Duration
 	limit   time.Duration
 	flights map[string]*encodeFlight
+	slots   chan struct{}
 	kick    chan struct{}
 	every   time.Duration
 	delay   time.Duration
@@ -83,7 +90,7 @@ type songPathEntry struct {
 
 func NewTranscodes(dir, lib string, enc encodeFunc) *Transcodes {
 	return &Transcodes{dir: dir, lib: lib, encode: enc, urgent: enc, wait: time.Minute, limit: 10 * time.Minute,
-		flights: map[string]*encodeFlight{}, kick: make(chan struct{}, 1), every: 6 * time.Hour, delay: 2 * time.Minute,
+		flights: map[string]*encodeFlight{}, slots: make(chan struct{}, urgentEncodes), kick: make(chan struct{}, 1), every: 6 * time.Hour, delay: 2 * time.Minute,
 		failed: map[string]bool{}, ids: map[string]songPathEntry{}}
 }
 
@@ -170,7 +177,7 @@ func (t *Transcodes) Ensure(ctx context.Context, src string, tier transcodeTier)
 	if ready(p) {
 		return p, nil
 	}
-	f := t.flight(src, p, tier, t.urgent)
+	f := t.flight(src, p, tier, t.urgent, true)
 	wait, cancel := context.WithTimeout(ctx, t.wait)
 	defer cancel()
 	select {
@@ -184,7 +191,7 @@ func (t *Transcodes) Ensure(ctx context.Context, src string, tier transcodeTier)
 	}
 }
 
-func (t *Transcodes) flight(src, dst string, tier transcodeTier, enc encodeFunc) *encodeFlight {
+func (t *Transcodes) flight(src, dst string, tier transcodeTier, enc encodeFunc, limited bool) *encodeFlight {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if f, ok := t.flights[dst]; ok {
@@ -200,10 +207,10 @@ func (t *Transcodes) flight(src, dst string, tier transcodeTier, enc encodeFunc)
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), t.limit)
 		defer cancel()
-		f.err = t.encodeOne(ctx, src, dst, tier, enc)
+		f.err = t.encodeSlot(ctx, src, dst, tier, enc, limited)
 		t.mu.Lock()
 		delete(t.flights, dst)
-		if f.err != nil {
+		if f.err != nil && !errors.Is(f.err, errNoSlot) {
 			t.failed[dst] = true
 		}
 		t.mu.Unlock()
@@ -441,7 +448,7 @@ func (t *Transcodes) Sweep(ctx context.Context) (made int) {
 			if failed {
 				continue
 			}
-			fl := t.flight(f.path, dst, tier, t.encode)
+			fl := t.flight(f.path, dst, tier, t.encode, false)
 			select {
 			case <-ctx.Done():
 				return made
@@ -470,6 +477,22 @@ func (t *Transcodes) Sweep(ctx context.Context) (made int) {
 		log.Printf("transcode: %d new, %d removed in %s", made, removed, time.Since(start).Round(time.Second))
 	}
 	return made
+}
+
+func (t *Transcodes) encodeSlot(ctx context.Context, src, dst string, tier transcodeTier, enc encodeFunc, limited bool) error {
+	if !limited {
+		return t.encodeOne(ctx, src, dst, tier, enc)
+	}
+	select {
+	case t.slots <- struct{}{}:
+	case <-ctx.Done():
+		return errNoSlot
+	}
+	defer func() { <-t.slots }()
+	if ready(dst) {
+		return nil
+	}
+	return t.encodeOne(ctx, src, dst, tier, enc)
 }
 
 func (t *Transcodes) encodeOne(ctx context.Context, src, dst string, tier transcodeTier, enc encodeFunc) error {
