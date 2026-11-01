@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -218,6 +219,9 @@ func (a *App) proxyBinary(w http.ResponseWriter, r *http.Request, endpoint strin
 		return
 	}
 	for _, h := range []string{"Range", "If-Range", "If-None-Match", "If-Modified-Since"} {
+		if endpoint == "stream.view" && h != "Range" {
+			continue
+		}
 		if v := r.Header.Get(h); v != "" {
 			req.Header.Set(h, v)
 		}
@@ -240,10 +244,27 @@ func (a *App) proxyBinary(w http.ResponseWriter, r *http.Request, endpoint strin
 		writeError(w, http.StatusNotFound, "not-found")
 		return
 	}
-	if endpoint == "stream.view" && res.StatusCode == http.StatusOK && rangeStart(r.Header.Get("Range")) > 0 {
-		w.Header().Set("Cache-Control", cache)
-		w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
-		return
+	var head []byte
+	if from := rangeStart(r.Header.Get("Range")); endpoint == "stream.view" && from > 0 {
+		bad := res.StatusCode == http.StatusOK
+		if res.StatusCode == http.StatusPartialContent {
+			if contentRangeStart(res.Header.Get("Content-Range")) != from {
+				bad = true
+			} else {
+				head = make([]byte, 16)
+				idle.Reset(streamIdle)
+				n, _ := io.ReadFull(res.Body, head)
+				idle.Stop()
+				head = head[:n]
+				bad = looksLikeFileStart(head)
+			}
+		}
+		if bad {
+			log.Printf("music stream: navidrome answered range %s for track %s with the start of the file (status %d, Content-Range %q), refused with 416", r.Header.Get("Range"), q.Get("id"), res.StatusCode, res.Header.Get("Content-Range"))
+			w.Header().Set("Cache-Control", cache)
+			w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
+			return
+		}
 	}
 	for _, h := range passHeaders {
 		if v := res.Header.Get(h); v != "" {
@@ -255,6 +276,13 @@ func (a *App) proxyBinary(w http.ResponseWriter, r *http.Request, endpoint strin
 	w.WriteHeader(res.StatusCode)
 	buf := make([]byte, 32<<10)
 	flusher, _ := w.(http.Flusher)
+	if len(head) > 0 {
+		m, werr := w.Write(head)
+		sent += int64(m)
+		if werr != nil {
+			return
+		}
+	}
 	for {
 		idle.Reset(streamIdle)
 		n, rerr := res.Body.Read(buf)
@@ -303,6 +331,62 @@ func rangeStart(h string) int64 {
 	return n
 }
 
+func contentRangeStart(h string) int64 {
+	spec, ok := strings.CutPrefix(strings.TrimSpace(h), "bytes ")
+	if !ok {
+		return -1
+	}
+	from, _, ok := strings.Cut(spec, "-")
+	if !ok {
+		return -1
+	}
+	n, err := strconv.ParseInt(strings.TrimSpace(from), 10, 64)
+	if err != nil {
+		return -1
+	}
+	return n
+}
+
+func looksLikeFileStart(b []byte) bool {
+	switch {
+	case bytes.HasPrefix(b, []byte("ID3")), bytes.HasPrefix(b, []byte("fLaC")), bytes.HasPrefix(b, []byte("RIFF")):
+		return true
+	case len(b) >= 6 && bytes.HasPrefix(b, []byte("OggS")) && b[5]&0x02 != 0:
+		return true
+	case len(b) >= 8 && string(b[4:8]) == "ftyp":
+		return true
+	}
+	return false
+}
+
+type streamLogWriter struct {
+	http.ResponseWriter
+	status int
+	n      int64
+}
+
+func (s *streamLogWriter) WriteHeader(code int) {
+	if s.status == 0 {
+		s.status = code
+	}
+	s.ResponseWriter.WriteHeader(code)
+}
+
+func (s *streamLogWriter) Write(b []byte) (int, error) {
+	if s.status == 0 {
+		s.status = http.StatusOK
+	}
+	n, err := s.ResponseWriter.Write(b)
+	s.n += int64(n)
+	return n, err
+}
+
+func (s *streamLogWriter) Flush() {
+	if f, ok := s.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
 func (a *App) handleCover(w http.ResponseWriter, r *http.Request, user string) {
 	id := r.PathValue("id")
 	if !validID(id) {
@@ -328,11 +412,25 @@ func (a *App) handleStream(w http.ResponseWriter, r *http.Request, user string) 
 		return
 	}
 	saver := q.Get("format") != ""
-	if sent, ok := a.servePretranscoded(w, r, id, q); ok {
+	lw := &streamLogWriter{ResponseWriter: w}
+	start := time.Now()
+	source := "store"
+	defer func() {
+		format := q.Get("format")
+		if format == "" {
+			format = "original"
+		}
+		_, ifRange := r.Header["If-Range"]
+		log.Printf("stream track=%s format=%s kbps=%s offset=%s range=%q if-range=%t source=%s status=%d content-range=%q content-length=%s sent=%d in %s",
+			id, format, q.Get("maxBitRate"), q.Get("timeOffset"), r.Header.Get("Range"), ifRange, source, lw.status,
+			lw.Header().Get("Content-Range"), lw.Header().Get("Content-Length"), lw.n, time.Since(start).Round(time.Millisecond))
+	}()
+	if sent, ok := a.servePretranscoded(lw, r, id, q); ok {
 		a.recordStream(r, user, id, sent, saver)
 		return
 	}
-	a.recordStream(r, user, id, a.proxyBinary(w, r, "stream.view", q, "private, no-cache"), saver)
+	source = "proxy"
+	a.recordStream(r, user, id, a.proxyBinary(lw, r, "stream.view", q, "private, no-cache"), saver)
 }
 
 type countingWriter struct {
@@ -390,6 +488,10 @@ func (a *App) servePretranscoded(w http.ResponseWriter, r *http.Request, id stri
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("X-Pretranscoded", "1")
 	cw := &countingWriter{ResponseWriter: w}
+	if r.Header.Get("If-Range") != "" {
+		r = r.Clone(r.Context())
+		r.Header.Del("If-Range")
+	}
 	http.ServeContent(cw, r, "", st.ModTime(), f)
 	return cw.n, true
 }
