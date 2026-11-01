@@ -266,6 +266,32 @@ func (a *App) proxyBinary(w http.ResponseWriter, r *http.Request, endpoint strin
 			return
 		}
 	}
+	if end, ok := probeEnd(r.Header.Get("Range")); ok && endpoint == "stream.view" && q.Get("format") != "" && res.StatusCode == http.StatusOK {
+		part := make([]byte, end+1)
+		idle.Reset(streamIdle)
+		n, _ := io.ReadFull(res.Body, part)
+		idle.Stop()
+		if n == 0 {
+			writeError(w, http.StatusBadGateway, "navidrome-empty")
+			return
+		}
+		total := "*"
+		if res.ContentLength > 0 {
+			total = strconv.FormatInt(res.ContentLength, 10)
+		}
+		log.Printf("music stream: navidrome answered probe range %s for track %s with the whole stream (status 200, length %q), sent 206 for the asked bytes only", r.Header.Get("Range"), q.Get("id"), res.Header.Get("Content-Length"))
+		if v := res.Header.Get("Content-Type"); v != "" {
+			w.Header().Set("Content-Type", v)
+		}
+		w.Header().Set("Accept-Ranges", "bytes")
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes 0-%d/%s", n-1, total))
+		w.Header().Set("Content-Length", strconv.Itoa(n))
+		w.Header().Set("Cache-Control", cache)
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.WriteHeader(http.StatusPartialContent)
+		m, _ := w.Write(part[:n])
+		return int64(m)
+	}
 	for _, h := range passHeaders {
 		if v := res.Header.Get(h); v != "" {
 			w.Header().Set(h, v)
@@ -329,6 +355,24 @@ func rangeStart(h string) int64 {
 		return 0
 	}
 	return n
+}
+
+const maxProbeBytes = 1 << 20
+
+func probeEnd(h string) (int64, bool) {
+	spec, ok := strings.CutPrefix(strings.TrimSpace(h), "bytes=")
+	if !ok || strings.Contains(spec, ",") {
+		return 0, false
+	}
+	from, to, ok := strings.Cut(strings.TrimSpace(spec), "-")
+	if !ok || strings.TrimSpace(from) != "0" {
+		return 0, false
+	}
+	end, err := strconv.ParseInt(strings.TrimSpace(to), 10, 64)
+	if err != nil || end < 0 || end >= maxProbeBytes {
+		return 0, false
+	}
+	return end, true
 }
 
 func contentRangeStart(h string) int64 {

@@ -87,7 +87,7 @@ export function qualityHint(q) {
   return `${spec.format === "opus" ? "Opus" : "MP3"} ${spec.kbps}`;
 }
 
-const STORED = { mp3: [128, 192], opus: [80, 128] };
+const STORED = { mp3: [128, 192, 320], opus: [80, 128] };
 const storedSpec = (spec) => (STORED[spec.format] || []).includes(spec.kbps);
 
 function streamURL(song, spec) {
