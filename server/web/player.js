@@ -125,7 +125,8 @@ function pickTier(song, commit) {
 }
 
 const meter = { t0: 0, b0: 0, done: false, playing: null, started: false };
-const play = { offset: 0, tries: 0, blob: "", heard: 0, heardAt: 0, gen: 0, okSince: 0, pending: false };
+const play = { offset: 0, tries: 0, blob: "", heard: 0, heardAt: 0, gen: 0, okSince: 0, pending: false, wantSeek: 0 };
+const heal = { song: null, n: 0 };
 const RETRY_DELAYS = [0, 1500, 4000, 8000];
 const STALL_MS = 15000;
 const STALL_EMPTY_MS = 6000;
@@ -248,7 +249,7 @@ function startStream(song, tier, from = 0) {
   audio.src = blob || (off ? `${base}&timeOffset=${off}` : base);
   if (stale) URL.revokeObjectURL(stale);
   const gen = play.gen;
-  if (seekTo > 0.05) audio.addEventListener("loadedmetadata", () => { if (play.gen === gen) audio.currentTime = seekTo; }, { once: true });
+  if (seekTo > 0.05) audio.addEventListener("loadedmetadata", () => { if (play.gen === gen) { play.wantSeek = Date.now(); audio.currentTime = seekTo; } }, { once: true });
 }
 
 function load(i, autoplay = true) {
@@ -386,6 +387,7 @@ export function seek(t) {
     emit();
     return;
   }
+  play.wantSeek = Date.now();
   audio.currentTime = Math.max(0, local);
 }
 export function toggleShuffle() { state.shuffle = !state.shuffle; rebuildOrder(); emit(); }
@@ -651,10 +653,23 @@ function checkJump() {
   if (watch.t >= 0) {
     const expected = watch.t + Math.max(0, now - watch.at) / 1000 * (audio.playbackRate || 1);
     if (t < watch.t - 0.75 || t > expected + 0.75) reportJump(watch.t, t, expected);
+    if (t < watch.t - 3 && watch.t > 5 && healJump(play.offset + watch.t)) return;
   }
   watch.t = t;
   watch.at = now;
   watch.stalled = false;
+}
+
+function healJump(at) {
+  const song = current();
+  if (!song || audio.paused) return false;
+  if (heal.song !== song) Object.assign(heal, { song, n: 0 });
+  if (heal.n >= 3) return false;
+  heal.n += 1;
+  watch.t = -1;
+  logEvent("restart-heal", `back to ${at.toFixed(2)} try ${heal.n}`);
+  seek(at);
+  return true;
 }
 
 function syncSession() {
@@ -675,6 +690,11 @@ for (const ev of ["play", "pause", "playing", "waiting", "seeked", "ratechange",
 audio.addEventListener("pause", () => { listen.last = -1; report(false); });
 audio.addEventListener("play", () => { listen.last = audio.currentTime; report(true); });
 audio.addEventListener("seeking", () => { listen.last = -1; });
+audio.addEventListener("seeking", () => {
+  const t = audio.currentTime || 0;
+  if (Date.now() - play.wantSeek < 1500 || play.heard <= 5 || t >= play.heard - 3) return;
+  healJump(play.offset + play.heard);
+});
 audio.addEventListener("seeked", () => { play.heard = audio.currentTime; play.heardAt = Date.now(); });
 audio.addEventListener("progress", measure);
 audio.addEventListener("playing", () => { meter.started = true; });

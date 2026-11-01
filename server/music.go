@@ -240,6 +240,11 @@ func (a *App) proxyBinary(w http.ResponseWriter, r *http.Request, endpoint strin
 		writeError(w, http.StatusNotFound, "not-found")
 		return
 	}
+	if endpoint == "stream.view" && res.StatusCode == http.StatusOK && rangeStart(r.Header.Get("Range")) > 0 {
+		w.Header().Set("Cache-Control", cache)
+		w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
+		return
+	}
 	for _, h := range passHeaders {
 		if v := res.Header.Get(h); v != "" {
 			w.Header().Set(h, v)
@@ -279,6 +284,23 @@ func (a *App) proxyBinary(w http.ResponseWriter, r *http.Request, endpoint strin
 			return
 		}
 	}
+}
+
+func rangeStart(h string) int64 {
+	spec, ok := strings.CutPrefix(strings.TrimSpace(h), "bytes=")
+	if !ok {
+		return 0
+	}
+	first, _, _ := strings.Cut(spec, ",")
+	from, _, ok := strings.Cut(strings.TrimSpace(first), "-")
+	if !ok {
+		return 0
+	}
+	n, err := strconv.ParseInt(strings.TrimSpace(from), 10, 64)
+	if err != nil || n < 0 {
+		return 0
+	}
+	return n
 }
 
 func (a *App) handleCover(w http.ResponseWriter, r *http.Request, user string) {

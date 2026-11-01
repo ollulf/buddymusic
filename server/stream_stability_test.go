@@ -25,6 +25,7 @@ type upstreamMode struct {
 	stallAt int
 	noHead  bool
 	status  int
+	rng     string
 }
 
 type streamOutcome struct {
@@ -116,6 +117,9 @@ func runStreamScenario(t *testing.T, mode upstreamMode, wait time.Duration) stre
 	defer cancel()
 	req, _ := http.NewRequestWithContext(ctx, "GET", edge.URL+"/api/music/stream/s1?format=opus&maxBitRate=128", nil)
 	req.AddCookie(login(t, a))
+	if mode.rng != "" {
+		req.Header.Set("Range", mode.rng)
+	}
 	start := time.Now()
 	out := streamOutcome{upClosed: &closed}
 	res, err := client.Do(req)
@@ -158,6 +162,8 @@ func TestStreamStabilityScenarios(t *testing.T) {
 		{upstreamMode{name: "transcode stalls mid-body", stallAt: full / 4}, func(o streamOutcome) bool { return o.err != nil && !o.hung }},
 		{upstreamMode{name: "original stalls mid-body", length: true, stallAt: full / 4}, func(o streamOutcome) bool { return o.err != nil && !o.hung }},
 		{upstreamMode{name: "upstream never answers", noHead: true}, func(o streamOutcome) bool { return o.status == http.StatusBadGateway }},
+		{upstreamMode{name: "transcode ignores Range from start", rng: "bytes=0-"}, func(o streamOutcome) bool { return o.err == nil && o.status == http.StatusOK && o.got == full }},
+		{upstreamMode{name: "transcode ignores mid-song Range", rng: "bytes=2400000-"}, func(o streamOutcome) bool { return o.status == http.StatusRequestedRangeNotSatisfiable && o.got == 0 }},
 		{upstreamMode{name: "transcode Range 416", status: http.StatusRequestedRangeNotSatisfiable}, func(o streamOutcome) bool { return o.status == http.StatusRequestedRangeNotSatisfiable }},
 	}
 	for _, c := range cases {
@@ -184,4 +190,23 @@ func TestStreamClientGoneCancelsUpstream(t *testing.T) {
 		t.Fatal("upstream request still open after the client left")
 	}
 	t.Logf("RESULT client leaves during stall => upstream request cancelled")
+}
+
+func TestRangeStart(t *testing.T) {
+	cases := map[string]int64{
+		"":                0,
+		"bytes=0-":        0,
+		"bytes=0-1":       0,
+		"bytes=2400000-":  2400000,
+		"bytes= 512-1023": 512,
+		"bytes=100-,300-": 100,
+		"bytes=-500":      0,
+		"items=5-":        0,
+		"bytes=abc-":      0,
+	}
+	for h, want := range cases {
+		if got := rangeStart(h); got != want {
+			t.Errorf("rangeStart(%q) = %d, want %d", h, got, want)
+		}
+	}
 }
