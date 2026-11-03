@@ -1,5 +1,23 @@
 [
   {
+    "version": "1.0.0311",
+    "date": "2026-11-03",
+    "en": [
+      "New album roulette: tap the dice and a reel of CDs spins to a random album to play",
+      "iPhone and iPad stream Opus again, with an automatic switch to MP3 if it ever fails",
+      "Settings has its own pixel scrollbar under the close button",
+      "Library: the Random tab is gone, and album titles no longer leave an empty line under short names",
+      "Tidier top bar: the quality button moved to Settings, the filter button sits on the right"
+    ],
+    "de": [
+      "Neues Album-Roulette: Tippe auf den Würfel und eine Rolle aus CDs dreht sich zu einem zufälligen Album",
+      "iPhone und iPad streamen wieder Opus und wechseln automatisch zu MP3, falls es mal nicht klappt",
+      "Die Einstellungen haben eine eigene Pixel-Scrollleiste unter dem Schließen-Knopf",
+      "Bibliothek: Der Tab Zufällig ist weg, und kurze Albumtitel lassen keine leere Zeile mehr",
+      "Aufgeräumte Kopfzeile: Die Qualitätswahl ist in den Einstellungen, der Filter-Knopf sitzt rechts"
+    ]
+  },
+  {
     "version": "1.0.0111.8",
     "date": "2026-11-01",
     "en": [
