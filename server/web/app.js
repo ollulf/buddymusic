@@ -4,7 +4,7 @@ import { renderSearch, searchBox } from "./search.js";
 import { renderFavorites } from "./favorites.js";
 import { renderQueue } from "./queue.js";
 import "./fly.js";
-import { renderBar, playList, settings, setQuality, onChange, stopAll, QUALITIES, qualityHint, restoreSession, forgetSession } from "./player.js";
+import { renderBar, playList, stopAll, restoreSession, forgetSession } from "./player.js";
 import { api, Unauthorized } from "./dom.js";
 import { renderPlaylists, setPlaylistUser } from "./playlists.js";
 import { renderAdmin } from "./admin.js";
@@ -79,7 +79,6 @@ const BASE_TABS = ["library", "search", "favorites", "playlists", "upload"].map(
 let titleHandler = null;
 let routeHandler = null;
 let playerBar = null;
-let openQuality = null;
 
 const SVG = "http://www.w3.org/2000/svg";
 
@@ -311,42 +310,6 @@ function profileMenu(user, admin, avatar, version) {
   return h("div", { class: "profile" }, btn, recBadge(), friendsDot(btn, user), menu);
 }
 
-const QUALITY_LETTERS = { auto: "A", original: "O", normal: "N", low: "L" };
-
-function qualityButton() {
-  const btn = h("button", { type: "button", class: "saver-btn", "aria-haspopup": "true", "aria-expanded": "false" });
-  const menu = h("div", { class: "quality-menu", hidden: true, role: "menu" });
-  const close = () => { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); };
-  const paint = () => {
-    const q = settings().quality;
-    btn.textContent = QUALITY_LETTERS[q];
-    btn.classList.toggle("on", q === "normal" || q === "low");
-    btn.setAttribute("aria-label", t("quality.label", { q: t(`quality.${q}`) }));
-    btn.title = t("quality.label", { q: t(`quality.${q}`) });
-    menu.replaceChildren(...QUALITIES.map((k) => h("button", {
-      type: "button", role: "menuitemradio", "aria-checked": String(k === q), class: k === q ? "on" : "",
-      onclick: () => { setQuality(k); close(); },
-    }, `${t(`quality.${k}`)} `, h("span", { class: "muted" }, qualityHint(k)))));
-  };
-  btn.addEventListener("click", () => {
-    if (!menu.hidden) return close();
-    menu.hidden = false;
-    btn.setAttribute("aria-expanded", "true");
-  });
-  openQuality = () => {
-    menu.hidden = false;
-    btn.setAttribute("aria-expanded", "true");
-    const on = menu.querySelector("button.on") || menu.querySelector("button");
-    if (on) on.focus();
-  };
-  document.addEventListener("click", (e) => { if (!wrap.contains(e.target)) close(); });
-  const wrap = h("div", { class: "saver-toggle" }, btn, menu);
-  wrap.addEventListener("keydown", (e) => { if (e.key === "Escape") { close(); btn.focus(); } });
-  onChange(paint);
-  paint();
-  return wrap;
-}
-
 function showApp(user, admin, avatar, me = {}) {
   setNewAlbums(me.newSince, me.ownAlbums, me.openedAlbums, me.renewedAlbums);
   setVinylAlbums(me.vinylAlbums);
@@ -372,13 +335,12 @@ function showApp(user, admin, avatar, me = {}) {
     else location.hash = "#/library";
   };
   settingsView.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSettings(); });
-  if (!playerBar) { playerBar = renderBar({ onUnauthorized: showLogin, onQuality: () => openQuality && openQuality() }); playerBar.append(renderQueue()); }
+  if (!playerBar) { playerBar = renderBar({ onUnauthorized: showLogin, onQuality: () => { location.hash = "#/settings"; } }); playerBar.append(renderQueue()); }
   restoreSession(user);
   root.replaceChildren(
     h("header", { class: "top" },
       h("nav", { class: "tabs", "aria-label": t("tab.sections") }, Object.values(links)),
       randomButton(),
-      qualityButton(),
       profileMenu(user, admin, avatar, me.version)),
     titleRow,
     ...Object.values(views),
