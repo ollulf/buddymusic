@@ -847,6 +847,7 @@ header.top .avatar.has-pic::after { content: ""; position: absolute; inset: 0; b
 }
 .filter-btn { position: relative; box-sizing: border-box; width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 2px solid var(--ink); border-radius: 0; background: var(--card); color: var(--muted); box-shadow: var(--bevel); cursor: pointer; }
 .filter-btn[hidden] { display: none; }
+.filter-btn > svg { width: 24px; height: 24px; }
 .filter-btn:hover, .filter-btn:focus-visible { color: var(--fg); }
 .filter-btn:active { transform: translate(2px, 2px); box-shadow: inset 2px 2px 0 var(--shade); }
 .filter-btn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
