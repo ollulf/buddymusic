@@ -63,10 +63,21 @@ for (const ev of ["play", "pause", "emptied", "ended"]) audio.addEventListener(e
 
 const appleWebKit = /iPhone|iPad|iPod/.test(navigator.userAgent || "") || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
-export const opusSupported = (() => {
-  if (appleWebKit) return false;
+const OPUS_OFF_KEY = "bm.opusOff";
+const OPUS_OFF_MS = 7 * 24 * 3600 * 1000;
+const opusCanPlay = (() => {
   try { return audio.canPlayType("audio/ogg; codecs=opus") !== ""; } catch { return false; }
 })();
+export let opusSupported = opusCanPlay && Date.now() >= (+store.get(OPUS_OFF_KEY) || 0);
+
+function opusFallback(why) {
+  if (!appleWebKit || !opusSupported || !meter.playing || meter.playing.format !== "opus") return false;
+  opusSupported = false;
+  store.set(OPUS_OFF_KEY, String(Date.now() + OPUS_OFF_MS));
+  logEvent("opus-fallback", why);
+  dropPreload();
+  return true;
+}
 
 const blobPlay = { ok: !appleWebKit };
 
@@ -576,6 +587,11 @@ function streamOver(failed, why = "") {
     blobPlay.ok = false;
     dropPreload();
   }
+  if (failed && !why && audio.error && (audio.error.code === 3 || audio.error.code === 4) && opusFallback(`code ${audio.error.code} at ${at.toFixed(2)}`)) {
+    play.tries = 0;
+    retryStream(song, at);
+    return;
+  }
   if (meter.playing && missing && play.tries < RETRY_DELAYS.length) {
     const lighter = failed && document.visibilityState === "hidden" && state.quality === "auto" && meter.playing.tier === "original" ? "normal" : "";
     if (lighter) auto.tier = Math.max(auto.tier, 1);
@@ -722,6 +738,20 @@ audio.addEventListener("durationchange", () => {
   if (Math.abs(play.offset + d - song.duration) < 5) return;
   play.durLogged = play.gen;
   logEvent("duration", `element ${(play.offset + d).toFixed(1)} song ${(+song.duration).toFixed(1)}`);
+  if (!meter.playing || meter.playing.format !== "opus") return;
+  const t = audio.currentTime || 0;
+  const at = play.offset + (heardOK(t) ? t : play.heard);
+  const resume = !audio.paused;
+  const tier = meter.playing.tier;
+  const gen = play.gen;
+  if (!opusFallback(`duration ${(play.offset + d).toFixed(1)} song ${(+song.duration).toFixed(1)}`)) return;
+  setTimeout(() => {
+    if (current() !== song || play.gen !== gen) return;
+    play.tries = 0;
+    startStream(song, tier, at, "opus-fallback");
+    if (resume) audio.play().catch(() => {});
+    emit();
+  }, 0);
 });
 for (const ev of ["play", "pause", "seeking", "seeked", "emptied", "loadstart", "ratechange"]) audio.addEventListener(ev, rebase);
 audio.addEventListener("playing", () => { watch.t = audio.currentTime || 0; watch.at = Date.now(); });
