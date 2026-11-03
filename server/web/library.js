@@ -13,7 +13,7 @@ const deletedSongs = new Set();
 const deletedAlbums = new Set();
 const liveAlbums = (list) => (list || []).filter((al) => !deletedAlbums.has(al.id));
 
-const LISTS = [["newest", t("library.new")], ["random", t("library.random")], ["artists", t("library.artists")]];
+const LISTS = [["newest", t("library.new")], ["artists", t("library.artists")]];
 
 const EAGER_COVERS = 12;
 
