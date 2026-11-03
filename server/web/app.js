@@ -4,8 +4,9 @@ import { renderSearch, searchBox } from "./search.js";
 import { renderFavorites } from "./favorites.js";
 import { renderQueue } from "./queue.js";
 import "./fly.js";
-import { renderBar, playList, settings, setQuality, onChange, stopAll, QUALITIES, qualityHint, restoreSession, forgetSession } from "./player.js";
-import { api, Unauthorized } from "./dom.js";
+import { openCaseReel } from "./casereel.js";
+import { renderBar, settings, setQuality, onChange, stopAll, QUALITIES, qualityHint, restoreSession, forgetSession } from "./player.js";
+import { Unauthorized } from "./dom.js";
 import { renderPlaylists, setPlaylistUser } from "./playlists.js";
 import { renderAdmin } from "./admin.js";
 import { t, relTime, lang } from "./i18n.js";
@@ -128,26 +129,8 @@ function diceIcon() {
 }
 
 function randomButton() {
-  const btn = h("button", { class: "dice", type: "button", title: t("dice.title"), "aria-label": t("dice.title") }, diceIcon());
-  btn.addEventListener("click", async () => {
-    if (btn.classList.contains("busy")) return;
-    btn.classList.add("busy");
-    btn.classList.remove("fail");
-    btn.title = t("dice.title");
-    try {
-      const res = await api("/api/music/random-songs?size=50");
-      const songs = res?.song || [];
-      if (!songs.length) throw new Error("empty");
-      playList(songs, 0);
-    } catch (err) {
-      if (err instanceof Unauthorized) return showLogin();
-      btn.title = t("dice.failed");
-      void btn.offsetWidth;
-      btn.classList.add("fail");
-    } finally {
-      btn.classList.remove("busy");
-    }
-  });
+  const btn = h("button", { class: "dice", type: "button", title: t("dice.title"), "aria-label": t("dice.title"), "aria-haspopup": "dialog" }, diceIcon());
+  btn.addEventListener("click", () => openCaseReel({ returnTo: btn, onUnauthorized: showLogin }));
   return btn;
 }
 
