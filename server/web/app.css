@@ -843,7 +843,7 @@ header.top .avatar.has-pic::after { content: ""; position: absolute; inset: 0; b
 @media (min-width: 601px) {
   .title-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 420px) minmax(40px, 1fr); }
   .title-row .hsearch { min-width: 0; max-width: none; margin-left: 0; }
-  .title-tools { display: flex; }
+  .title-tools { display: flex; justify-self: end; }
 }
 .filter-btn { position: relative; box-sizing: border-box; width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 2px solid var(--ink); border-radius: 0; background: var(--card); color: var(--muted); box-shadow: var(--bevel); cursor: pointer; }
 .filter-btn[hidden] { display: none; }
