@@ -585,6 +585,20 @@ body.settings-open { overflow: hidden; }
 .settings-user { font-size: var(--fs-lg); overflow-wrap: anywhere; }
 .linkish { background: none; border: 0; padding: 0; color: var(--muted); text-decoration: underline; cursor: pointer; font: inherit; font-size: var(--fs-sm); }
 .settings-list { list-style: none; max-width: 720px; margin: 0 auto; padding: 0; }
+.settings-rail { display: none; position: fixed; bottom: 16px; z-index: 1; width: var(--rail-w); flex-direction: column; gap: 4px; user-select: none; -webkit-user-select: none; touch-action: none; }
+.view-settings { --rail-w: var(--rail-x, 30px); }
+.view-settings.has-rail { scrollbar-width: none; }
+.view-settings.has-rail::-webkit-scrollbar { display: none; }
+.view-settings.has-rail .settings-rail { display: flex; }
+.view-settings.has-rail > .settings-profile, .view-settings.has-rail > .settings-list { box-sizing: border-box; padding-right: calc(var(--rail-w) + var(--sp-2)); }
+body:has(footer.player.pb:not([hidden])) .settings-rail { bottom: calc(var(--pb-clear) - 24px); }
+.rail-btn { flex: none; height: 24px; padding: 0; font: inherit; font-size: 10px; line-height: 1; color: var(--fg); background: var(--card); border: 2px solid var(--ink); border-radius: 0; box-shadow: var(--bevel); cursor: pointer; }
+.rail-btn:active { box-shadow: inset 2px 2px 0 var(--shade), inset -2px -2px 0 var(--hi); }
+.rail-track { flex: 1; min-height: 32px; position: relative; background: var(--shade); background-image: repeating-linear-gradient(0deg, transparent 0 6px, color-mix(in srgb, var(--fg) 6%, transparent) 6px 8px); border: 2px solid var(--ink); cursor: pointer; }
+.rail-thumb { position: absolute; left: 0; right: 0; top: 0; min-height: 24px; box-sizing: border-box; background: var(--accent); border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); box-shadow: inset 2px 2px 0 var(--accent-hi), inset -2px -2px 0 var(--accent-lo); cursor: grab; }
+.rail-thumb::after { content: ""; position: absolute; left: 25%; right: 25%; top: 50%; height: 6px; margin-top: -3px; background: repeating-linear-gradient(0deg, var(--accent-fg) 0 2px, transparent 2px 4px); opacity: .55; }
+.settings-rail.drag .rail-thumb { cursor: grabbing; }
+@media (max-width: 560px) { .view-settings { --rail-w: min(var(--rail-x, 30px), 20px); } }
 .settings-list:empty { display: none; }
 .settings-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2) var(--sp-3); padding: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-2); background: var(--card); border: 2px solid var(--ink); box-shadow: var(--bevel); }
 .settings-item { display: flex; align-items: center; gap: var(--sp-2); }

@@ -303,5 +303,64 @@ export function renderSettings(el, { onClose, ...profile }) {
     profileHeader(profile),
     h("ul", { class: "settings-list" }, ...ITEMS.map((item) =>
       h("li", { class: "settings-row", id: `setting-${item.id}` }, h("span", { class: "settings-label" }, item.label()), item.render()))));
+  pixelScrollbar(el, close);
   close.focus();
+}
+
+function pixelScrollbar(sc, anchor) {
+  sc._railStop?.();
+  const step = (dir) => sc.scrollBy({ top: dir * 64, behavior: "smooth" });
+  const thumb = h("div", { class: "rail-thumb" });
+  const track = h("div", { class: "rail-track" }, thumb);
+  const rail = h("div", { class: "settings-rail", "aria-hidden": "true" },
+    h("button", { class: "rail-btn", type: "button", tabindex: "-1", onclick: () => step(-1) }, "▲"),
+    track,
+    h("button", { class: "rail-btn", type: "button", tabindex: "-1", onclick: () => step(1) }, "▼"));
+  sc.append(rail);
+  const sync = () => {
+    if (sc.hidden || !anchor.isConnected) return;
+    const max = sc.scrollHeight - sc.clientHeight;
+    sc.classList.toggle("has-rail", max > 0);
+    if (max <= 0) return;
+    const a = anchor.getBoundingClientRect();
+    rail.style.right = `${Math.round(document.documentElement.clientWidth - a.right)}px`;
+    const head = anchor.parentElement;
+    sc.style.setProperty("--rail-x", `${Math.round(a.width)}px`);
+    rail.style.top = `${Math.round(head.offsetTop + head.offsetHeight + 12)}px`;
+    const room = track.clientHeight;
+    const size = Math.max(24, Math.min(room, Math.round(room * sc.clientHeight / sc.scrollHeight)));
+    thumb.style.height = `${size}px`;
+    thumb.style.transform = `translateY(${Math.round((room - size) * sc.scrollTop / max / 2) * 2}px)`;
+  };
+  track.addEventListener("pointerdown", (e) => {
+    if (e.target !== track) return;
+    const dir = e.clientY < thumb.getBoundingClientRect().top ? -1 : 1;
+    sc.scrollBy({ top: dir * sc.clientHeight * 0.9, behavior: "smooth" });
+  });
+  thumb.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    thumb.setPointerCapture(e.pointerId);
+    rail.classList.add("drag");
+    const y0 = e.clientY;
+    const s0 = sc.scrollTop;
+    const f = (sc.scrollHeight - sc.clientHeight) / Math.max(1, track.clientHeight - thumb.offsetHeight);
+    const move = (ev) => { sc.scrollTop = s0 + (ev.clientY - y0) * f; };
+    const end = () => {
+      rail.classList.remove("drag");
+      thumb.removeEventListener("pointermove", move);
+      thumb.removeEventListener("pointerup", end);
+      thumb.removeEventListener("pointercancel", end);
+    };
+    thumb.addEventListener("pointermove", move);
+    thumb.addEventListener("pointerup", end);
+    thumb.addEventListener("pointercancel", end);
+  });
+  const ro = new ResizeObserver(() => requestAnimationFrame(sync));
+  ro.observe(sc);
+  for (const kid of sc.children) if (kid !== rail) ro.observe(kid);
+  const mo = new MutationObserver(() => requestAnimationFrame(sync));
+  mo.observe(sc, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden", "class"] });
+  sc.addEventListener("scroll", sync, { passive: true });
+  sc._railStop = () => { ro.disconnect(); mo.disconnect(); sc.removeEventListener("scroll", sync); rail.remove(); sc.classList.remove("has-rail"); };
+  requestAnimationFrame(sync);
 }
