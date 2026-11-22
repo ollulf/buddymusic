@@ -491,12 +491,14 @@ async function renderAlbum(container, id, opts) {
     const total = songs.reduce((t, s) => t + (s.duration || 0), 0);
     setPageTitle(al.name || t("library.unknownAlbum"), container);
     container.replaceChildren(
-      h("a", { class: "back", href: "#/library" }, t("library.back")),
+      albumBackLink(),
       h("section", { class: "album-head" },
         head,
         h("div", { class: "album-info" },
-          albumArtistLinks(al, songs),
-          h("div", { class: "muted" }, [al.year, t("common.songCount", { n: songs.length }), fmtTime(total)].filter(Boolean).join(" · ")),
+          h("div", { class: "album-screen", onclick: (e) => { if (!e.target.closest("a")) e.currentTarget.classList.toggle("open"); } },
+            albumArtistLinks(al, songs),
+            h("div", { class: "muted album-meta" }, [al.year, t("common.songCount", { n: songs.length }), fmtTime(total)].filter(Boolean)
+              .flatMap((v, i) => [i ? h("span", { class: "am-sep" }, " · ") : null, h("span", { class: "am-v" }, String(v))]))),
           Array.isArray(al.genreTags) && al.genreTags.length
             ? h("div", { class: "album-genres", role: "group", "aria-label": t("genre.album") }, al.genreTags.map((g) => h("a", { class: "pill genre-chip", href: "#/library/newest", title: t("genre.showAll", { name: g }), onclick: () => filterByGenre(g) }, g))) : null,
           Array.isArray(al.uploadedBy) && al.uploadedBy.length
@@ -504,7 +506,7 @@ async function renderAlbum(container, id, opts) {
           albumActions(al, songs, opts, { editAlbum, deleteAlbum }))),
       h("ol", { class: "songs card" }, songs.map((_, i) => songRow(songs, i, { album: al, onDelete: deleteTrack, onUnauthorized: opts.onUnauthorized }))));
   } catch (e) {
-    container.replaceChildren(h("a", { class: "back", href: "#/library" }, t("library.back")), failBox(e, opts));
+    container.replaceChildren(albumBackLink(), failBox(e, opts));
   }
 }
 
@@ -521,6 +523,18 @@ async function renderArtist(container, id, opts) {
   } catch (e) {
     container.replaceChildren(h("a", { class: "back", href: "#/library/artists" }, t("library.backArtists")), failBox(e, opts));
   }
+}
+
+let albumBack = { hash: "#/library", viaHistory: false };
+
+export function setLibraryBack(hash, viaHistory) {
+  albumBack = { hash, viaHistory };
+}
+
+function albumBackLink() {
+  const { hash, viaHistory } = albumBack;
+  const label = hash.startsWith("#/library/artist") ? t("library.backArtists") : t("library.back");
+  return h("a", { class: "back", href: hash, onclick: (e) => { if (viaHistory) { e.preventDefault(); history.back(); } } }, label);
 }
 
 export function renderLibrary(container, parts, opts = {}) {

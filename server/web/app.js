@@ -1,5 +1,5 @@
 import { renderUpload } from "./upload.js";
-import { renderLibrary, setNewAlbums, setVinylAlbums, prefetchLibrary, dropLibraryPrefetch, filterButton, libraryHasFilter } from "./library.js";
+import { renderLibrary, setNewAlbums, setVinylAlbums, prefetchLibrary, dropLibraryPrefetch, filterButton, libraryHasFilter, setLibraryBack } from "./library.js";
 import { renderSearch, searchBox } from "./search.js";
 import { renderFavorites } from "./favorites.js";
 import { renderQueue } from "./queue.js";
@@ -367,17 +367,28 @@ function showApp(user, admin, avatar, me = {}) {
     setTitle(TABS.find(([k]) => k === tab)[1]);
     titleRow.classList.toggle("no-search", tab === "upload" || tab === "admin");
     filterBtn.hidden = tab !== "library" || !libraryHasFilter(parts.slice(1));
-    const key = [tab, ...parts.slice(1)].join("/");
+    const key = tab === "library" ? libraryKey(parts.slice(1)) : [tab, ...parts.slice(1)].join("/");
+    const prevPage = currentPage;
+    const prevHash = currentHash;
+    currentPage = key;
+    currentHash = location.hash;
+    if (key !== prevPage) cancelScrollRestore();
     if (tab === "library" && key !== shown) {
-      renderLibrary(views.library, parts.slice(1), opts);
-      window.scrollTo(0, 0);
+      const fromLibrary = prevPage.startsWith("library/") && !prevPage.startsWith("library/album/");
+      if (key.startsWith("library/album/")) setLibraryBack(fromLibrary ? prevHash : "#/library", fromLibrary);
+      const done = renderLibrary(views.library, parts.slice(1), opts);
+      if (LIST_PAGES.has(key) || key === pageBefore) restoreScroll(key, done);
+      else window.scrollTo(0, 0);
     }
     if (tab === "search" && lastTab !== "search") renderSearch(views.search, opts);
     if (tab === "favorites" && lastTab !== "favorites") renderFavorites(views.favorites, opts);
     if (tab === "playlists" && key !== shown) {
-      renderPlaylists(views.playlists, parts.slice(1), opts);
-      window.scrollTo(0, 0);
+      const done = renderPlaylists(views.playlists, parts.slice(1), opts);
+      if (LIST_PAGES.has(key) || key === pageBefore) restoreScroll(key, done);
+      else window.scrollTo(0, 0);
     }
+    if ((tab === "library" || tab === "playlists") && key === shown && key !== prevPage) restoreScroll(key);
+    if (key !== prevPage) pageBefore = prevPage;
     if (tab === "admin" && lastTab !== "admin") renderAdmin(views.admin, opts);
     if (tab === "library" || tab === "playlists") shown = key;
     lastTab = tab;
@@ -387,6 +398,49 @@ function showApp(user, admin, avatar, me = {}) {
   window.addEventListener("hashchange", route);
   route();
 }
+
+const LIST_PAGES = new Set(["library/newest", "library/artists", "playlists"]);
+const scrollPos = new Map();
+let currentPage = "";
+let currentHash = "";
+let pageBefore = "";
+let restoreToken = 0;
+let restoring = false;
+
+function libraryKey(parts) {
+  const [kind, id] = parts;
+  if ((kind === "album" || kind === "artist") && id) return `library/${kind}/${id}`;
+  return kind === "artists" ? "library/artists" : "library/newest";
+}
+
+function cancelScrollRestore() {
+  restoreToken++;
+  restoring = false;
+}
+
+function restoreScroll(page, done) {
+  const y = scrollPos.get(page) || 0;
+  const token = ++restoreToken;
+  if (y <= 0) { restoring = false; window.scrollTo(0, 0); return; }
+  restoring = true;
+  const started = performance.now();
+  const step = () => {
+    if (token !== restoreToken) return;
+    const room = document.documentElement.scrollHeight - window.innerHeight;
+    const timedOut = performance.now() - started > 2500;
+    if (room >= y || timedOut) {
+      window.scrollTo(0, Math.min(y, Math.max(0, room)));
+      requestAnimationFrame(() => { if (token === restoreToken) restoring = false; });
+      return;
+    }
+    requestAnimationFrame(step);
+  };
+  Promise.resolve(done).catch(() => {}).then(() => requestAnimationFrame(step));
+}
+
+if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+window.addEventListener("scroll", () => { if (!restoring && currentPage) scrollPos.set(currentPage, window.scrollY); }, { passive: true });
+for (const ev of ["wheel", "touchstart", "keydown"]) window.addEventListener(ev, () => { if (restoring) cancelScrollRestore(); }, { passive: true });
 
 async function boot() {
   const parts = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);

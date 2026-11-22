@@ -1,5 +1,23 @@
 [
   {
+    "version": "1.0.2211",
+    "date": "2026-11-22",
+    "en": [
+      "Going back from an album returns you to where you were in the library",
+      "Album view on phones: cover on the left, a player-style screen with artists, year and length on the right",
+      "Clearer numbers: 2, 5 and 8 are easy to tell apart now",
+      "Bigger album, artist and year text in the library",
+      "The CD in the player spins smoothly"
+    ],
+    "de": [
+      "Zurück aus einem Album bringt dich wieder an deine Stelle in der Bibliothek",
+      "Albumansicht auf dem Handy: Cover links, rechts ein Player-Bildschirm mit Interpreten, Jahr und Länge",
+      "Klarere Zahlen: 2, 5 und 8 sind jetzt gut zu unterscheiden",
+      "Größere Schrift für Album, Interpret und Jahr in der Bibliothek",
+      "Die CD im Player dreht sich jetzt flüssig"
+    ]
+  },
+  {
     "version": "1.0.0311",
     "date": "2026-11-03",
     "en": [
