@@ -495,8 +495,10 @@ async function renderAlbum(container, id, opts) {
       h("section", { class: "album-head" },
         head,
         h("div", { class: "album-info" },
-          albumArtistLinks(al, songs),
-          h("div", { class: "muted" }, [al.year, t("common.songCount", { n: songs.length }), fmtTime(total)].filter(Boolean).join(" · ")),
+          h("div", { class: "album-screen", onclick: (e) => { if (!e.target.closest("a")) e.currentTarget.classList.toggle("open"); } },
+            albumArtistLinks(al, songs),
+            h("div", { class: "muted album-meta" }, [al.year, t("common.songCount", { n: songs.length }), fmtTime(total)].filter(Boolean)
+              .flatMap((v, i) => [i ? h("span", { class: "am-sep" }, " · ") : null, h("span", { class: "am-v" }, String(v))]))),
           Array.isArray(al.genreTags) && al.genreTags.length
             ? h("div", { class: "album-genres", role: "group", "aria-label": t("genre.album") }, al.genreTags.map((g) => h("a", { class: "pill genre-chip", href: "#/library/newest", title: t("genre.showAll", { name: g }), onclick: () => filterByGenre(g) }, g))) : null,
           Array.isArray(al.uploadedBy) && al.uploadedBy.length

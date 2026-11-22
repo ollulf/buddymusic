@@ -262,6 +262,7 @@ h1 { font-size: var(--fs-xl); margin: 0; line-height: 1.25; color: var(--accent)
 .album-head { display: flex; gap: var(--sp-4); align-items: flex-end; }
 .album-info { flex: 1 1 auto; display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
 .album-info .actions { margin-top: var(--sp-2); flex-wrap: wrap; }
+.album-screen { display: contents; }
 .uploaded-by { color: var(--muted); font: var(--fs-sm)/1.4 var(--pix); overflow-wrap: anywhere; }
 .songs { list-style: none; margin: 0; padding: var(--sp-1) var(--sp-2); }
 .song-row { position: relative; overflow: hidden; touch-action: pan-y; border-bottom: 2px dashed var(--shade); }
@@ -394,9 +395,21 @@ button.add-artist { font-size: var(--fs-xs); padding: 2px var(--sp-2); }
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
   .album .a-name { font-size: var(--fs-lg); }
   .album .a-sub { font-size: var(--fs-sm); }
-  .album-head { flex-direction: column; align-items: flex-start; }
-  .album-info { align-self: stretch; }
-  .art.big { width: 100%; max-width: 280px; }
+  .album-head { display: grid; grid-template-columns: 128px minmax(0, 1fr); align-items: stretch; gap: var(--sp-2) var(--sp-3); }
+  .album-head > .art.big { grid-column: 1; grid-row: 1; width: 128px; align-self: start; }
+  .album-info { display: contents; }
+  .album-info > * { grid-column: 1 / -1; }
+  .album-info > .album-screen { grid-column: 2; grid-row: 1; }
+  .album-info .actions { margin-top: 0; }
+  .album-screen { display: flex; flex-direction: column; justify-content: space-between; gap: var(--sp-1); min-width: 0; box-sizing: border-box; padding: 6px var(--sp-2); position: relative; overflow: hidden; --lcd-fg: var(--screen-fg); --lcd-glow: color-mix(in srgb, var(--lcd-fg) 45%, transparent); background: color-mix(in srgb, var(--lcd-fg) 9%, #040506); border: 2px solid var(--ink); box-shadow: inset 0 0 0 2px var(--screen-rim); color: var(--lcd-fg); text-shadow: 0 0 4px var(--lcd-glow); }
+  .album-screen::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, .32) 0 1px, transparent 1px 3px); }
+  .album-screen .album-artists { font-size: var(--fs-md); line-height: 1.25; max-height: 2.5em; flex: none; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: anywhere; }
+  .album-screen .album-artists a, .album-screen .album-artists .muted { color: var(--lcd-fg); text-decoration: none; }
+  .album-screen .album-artists .muted { opacity: .72; }
+  .album-screen .album-meta { display: flex; flex-direction: column; color: var(--lcd-fg); opacity: .72; font-family: var(--num); font-variant-numeric: tabular-nums; font-size: var(--fs-sm); line-height: 1.3; }
+  .album-screen .am-sep { display: none; }
+  .album-screen.open .album-artists { max-height: none; display: block; }
+  .album-screen .am-v { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .album-grid { grid-template-columns: 1fr; }
   .cover { flex-direction: row; align-items: center; }
   .preview { width: 96px; flex: none; }
