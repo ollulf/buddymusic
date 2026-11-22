@@ -491,7 +491,7 @@ async function renderAlbum(container, id, opts) {
     const total = songs.reduce((t, s) => t + (s.duration || 0), 0);
     setPageTitle(al.name || t("library.unknownAlbum"), container);
     container.replaceChildren(
-      h("a", { class: "back", href: "#/library" }, t("library.back")),
+      albumBackLink(),
       h("section", { class: "album-head" },
         head,
         h("div", { class: "album-info" },
@@ -504,7 +504,7 @@ async function renderAlbum(container, id, opts) {
           albumActions(al, songs, opts, { editAlbum, deleteAlbum }))),
       h("ol", { class: "songs card" }, songs.map((_, i) => songRow(songs, i, { album: al, onDelete: deleteTrack, onUnauthorized: opts.onUnauthorized }))));
   } catch (e) {
-    container.replaceChildren(h("a", { class: "back", href: "#/library" }, t("library.back")), failBox(e, opts));
+    container.replaceChildren(albumBackLink(), failBox(e, opts));
   }
 }
 
@@ -521,6 +521,18 @@ async function renderArtist(container, id, opts) {
   } catch (e) {
     container.replaceChildren(h("a", { class: "back", href: "#/library/artists" }, t("library.backArtists")), failBox(e, opts));
   }
+}
+
+let albumBack = { hash: "#/library", viaHistory: false };
+
+export function setLibraryBack(hash, viaHistory) {
+  albumBack = { hash, viaHistory };
+}
+
+function albumBackLink() {
+  const { hash, viaHistory } = albumBack;
+  const label = hash.startsWith("#/library/artist") ? t("library.backArtists") : t("library.back");
+  return h("a", { class: "back", href: hash, onclick: (e) => { if (viaHistory) { e.preventDefault(); history.back(); } } }, label);
 }
 
 export function renderLibrary(container, parts, opts = {}) {
