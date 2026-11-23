@@ -146,7 +146,10 @@ function friendRow(f) {
     pic.append(img);
   } else pic.innerHTML = AVATAR;
   let what;
-  if (!f.online) what = t("friends.lastSeen", { when: relTime(f.lastSeen) });
+  if (!f.online && f.lastTitle) {
+    const track = f.lastArtist ? `${f.lastTitle} – ${f.lastArtist}` : f.lastTitle;
+    what = t("friends.lastTrack", { track, when: relTime(f.lastAt) });
+  } else if (!f.online) what = t("friends.lastSeen", { when: relTime(f.lastSeen) });
   else if (f.state === "playing" || f.state === "paused") {
     const track = f.artist ? `${f.title} – ${f.artist}` : f.title;
     what = f.state === "paused" ? t("friends.paused", { track }) : track;

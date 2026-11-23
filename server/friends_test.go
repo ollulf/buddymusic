@@ -50,6 +50,46 @@ func TestStoreFriends(t *testing.T) {
 	if list[2].User != "bob" || list[3].User != "dan" {
 		t.Fatalf("offline friends last: %+v", list)
 	}
+	if f := got["bob"]; f.LastTitle != "" || f.LastAt != 0 {
+		t.Fatalf("bob no track: %+v", f)
+	}
+	if f := got["ann"]; f.LastTitle != "" {
+		t.Fatalf("online ann has no last track: %+v", f)
+	}
+}
+
+func TestStoreFriendsLastTrack(t *testing.T) {
+	a := newTestApp(t)
+	s := a.store
+	now := time.Now()
+	old := now.Add(-2 * time.Hour)
+	older := now.Add(-3 * time.Hour)
+	s.TouchSeen("bob", old, "Mac · Firefox")
+	s.AddStreamBytes("bob", "t1", "Mac · Firefox", older, 100, false)
+	s.RecordProgress("bob", "t1", "Early", "Band", older, 30, true)
+	s.AddStreamBytes("bob", "t2", "Mac · Firefox", old, 100, false)
+	s.RecordProgress("bob", "t2", "Late", "Band", old, 30, true)
+	s.TouchSeen("eve", old, "Mac · Firefox")
+	s.AddStreamBytes("eve", "t3", "Mac · Firefox", old, 100, false)
+	s.RecordProgress("eve", "t3", "Secret", "Hidden", old, 30, true)
+	if _, err := s.db.Exec(`INSERT INTO user_prefs (user, share_listening) VALUES ('eve', 0)`); err != nil {
+		t.Fatal(err)
+	}
+
+	list, err := s.Friends("max", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]Friend{}
+	for _, f := range list {
+		got[f.User] = f
+	}
+	if f := got["bob"]; f.Online || f.LastTitle != "Late" || f.LastArtist != "Band" || f.LastAt != old.Unix() || f.Title != "" {
+		t.Fatalf("bob: %+v", f)
+	}
+	if f := got["eve"]; f.User != "eve" || f.LastTitle != "" || f.LastAt != 0 {
+		t.Fatalf("eve: %+v", f)
+	}
 
 }
 
