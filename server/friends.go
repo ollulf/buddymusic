@@ -19,13 +19,16 @@ CREATE TABLE IF NOT EXISTS user_prefs (
 );`
 
 type Friend struct {
-	User     string `json:"user"`
-	Online   bool   `json:"online"`
-	LastSeen int64  `json:"lastSeen"`
-	State    string `json:"state"`
-	Title    string `json:"title,omitempty"`
-	Artist   string `json:"artist,omitempty"`
-	Avatar   int64  `json:"avatar"`
+	User       string `json:"user"`
+	Online     bool   `json:"online"`
+	LastSeen   int64  `json:"lastSeen"`
+	State      string `json:"state"`
+	Title      string `json:"title,omitempty"`
+	Artist     string `json:"artist,omitempty"`
+	LastTitle  string `json:"lastTitle,omitempty"`
+	LastArtist string `json:"lastArtist,omitempty"`
+	LastAt     int64  `json:"lastAt,omitempty"`
+	Avatar     int64  `json:"avatar"`
 }
 
 func (s *Store) Friends(self string, now time.Time) ([]Friend, error) {
@@ -76,6 +79,28 @@ WHERE s.user != ? AND s.last_seen >= ?`, self, now.Add(-friendRecentGap).Unix())
 		if playing {
 			out[i].State = "playing"
 		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	rows, err = s.db.Query(`SELECT p.user, p.title, p.artist, p.updated_at FROM play_events p
+JOIN (SELECT user, MAX(updated_at) AS m FROM play_events
+	WHERE user != ? AND updated_at >= ? AND title != '' GROUP BY user) x
+	ON x.user = p.user AND x.m = p.updated_at
+LEFT JOIN user_prefs up ON up.user = p.user
+WHERE p.title != '' AND COALESCE(up.share_listening, 1) = 1`,
+		self, now.Add(-friendRecentGap).Unix())
+	if err := scanEach(rows, err, func(r *sql.Rows) error {
+		var u, title, artist string
+		var at int64
+		if err := r.Scan(&u, &title, &artist, &at); err != nil {
+			return err
+		}
+		i, ok := idx[u]
+		if !ok || out[i].Online || out[i].LastAt != 0 {
+			return nil
+		}
+		out[i].LastTitle, out[i].LastArtist, out[i].LastAt = title, artist, at
 		return nil
 	}); err != nil {
 		return nil, err

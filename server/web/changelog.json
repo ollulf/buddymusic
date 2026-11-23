@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.0.2311",
+    "date": "2026-11-23",
+    "en": [
+      "Friends list: see the last song an offline friend listened to and when"
+    ],
+    "de": [
+      "Freundesliste: zeigt den zuletzt gehörten Song von Freunden, die offline sind, und wann"
+    ]
+  },
+  {
     "version": "1.0.2211",
     "date": "2026-11-22",
     "en": [
